@@ -1,3 +1,11 @@
+# Tests must never touch the real app database: isolate before importing pulse.
+import os as _os
+import tempfile as _tempfile
+
+_os.environ.setdefault("PULSE_DATA_DIR", _tempfile.mkdtemp(prefix="pulse-tests-"))
+_os.environ.setdefault("PULSE_INGEST", "0")
+_os.environ.setdefault("PULSE_EXTRACT_BODIES", "0")
+
 import gzip
 import http.client
 import json

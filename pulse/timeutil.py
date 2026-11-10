@@ -232,6 +232,10 @@ def relative(dt: datetime | str | None, *, reference: datetime | None = None) ->
     seconds = abs(seconds)
     if seconds < 90:
         return "just now"
+    # Small positive offsets are publisher clock skew, not the future. Showing
+    # "in 2 min" on a story we just fetched would look broken.
+    if future and seconds < 900:
+        return "just now"
     elif seconds < 150:
         label = "2 min"
     elif seconds < 3600:

@@ -1,3 +1,11 @@
+# Tests must never touch the real app database: isolate before importing pulse.
+import os as _os
+import tempfile as _tempfile
+
+_os.environ.setdefault("PULSE_DATA_DIR", _tempfile.mkdtemp(prefix="pulse-tests-"))
+_os.environ.setdefault("PULSE_INGEST", "0")
+_os.environ.setdefault("PULSE_EXTRACT_BODIES", "0")
+
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -51,6 +59,10 @@ class DateParsingTests(unittest.TestCase):
         self.assertIn("min", timeutil.relative((now - timedelta(minutes=20)).isoformat()))
         self.assertIn("hr", timeutil.relative((now - timedelta(hours=3)).isoformat()))
         self.assertIn("day", timeutil.relative((now - timedelta(days=2)).isoformat()))
+
+    def test_small_future_skew_reads_as_just_now(self):
+        now = datetime.now(timezone.utc)
+        self.assertEqual(timeutil.relative((now + timedelta(minutes=3)).isoformat()), "just now")
 
     def test_freshness_buckets(self):
         now = datetime.now(timezone.utc)

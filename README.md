@@ -9,8 +9,10 @@ Runs on the Python standard library alone — no Node, no build step, no ads, no
 tracking, no account.
 
 ```bash
-python3 run.py          # → http://localhost:8787
+python3 run.py
 ```
+
+Then open <http://localhost:8787> in your browser.
 
 ---
 
@@ -128,17 +130,57 @@ ingesting in the background; the feed fills within a minute or two.
 Useful flags:
 
 ```bash
-python3 run.py --port 9000          # different port
-python3 run.py --host 0.0.0.0       # expose on the network (pair with a token)
-python3 run.py --no-ingest          # serve only
-python3 run.py --ingest-once        # one fetch pass, then exit (cron-friendly)
+python3 run.py --port 9000        # run on a different port
+python3 run.py --host 0.0.0.0     # expose on the network (pair with a token)
+python3 run.py --no-ingest        # serve only, don't fetch feeds
+python3 run.py --ingest-once      # one fetch pass, then exit
 ```
+
+Copy the commands without the trailing comments — some shells (macOS zsh by
+default) do not treat `#` as a comment in interactive mode and will pass it to
+Python as an argument.
 
 Data lives in `~/Library/Application Support/pulse-news` (macOS),
 `~/.local/share/pulse-news` (Linux) or `%LOCALAPPDATA%\pulse-news` (Windows).
 Override with `PULSE_DATA_DIR`.
 
 ---
+
+## Troubleshooting
+
+**`run.py: error: unrecognized arguments: # → http://localhost:8787`**
+Paste only the command, not the trailing note. macOS `zsh` does not treat `#` as
+a comment in interactive mode, so it gets passed to Python. Run:
+
+```bash
+python3 run.py
+```
+
+**`Address already in use`**
+An instance is already running. Find and stop it:
+
+```bash
+lsof -nP -iTCP:8787 -sTCP:LISTEN -t | xargs kill
+```
+
+**How do I stop the server?**
+Press `Ctrl+C` in the Terminal window running it (it shuts down cleanly).
+
+**The feed looks empty on first run**
+Expected for the first ~60 seconds: the app is fetching 421 feeds and stores them
+as they arrive. The onboarding survey takes you straight into the feed.
+
+**A source says "blocked" or "unreachable"**
+Open *Sources → Feed health*. School/office filters and some publishers (AP,
+Reuters) block automated requests; those sources stay in the catalogue and retry.
+
+**The UI looks stale after an update**
+The service worker caches the app shell. Hard-reload with `Cmd+Shift+R`, or
+unregister it in DevTools → Application → Service Workers.
+
+**Reset everything**
+Quit Pulse, then delete `~/Library/Application Support/pulse-news` (macOS),
+`~/.local/share/pulse-news` (Linux) or `%LOCALAPPDATA%\pulse-news` (Windows).
 
 ## Configuration
 

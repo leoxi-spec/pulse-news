@@ -16,6 +16,7 @@ import re
 import signal
 import socket
 import sys
+import threading
 import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -403,7 +404,10 @@ def serve(host: str | None = None, port: int | None = None) -> None:
     def _shutdown(signum, frame):
         log.info("shutting down (signal %s)", signum)
         ingest.stop()
-        httpd.shutdown()
+        # shutdown() blocks until serve_forever() returns. Because signal
+        # handlers run on the same thread as serve_forever, calling it directly
+        # here deadlocks the process. Hand it to a helper thread instead.
+        threading.Thread(target=httpd.shutdown, name="pulse-shutdown", daemon=True).start()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
