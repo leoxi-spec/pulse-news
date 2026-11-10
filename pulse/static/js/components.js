@@ -1,0 +1,175 @@
+import { html, raw, esc, timeAgo, absDate, compactNumber, icons, emptyState, proxyImg } from './ui.js';
+export { emptyState };
+import { topicLabel, topicIcon } from './store.js';
+
+export function hashHue(text) {
+  let hash = 0;
+  for (let i = 0; i < (text || '').length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) % 360;
+  return hash;
+}
+
+export function sourceDot(source) {
+  const hue = hashHue(source?.name || '');
+  return html`<span class="src-dot" style="--h:${hue}" aria-hidden="true">${(source?.initials || source?.name || '?').slice(0, 2)}</span>`;
+}
+
+export function saveButton(item, { floating = true, label = false } = {}) {
+  const on = item.saved ? 'is-on' : '';
+  return html`<button class="icon-btn ${on} ${floating ? 'story-card__save' : ''}" type="button"
+    data-action="toggle-save" data-id="${item.id}" aria-pressed="${item.saved ? 'true' : 'false'}"
+    aria-label="${item.saved ? 'Remove from saved' : 'Save story'}" title="${item.saved ? 'Saved' : 'Save'}">
+    ${raw(icons.bookmark)}${label ? html`<span class="small">${item.saved ? 'Saved' : 'Save'}</span>` : ''}
+  </button>`;
+}
+
+export function reasonChips(item, max = 2) {
+  const reasons = (item.reasons || []).filter(Boolean).slice(0, max);
+  if (!reasons.length) return '';
+  return html`<span class="hstack" style="gap:.3rem">${reasons.map((r) => html`<span class="reason">${r}</span>`)}</span>`;
+}
+
+export function storyKicker(item) {
+  const source = item.source || {};
+  return html`
+    <div class="story-card__kicker">
+      ${sourceDot(source)}
+      <span class="tiny" style="font-weight:650;color:var(--text-2)">${source.name || 'Unknown'}</span>
+      <span class="tiny faint" aria-hidden="true">·</span>
+      <span class="tiny muted" title="${absDate(item.published_at || item.first_seen_at)}">${item.published_relative || timeAgo(item.published_at || item.first_seen_at)}</span>
+      ${item.date_label === 'First seen' ? html`<span class="tiny faint">(first seen)</span>` : ''}
+      ${item.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
+      ${item.source?.paywall ? html`<span class="tiny faint" title="Subscription required at the source">🔒</span>` : ''}
+    </div>`;
+}
+
+export function storyCard(item, { compact = false } = {}) {
+  const hasImage = Boolean(item.image) && !compact;
+  const outlets = item.story?.source_count > 1
+    ? html`<span class="tiny faint">·</span><span class="tiny muted">${item.story.source_count} outlets</span>`
+    : '';
+  return html`
+    <article class="card story-card ${hasImage ? '' : 'story-card--noimg'}" data-article-card="${item.id}">
+      <a class="card__link" href="/article/${item.id}" data-link aria-label="${item.title}">
+        <div class="story-card__body">
+          ${storyKicker(item)}
+          <h3 class="story-card__title">${item.title}</h3>
+          ${item.preview ? html`<p class="story-card__summary">${item.preview}</p>` : ''}
+          <div class="story-card__foot">
+            <span class="tiny muted">${item.reading_minutes} min read</span>
+            <span class="tiny faint">·</span>
+            <span class="tiny muted">${item.topic_label || topicLabel(item.topic)}</span>
+            ${outlets}
+            ${reasonChips(item)}
+          </div>
+        </div>
+        ${hasImage ? html`<div class="story-card__media"><img class="story-card__img" src="${item.image}" alt="" loading="lazy" decoding="async" width="150" height="108"></div>` : ''}
+      </a>
+      ${saveButton(item)}
+    </article>`;
+}
+
+export function heroCard(item, { label = 'Top story' } = {}) {
+  if (!item) return '';
+  return html`
+    <article class="hero" data-article-card="${item.id}">
+      ${item.image ? html`<img class="hero__img" src="${item.image}" alt="" fetchpriority="high" decoding="async">` : html`<div class="hero__img" style="background:var(--grad)"></div>`}
+      <div class="hero__shade"></div>
+      <div class="hero__body">
+        <div class="hero__top">
+          ${item.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : html`<span class="badge badge--glass">${label}</span>`}
+          <span class="badge badge--glass">${item.topic_label || topicLabel(item.topic)}</span>
+          ${item.story?.source_count > 2 ? html`<span class="badge badge--glass">${item.story.source_count} outlets covering</span>` : ''}
+        </div>
+        <h2 class="hero__title"><a href="/article/${item.id}" data-link>${item.title}</a></h2>
+        ${item.preview ? html`<p class="hero__summary">${item.preview}</p>` : ''}
+        <div class="hero__meta">
+          <span>${item.source?.name || ''}</span>
+          <span aria-hidden="true">·</span>
+          <span title="${absDate(item.published_at || item.first_seen_at)}">${item.published_relative || timeAgo(item.published_at || item.first_seen_at)}</span>
+          <span aria-hidden="true">·</span>
+          <span>${item.reading_minutes} min read</span>
+          ${item.reasons?.length ? html`<span class="badge badge--glass">${item.reasons[0]}</span>` : ''}
+        </div>
+      </div>
+    </article>`;
+}
+
+export function sectionHead(title, action = '', { sub = '' } = {}) {
+  return html`
+    <div class="section-head">
+      <h2>${title}${sub ? html` <span class="small muted" style="font-weight:400">${sub}</span>` : ''}</h2>
+      ${action}
+    </div>`;
+}
+
+export function scoreMini(game) {
+  const competitors = [...(game.competitors || [])].sort((a, b) => (a.home === b.home ? 0 : a.home ? 1 : -1));
+  const state = game.status?.state || 'pre';
+  return html`
+    <a class="score-mini ${game.is_live ? 'is-live' : ''}" href="/sports#${game.league || ''}">
+      <div class="score-mini__top">
+        <span>${game.is_live ? '● LIVE' : state === 'post' ? 'Final' : 'Upcoming'}</span>
+        <span>${(game.league || '').toUpperCase()}</span>
+      </div>
+      ${competitors.map((team) => html`
+        <div class="score-mini__row">
+          <span class="score-mini__team">
+            ${team.logo ? html`<img src="${proxyImg(team.logo)}" alt="" loading="lazy">` : ''}
+            <span>${team.abbr || team.short || team.name}</span>
+          </span>
+          <span class="score-mini__score">${state === 'pre' ? '–' : esc(team.score ?? 0)}</span>
+        </div>`)}
+      <div class="tiny muted">${game.status?.detail || ''}</div>
+    </a>`;
+}
+
+export function leanBar(leans = {}) {
+  const total = Object.values(leans).reduce((sum, n) => sum + n, 0);
+  if (!total) return '';
+  const order = ['left', 'center-left', 'center', 'center-right', 'right', 'state'];
+  return html`
+    <div class="lean-bar" role="img" aria-label="Approximate editorial spread of coverage">
+      ${order.filter((k) => leans[k]).map((k) => html`<span class="lean-${k}" style="width:${(leans[k] / total) * 100}%"></span>`)}
+    </div>`;
+}
+
+export function topicTile(topic) {
+  return html`
+    <a class="tile" href="/topic/${topic.slug}" data-link>
+      <span class="tile__icon" aria-hidden="true">${topic.icon || topicIcon(topic.slug)}</span>
+      <span>
+        <span class="tile__label">${topic.label}</span>
+        <span class="tile__count">${compactNumber(topic.count)} stories${topic.relative ? ` · ${topic.relative}` : ''}</span>
+      </span>
+    </a>`;
+}
+
+
+export function skeletonFeed(count = 5) {
+  return html`<div class="feed" aria-hidden="true">
+    ${Array.from({ length: count }).map(() => html`
+      <div class="card" style="padding:1rem;display:flex;gap:1rem">
+        <div style="flex:1" class="stack-sm">
+          <div class="skeleton skeleton--line" style="width:32%"></div>
+          <div class="skeleton skeleton--line" style="width:88%;height:18px"></div>
+          <div class="skeleton skeleton--line" style="width:70%"></div>
+          <div class="skeleton skeleton--line" style="width:24%"></div>
+        </div>
+        <div class="skeleton" style="width:130px;height:96px;border-radius:12px"></div>
+      </div>`)}
+  </div>`;
+}
+
+export function stat(value, label) {
+  return html`<div class="stat"><div class="stat__value">${value}</div><div class="stat__label">${label}</div></div>`;
+}
+
+export function readTimeChip(minutes) {
+  return html`<span class="tiny muted hstack" style="gap:.25rem">${raw(icons.clock)}${minutes} min</span>`;
+}
+
+export function topicChips(topics, { active = '', base = '/topic' } = {}) {
+  return html`<div class="chip-row" role="tablist">
+    ${topics.map((t) => html`<a class="chip ${active === t.slug ? 'is-on' : ''}" href="${base}/${t.slug}" data-link role="tab">${t.icon || ''} ${t.label}</a>`)}
+  </div>`;
+}
