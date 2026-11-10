@@ -158,11 +158,14 @@ class IngestService:
             try:
                 feeds = self._select_feeds(only_source)
                 self._set_progress(0.0, f"Fetching {len(feeds)} feeds")
-                outcomes = self._fetch_all(feeds, report)
-                self._set_progress(0.75, "Indexing articles")
-                self._store_all(outcomes, report)
-                self._set_progress(0.9, "Clustering stories")
-                self._refresh_story_stats()
+                clusterer = stories.Clusterer(stories.load_recent(days=5))
+                outcomes, affected = self._fetch_all(feeds, report, clusterer)
+                self._set_progress(0.94, "Updating stories")
+                for story_id in affected:
+                    try:
+                        self._update_story(story_id)
+                    except Exception:
+                        log.debug("story update failed for %s", story_id, exc_info=True)
                 if extract and settings.extract_bodies:
                     self._set_progress(0.94, "Extracting article text")
                     report.extracted = self._extract_pending()
@@ -201,10 +204,17 @@ class IngestService:
         random.shuffle(selected)
         return selected
 
-    def _fetch_all(self, feeds: list[FeedSpec], report: RunReport) -> list[FeedOutcome]:
+    def _fetch_all(self, feeds: list[FeedSpec], report: RunReport, clusterer: stories.Clusterer):
+        """Fetch concurrently and store each feed as soon as it arrives.
+
+        Storing incrementally means a fresh install shows its first stories
+        within seconds instead of waiting for a 400-feed sweep to finish.
+        """
         outcomes: list[FeedOutcome] = []
+        affected: set[int] = set()
         total = max(len(feeds), 1)
         lock = threading.Lock()
+        storage_lock = threading.Lock()
 
         def work(feed: FeedSpec) -> FeedOutcome:
             return self._fetch_one(feed)
@@ -216,7 +226,20 @@ class IngestService:
                 outcomes.append(outcome)
                 if outcome.ok:
                     report.feeds_ok += 1
-                else:
+                    items = getattr(outcome, "items_payload", [])
+                    if items:
+                        with storage_lock:
+                            try:
+                                new, updated, story_ids = self._store_feed(outcome.feed, items, clusterer)
+                                with lock:
+                                    report.new_articles += new
+                                    report.updated_articles += updated
+                                    affected.update(story_ids)
+                            except Exception:
+                                log.exception("storing feed %s failed", outcome.feed.url)
+                                outcome.ok = False
+                                outcome.error = "database error while storing items"
+                if not outcome.ok:
                     report.feeds_failed += 1
                     if len(report.errors) < 40:
                         report.errors.append(
@@ -228,8 +251,8 @@ class IngestService:
                             }
                         )
                 with lock:
-                    self._set_progress(index / total * 0.72, f"Fetching feeds ({index}/{total})")
-        return outcomes
+                    self._set_progress(index / total * 0.9, f"Fetching feeds ({index}/{total})")
+        return outcomes, affected
 
     def _fetch_one(self, feed: FeedSpec) -> FeedOutcome:
         outcome = FeedOutcome(feed=feed)
@@ -308,25 +331,6 @@ class IngestService:
         return items
 
     # --------------------------------------------------------------- storage
-    def _store_all(self, outcomes: list[FeedOutcome], report: RunReport) -> None:
-        payloads = [(o, getattr(o, "items_payload", [])) for o in outcomes if o.ok]
-        clusterer = stories.Clusterer(stories.load_recent(days=5))
-        affected: set[int] = set()
-        for outcome, items in payloads:
-            if not items:
-                continue
-            try:
-                new, updated, story_ids = self._store_feed(outcome.feed, items, clusterer)
-                report.new_articles += new
-                report.updated_articles += updated
-                affected.update(story_ids)
-            except Exception:
-                log.exception("storing feed %s failed", outcome.feed.url)
-                outcome.ok = False
-                outcome.error = "database error while storing items"
-        for story_id in affected:
-            self._update_story(story_id)
-
     def _store_feed(
         self, feed: FeedSpec, items: list[feedparse.FeedItem], clusterer: stories.Clusterer
     ) -> tuple[int, int, set[int]]:
@@ -499,14 +503,6 @@ class IngestService:
                     "UPDATE articles SET is_breaking=1 WHERE story_id=? AND COALESCE(published_at, first_seen_at) >= ?",
                     (story_id, iso(now() - timedelta(hours=8))),
                 )
-
-    def _refresh_story_stats(self) -> None:
-        rows = db.query(
-            "SELECT id FROM stories WHERE last_seen_at >= ?",
-            (iso(now() - timedelta(days=2)),),
-        )
-        for row in rows:
-            self._update_story(row["id"])
 
     # ------------------------------------------------------------ extraction
     def _extract_pending(self) -> int:

@@ -190,6 +190,7 @@ ThreadingHTTPServer ──► api.py ──► feed.py ──► rank.py ──�
 **Ingestion loop** (background thread):
 1. fetch all due feeds concurrently, with ETag/Last-Modified and backoff
 2. parse RSS/Atom/RDF/JSON Feed, normalise, classify, upsert (never delete)
+   — articles are stored as each feed arrives, so a fresh install fills in seconds
 3. cluster into stories, recompute coverage counts and breaking flags
 4. extract readable text for the highest-value recent articles (robots-aware)
 5. record a run report + per-feed health, sleep, repeat
