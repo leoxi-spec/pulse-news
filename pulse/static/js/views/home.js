@@ -1,6 +1,6 @@
 import { get, post } from '../api.js';
 import {
-  state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel,
+  state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel, ageBand,
 } from '../store.js';
 import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
 import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed } from '../components.js';
@@ -39,6 +39,9 @@ const sectionMeta = (id) => allSections().find((section) => section.id === id) |
 function activeSections() {
   const saved = Array.isArray(prefs().home_sections) ? prefs().home_sections : [];
   const valid = saved.filter((id) => allSections().some((section) => section.id === id));
+  const age = Number(state.profile?.survey?.age || 13);
+  const younger = age <= 8;
+  const olderKid = age >= 9 && age <= 11;
   if (valid.length) {
     // one-time migration: make sure people who customised before motorsport
     // existed still get a Formula 1 row on the front page.
@@ -54,6 +57,12 @@ function activeSections() {
     }
     if (!prefs().sections_v2) savePrefs({ sections_v2: true });
     return valid;
+  }
+  if (younger) {
+    return ['brief', 'daily', 'top', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
+  }
+  if (olderKid) {
+    return ['brief', 'daily', 'top', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
   }
   const withInterests = [...DEFAULT_SECTIONS];
   for (const slug of followedTopics()) {
@@ -94,7 +103,7 @@ function feedUrl(mode, offset, limit = 20) {
 
 async function loadSection(id, timeoutMs = 3000) {
   const task = (async () => {
-    if (id === 'brief') return get('/api/brief', 60, true);
+    if (id === 'brief') return get(`/api/brief?size=${briefSize()}`, 60, true);
     if (id === 'daily') return loadDaily();
     if (id === 'top') return get('/api/feed?mode=top&limit=3&days=2', 45);
     if (id === 'picks') return get('/api/discover', 120);
@@ -112,6 +121,8 @@ async function loadSection(id, timeoutMs = 3000) {
 
 export async function homeView(root, ctx) {
   const sections = activeSections();
+  const viewerAge = Number(state.profile?.survey?.age || 13);
+  const kidHidden = viewerAge <= 11 ? new Set(['world', 'politics', 'business']) : null;
   const progress = dailyProgress();
   const streakInfo = streak();
   const levelInfo = levels();
@@ -141,7 +152,7 @@ export async function homeView(root, ctx) {
     <div class="between" style="margin:.2rem 0 .2rem">
       <div class="chip-row" id="quick-links">
         <a class="chip chip--shorts" href="/reels" data-link>${raw(icons.play)} Shorts</a>
-        ${followedTopics().slice(0, 5).map((slug) => html`
+        ${followedTopics().filter((slug) => !kidHidden?.has(slug)).slice(0, 5).map((slug) => html`
           <a class="chip" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`)}
         ${followedTopics().includes('motorsport') ? '' : html`
           <a class="chip" href="/topic/motorsport" data-link>🏎️ F1 &amp; motorsport</a>`}
@@ -246,6 +257,11 @@ function picksSection(data) {
   return sectionWrap('picks',
     sectionHead("Editor's picks", html`<a href="/discover" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'full text readable in Pulse' }),
     rowsHtml(items, { seed: 'picks' }));
+}
+
+function briefSize() {
+  const age = Number(state.profile?.survey?.age || 13);
+  return age <= 8 ? 3 : age <= 11 ? 4 : 5;
 }
 
 function applyMood(list, mood) {

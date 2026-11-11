@@ -16,7 +16,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 _BLOCK_TAGS = {
     "p", "div", "section", "article", "main", "br", "li", "ul", "ol",
@@ -48,6 +48,7 @@ class ExtractedArticle:
     title: str = ""
     blocks: list[Block] = field(default_factory=list)
     image: str | None = None
+    images: list[str] = field(default_factory=list)
     author: str | None = None
     site_name: str | None = None
     published_hint: str | None = None
@@ -63,6 +64,7 @@ class ExtractedArticle:
             "title": self.title,
             "blocks": [b.to_dict() for b in self.blocks],
             "image": self.image,
+            "images": self.images,
             "author": self.author,
             "site_name": self.site_name,
             "paywall": self.paywall,
@@ -220,6 +222,90 @@ def first_image(markup: str) -> str | None:
     return None
 
 
+_IMG_SKIP = re.compile(
+    r"(logo|icon|avatar|sprite|badge|pixel|track|analytics|spacer|advert|\bads?/|emoji|"
+    r"favicon|placeholder|default|masthead|brand|share|social|subscribe|newsletter|"
+    r"author|headshot|profile|thumbnail-default)",
+    re.I,
+)
+_IMG_EXT = re.compile(r"\.(?:jpe?g|png|webp|avif)(?:[?#]|$)", re.I)
+
+
+def image_urls(markup: str, base_url: str = "", limit: int = 14) -> list[str]:
+    """Collect large, article-like images from a page, in reading order."""
+    if not markup:
+        return []
+    found: list[str] = []
+
+    def add(url: str | None, width: int | None = None, height: int | None = None) -> None:
+        if not url:
+            return
+        url = html_lib.unescape(str(url)).strip().strip('"\'')
+        if not url or url.startswith(("data:", "blob:", "javascript:")):
+            return
+        if width is not None and width < 180:
+            return
+        if height is not None and height < 110:
+            return
+        if url.startswith("//"):
+            url = "https:" + url
+        elif url.startswith("/"):
+            url = urljoin(base_url, url)
+        if not url.startswith("http"):
+            return
+        if _IMG_SKIP.search(url):
+            return
+        if not _IMG_EXT.search(url) and "format=" not in url and "image" not in url.lower():
+            return
+        if url in found:
+            return
+        found.append(url)
+
+    # Lead image metadata first.
+    for name in ("og:image:secure_url", "og:image", "twitter:image", "twitter:image:src"):
+        add(meta_content(markup, name))
+
+    # JSON-LD image fields (string or list of strings/objects).
+    for match in re.finditer(r'"image"\s*:\s*(\[[^\]]{0,4000}\]|"[^"]{4,500}")', markup, re.I | re.S):
+        for url in re.findall(r'https?://[^"\s,\]]+', match.group(1)):
+            add(url)
+
+    # <img> and <source> tags, respecting obvious size hints and srcset.
+    for tag in re.finditer(r"<(img|source)\b[^>]*>", markup, re.I | re.S):
+        raw = tag.group(0)
+        attrs = {k.lower(): v for k, v in re.findall(r'([a-zA-Z_:.-]+)\s*=\s*["\']([^"\']*)["\']', raw)}
+
+        def dim(name: str) -> int | None:
+            try:
+                return int(float(attrs.get(name, "")))
+            except (TypeError, ValueError):
+                return None
+
+        width = dim("width")
+        height = dim("height")
+        srcset = attrs.get("srcset") or attrs.get("data-srcset") or ""
+        best = None
+        best_width = -1
+        for entry in srcset.split(","):
+            parts = entry.strip().split()
+            if not parts:
+                continue
+            candidate = parts[0]
+            size = 0
+            if len(parts) > 1 and parts[1].endswith("w"):
+                try:
+                    size = int(parts[1][:-1])
+                except ValueError:
+                    size = 0
+            if size > best_width:
+                best, best_width = candidate, size
+        add(best or attrs.get("src") or attrs.get("data-src") or attrs.get("data-original"), width, height)
+        if len(found) >= limit:
+            break
+
+    return found[:limit]
+
+
 def meta_content(markup: str, *names: str) -> str | None:
     for name in names:
         pattern = (
@@ -272,6 +358,16 @@ def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> Extra
         or ""
     ).strip()
     result.image = meta_content(markup, "og:image", "twitter:image")
+    result.images = image_urls(markup, url)
+    if result.image:
+        if result.image.startswith("//"):
+            result.image = "https:" + result.image
+        elif result.image.startswith("/"):
+            result.image = urljoin(url, result.image)
+        if result.image not in result.images:
+            result.images.insert(0, result.image)
+    if not result.image and result.images:
+        result.image = result.images[0]
     result.site_name = meta_content(markup, "og:site_name")
     result.author = meta_content(markup, "author", "article:author", "parsely-author")
     result.published_hint = meta_content(

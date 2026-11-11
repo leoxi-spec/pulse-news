@@ -54,6 +54,21 @@ class ExtractionTests(unittest.TestCase):
         self.assertIn("$40 million", self.result.text)
         self.assertGreater(self.result.word_count, 40)
 
+    def test_multiple_images_are_collected(self):
+        page = """<html><head><meta property="og:image" content="https://example.com/lead.jpg"></head>
+        <body><article><p>""" + ("The council met on Tuesday and discussed the transit plan in detail. " * 8) + """</p>
+        <figure><img src="https://example.com/one.jpg" width="900"><figcaption>One</figcaption></figure>
+        <img src="/two.webp" width="600">
+        <img src="https://example.com/logo.png" width="900">
+        <img src="https://example.com/tiny.jpg" width="40">
+        </article></body></html>"""
+        parsed = htmltext.extract_article(page, "https://example.com/story")
+        self.assertIn("https://example.com/lead.jpg", parsed.images)
+        self.assertIn("https://example.com/one.jpg", parsed.images)
+        self.assertIn("https://example.com/two.webp", parsed.images)
+        self.assertNotIn("https://example.com/logo.png", parsed.images)
+        self.assertNotIn("https://example.com/tiny.jpg", parsed.images)
+
     def test_headings_are_preserved(self):
         kinds = [b.type for b in self.result.blocks]
         self.assertIn("h2", kinds)

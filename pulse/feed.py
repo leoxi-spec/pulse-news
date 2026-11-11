@@ -7,6 +7,7 @@ client consumes, including the date labels that keep "published" and
 from __future__ import annotations
 
 import json
+import re
 from datetime import timedelta
 from urllib.parse import quote
 
@@ -17,7 +18,7 @@ from .sources import TOPICS, TOPIC_ICONS, TOPIC_LABELS, get_source
 from .timeutil import absolute, freshness, iso, now, relative, start_of_day
 
 _CANDIDATE_SQL = """
-SELECT a.id, a.title, a.summary, a.url, a.canonical_url, a.image_url, a.author,
+SELECT a.id, a.title, a.summary, a.url, a.canonical_url, a.image_url, a.images, a.author,
        a.published_at, a.published_raw, a.date_confidence, a.first_seen_at, a.last_seen_at,
        a.primary_topic, a.topics, a.reading_minutes, a.word_count, a.content_state,
        a.paywalled, a.is_breaking, a.story_id, a.source_weight,
@@ -178,6 +179,13 @@ def card(row, *, model: rank.ProfileModel | None = None, saved_ids: set[int] | N
         "date_confidence": labels["date_confidence"],
         "has_full_text": row["content_state"] == "extracted",
     }
+    try:
+        stored_images = json.loads(row["images"] or "[]") if "images" in row.keys() else []
+    except (ValueError, TypeError):
+        stored_images = []
+    if row["image_url"] and row["image_url"] not in stored_images:
+        stored_images.insert(0, row["image_url"])
+    payload["image_count"] = len([url for url in stored_images if url]) or (1 if row["image_url"] else 0)
     payload.update(labels)
     if model is not None:
         payload["reasons"] = rank.why_this(row, model)
@@ -205,6 +213,25 @@ def _preview_of(summary: str, limit: int = 260) -> str:
     if " " in cut:
         cut = cut.rsplit(" ", 1)[0]
     return cut.rstrip(",;:") + "…"
+
+
+_CHILD_BLOCK = re.compile(
+    r"\b(kill(?:ed|ing|s)?|shoot(?:ing|er|ers)?|shot|stab(?:bed|bing)?|war|bomb(?:ing|ed|s)?|"
+    r"attack(?:ed|ing|s)?|assault|rape|suicide|dead|death|murder(?:ed|er|ers)?|hostage|"
+    r"missile|airstrike|massacre|abuse|gun(?:man|men|s)?|terror(?:ist|ists|ism)?|corpse|"
+    r"behead|execution|torture|genocide|fatal|casualt(?:y|ies)|wounded|injured|prisoners?|"
+    r"dies|died|dying|fallec\w*|muere|muerto|muerte|threat(?:en|ens|ened)?|strikes?|military|"
+    r"weapons?|drone|invasion|troops|combat|conflict|clashes?|violence|violent|punch(?:ed)?|"
+    r"explosion|riot|kicked)\b",
+    re.I,
+)
+
+
+def child_safe(row, age: int = 13) -> bool:
+    if int(age or 13) > 9:
+        return True
+    text = f"{row['title'] or ''} {row['summary'] or ''}"
+    return not _CHILD_BLOCK.search(text)
 
 
 def proxied_image(url: str | None) -> str | None:
@@ -252,6 +279,10 @@ def feed_page(
     else:  # for-you and topic/source views use personalisation
         rows = load_candidates(days=days, limit=900, topic=topic, source=source)
         ranked = rank.rank(rows, model, limit=len(rows) or 1)
+
+    age = int(profile["survey"].get("age") or 13)
+    if age <= 9:
+        ranked = [entry for entry in ranked if child_safe(entry[0], age)]
 
     if mode not in ("breaking", "latest"):
         seen_story: set[int] = set()
@@ -328,8 +359,17 @@ def article_detail(article_id: int, profile: dict) -> dict | None:
         if not (len(block.get("text", "")) < 160 and "preferred source" in block.get("text", "").lower())
     ]
     blocks = htmltext.clean_blocks(blocks)
+    try:
+        stored_images = json.loads(row["images"] or "[]") if "images" in row.keys() else []
+    except (ValueError, TypeError):
+        stored_images = []
+    if row["image_url"] and row["image_url"] not in stored_images:
+        stored_images.insert(0, row["image_url"])
+    gallery = [proxied_image(url) for url in stored_images[:14] if url]
     payload.update(
         {
+            "images": gallery,
+            "image_count": len(gallery),
             "blocks": blocks[:120],
             "text_length": len(row["content_text"] or ""),
             "source_about": row["source_about"],
@@ -584,11 +624,20 @@ def source_spotlight(limit: int = 10) -> list[dict]:
 
 def discover(profile: dict) -> dict:
     model = rank.build_model(profile["id"], profile["survey"], profile["prefs"])
+    age = int(profile["survey"].get("age") or 13)
+    safe_topics = {"science", "culture", "sports", "motorsport", "tech", "health"}
+
+    def keep(row):
+        if not child_safe(row, age):
+            return False
+        return age > 8 or row["primary_topic"] in safe_topics
+
     topics = topic_overview(days=7)
     trending = trending_stories(limit=6)
     longreads = [
         card(row, model=model)
         for row in load_candidates(days=10, limit=12, mode="longreads")
+        if keep(row)
     ]
     picks = db.query(
         """
@@ -612,6 +661,8 @@ def discover(profile: dict) -> dict:
     seen_topic: dict[str, int] = {}
     editors = []
     for row in picks:
+        if not keep(row):
+            continue
         topic = row["primary_topic"]
         if seen_topic.get(topic, 0) >= 2:
             continue

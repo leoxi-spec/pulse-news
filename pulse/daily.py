@@ -366,7 +366,7 @@ def trending(limit: int = 8) -> list[dict]:
     return data
 
 
-def quiz(limit: int = 3) -> dict:
+def quiz(limit: int = 3, age: int = 13) -> dict:
     """News-literacy quiz: match a real archived headline to its outlet."""
     today_seed = date.today().toordinal()
     rng = random.Random(today_seed)
@@ -381,12 +381,16 @@ def quiz(limit: int = 3) -> dict:
     for row in source_rows:
         by_country.setdefault(row["country"] or "", []).append(row["name"])
     names = [row["name"] for row in source_rows]
+    topic_guard = ""
+    if int(age or 13) <= 8:
+        topic_guard = " AND a.primary_topic IN ('science','culture','sports','motorsport','tech','health')"
     rows = db.query(
-        """SELECT a.id, a.title, s.name AS source_name, s.country AS source_country
+        f"""SELECT a.id, a.title, s.name AS source_name, s.country AS source_country
            FROM articles a JOIN sources s ON s.id = a.source_id
            WHERE COALESCE(a.published_at, a.first_seen_at) >= datetime('now', '-3 days')
              AND a.lang = 'en'
              AND length(a.title) BETWEEN 28 AND 130
+             {topic_guard}
            ORDER BY a.id DESC LIMIT 400"""
     )
     # The archive is multilingual; keep the quiz in English so headlines are
@@ -474,11 +478,29 @@ def _widget_rows(where: str, params: tuple = (), limit: int = 3, order: str = "C
     return [_article_brief(row) for row in rows]
 
 
-def widget_stories() -> dict:
+_CHILD_BLOCK = re.compile(
+    r"\b(kill(?:ed|ing)?|shoot(?:ing|er)?|shot|war|bomb|attack|assault|rape|suicide|dead|death|"
+    r"murder|hostage|missile|airstrike|massacre|abuse|gun|terror|behead|torture|genocide|fatal|casualt|wounded|injured|"
+    r"dies|died|dying|kick(?:ed|ing)?|threat(?:en|ens|ened)?|strikes?|military|weapons?|drone|invasion|troops|"
+    r"combat|conflict|clashes?|violence|violent|punch(?:ed)?|explosion|riot|prisoners?|fallec\w*|muere|muerto|muerte|décès|mort)\b",
+    re.I,
+)
+
+
+def _child_ok(item: dict, age: int = 13) -> bool:
+    if int(age or 13) <= 8 and item.get("topic") in ("politics", "business", "world"):
+        return False
+    return not _CHILD_BLOCK.search(f"{item.get('title') or ''} {item.get('preview') or ''}")
+
+
+def widget_stories(age: int = 13) -> dict:
     """Small ready-made story sets for the customisable Today board."""
     global _WIDGET_CACHE
     if time.time() - _WIDGET_CACHE[0] < 300:
-        return _WIDGET_CACHE[1]
+        cached = _WIDGET_CACHE[1]
+        if int(age or 13) > 9:
+            return cached
+        return _filter_widgets(cached, age)
     topics = [row["primary_topic"] for row in db.query(
         "SELECT primary_topic FROM articles GROUP BY primary_topic ORDER BY COUNT(*) DESC LIMIT 12"
     )]
@@ -520,10 +542,41 @@ def widget_stories() -> dict:
             break
     data["number"] = number
     _WIDGET_CACHE = (time.time(), data)
-    return data
+    return data if int(age or 13) > 9 else _filter_widgets(data, age)
+
+
+def _filter_widgets(data: dict, age: int = 13) -> dict:
+    def clean(list_value):
+        return [item for item in (list_value or []) if _child_ok(item, age)]
+    result = dict(data)
+    for key in ("top", "quick", "long", "good", "photo", "sports", "motorsport", "science", "culture", "most", "next"):
+        result[key] = clean(result.get(key))
+    for key in ("topic", "source"):
+        block = dict(result.get(key) or {})
+        block["items"] = clean(block.get("items"))
+        result[key] = block
+    if result.get("number") and not _child_ok(result["number"].get("item") or {}, age):
+        result["number"] = None
+    if len(result.get("top") or []) < 3:
+        extra = clean(result.get("science")) + clean(result.get("sports")) + clean(result.get("culture")) + clean(result.get("photo"))
+        seen = {item.get("id") for item in result.get("top") or []}
+        for item in extra:
+            if len(result["top"]) >= 3:
+                break
+            if item.get("id") not in seen:
+                result["top"].append(item)
+                seen.add(item.get("id"))
+    return result
 
 
 def payload(profile_id: str | None = None) -> dict:
+    age = 13
+    if profile_id:
+        row = db.query_one("SELECT survey FROM profiles WHERE id=?", (profile_id,))
+        try:
+            age = int(json.loads(row["survey"] or "{}").get("age", 13)) if row else 13
+        except (ValueError, TypeError, AttributeError):
+            age = 13
     history, history_label = history_today()
     return {
         "date": day_key(),
@@ -535,7 +588,7 @@ def payload(profile_id: str | None = None) -> dict:
         "trending": trending(),
         "history": history,
         "history_label": history_label,
-        "quiz": quiz(),
+        "quiz": quiz(age=age),
         "challenge": challenge(profile_id),
-        "widgets": widget_stories(),
+        "widgets": widget_stories(age),
     }

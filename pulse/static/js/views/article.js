@@ -58,6 +58,7 @@ function articleMarkup(a, p) {
   const source = a.source || {};
   const blocks = a.blocks || [];
   const hasBody = blocks.length > 0;
+  const gallery = (Array.isArray(a.images) && a.images.length ? a.images : (a.image ? [a.image] : [])).filter(Boolean);
   const dateLabel = a.date_label === 'First seen' ? 'First seen' : 'Published';
   const dateRel = a.published_relative || timeAgo(a.published_at || a.first_seen_at);
 
@@ -105,7 +106,22 @@ function articleMarkup(a, p) {
       </div>
       <div class="reaction-bar" id="reaction-bar" aria-label="React to this story"></div>
 
-      ${a.image ? html`<figure class="article__hero"><img src="${a.image}" alt="" fetchpriority="high" decoding="async"></figure>` : ''}
+      ${gallery.length ? html`
+        <figure class="article__hero article__hero--photos">
+          <button class="hero-photo" data-gallery-open="0" aria-label="Open photo 1 of ${gallery.length}">
+            <img src="${gallery[0]}" alt="" fetchpriority="high" decoding="async">
+            <span class="photo-count">${gallery.length} photo${gallery.length === 1 ? '' : 's'}</span>
+          </button>
+          ${gallery.length > 1 ? html`
+            <div class="hero-thumbs">
+              ${gallery.slice(1, 4).map((src, index) => html`
+                <button class="hero-thumb" data-gallery-open="${index + 1}" aria-label="Open photo ${index + 2} of ${gallery.length}">
+                  <img src="${src}" alt="" loading="lazy" decoding="async">
+                </button>`)}
+              ${gallery.length > 4 ? html`
+                <button class="hero-more" data-gallery-open="0" aria-label="View all ${gallery.length} photos">+${gallery.length - 4}</button>` : ''}
+            </div>` : ''}
+        </figure>` : ''}
 
       <div id="overview-slot">
         <div class="overview">
@@ -402,7 +418,7 @@ function renderStoryExtras(root, article) {
                 ${numbers.map((number) => html`<li><b>${number.value}</b><span>${number.context}</span></li>`)}
               </ul>
             </div>` : ''}
-          <div class="card card-pad">
+          <div class="card card-pad class-card">
             <h3 class="extras-card__title">🗣️ Three questions for class</h3>
             <ol class="class-list">
               ${questions.map((question) => html`<li>${question}</li>`)}
@@ -574,7 +590,75 @@ function onListen(button, article) {
   speakNext();
 }
 
+function bindGallery(root, article) {
+  const images = (Array.isArray(article.images) && article.images.length ? article.images : (article.image ? [article.image] : [])).filter(Boolean);
+  if (!images.length) return;
+  let layer = null;
+  let index = 0;
+
+  const close = () => {
+    if (!layer) return;
+    layer.remove();
+    layer = null;
+    document.body.classList.remove('no-scroll');
+    document.removeEventListener('keydown', onKey);
+  };
+
+  const paint = () => {
+    if (!layer) return;
+    layer.querySelector('img').src = images[index];
+    layer.querySelector('[data-count]').textContent = `${index + 1} / ${images.length}`;
+    layer.querySelector('[data-prev]').disabled = index === 0;
+    layer.querySelector('[data-next]').disabled = index === images.length - 1;
+  };
+
+  const onKey = (event) => {
+    if (event.key === 'Escape') close();
+    else if (event.key === 'ArrowLeft' && index > 0) { index -= 1; paint(); }
+    else if (event.key === 'ArrowRight' && index < images.length - 1) { index += 1; paint(); }
+  };
+
+  const open = (start) => {
+    index = Math.max(0, Math.min(images.length - 1, start));
+    layer = document.createElement('div');
+    layer.className = 'lightbox';
+    layer.innerHTML = html`
+      <div class="lightbox__bar">
+        <span class="lightbox__brand">${raw(icons.camera)} Photos</span>
+        <span class="lightbox__count" data-count>${index + 1} / ${images.length}</span>
+        <button class="lightbox__close" data-close aria-label="Close photos">${raw(icons.close)}</button>
+      </div>
+      <button class="lightbox__nav lightbox__nav--prev" data-prev aria-label="Previous photo">${raw(icons.chevron)}</button>
+      <img src="${images[index]}" alt="">
+      <button class="lightbox__nav lightbox__nav--next" data-next aria-label="Next photo">${raw(icons.chevron)}</button>
+      <p class="lightbox__hint">Swipe or use ← → · Esc to close</p>`;
+    document.body.append(layer);
+    document.body.classList.add('no-scroll');
+    paint();
+    layer.querySelector('[data-close]').addEventListener('click', close);
+    layer.querySelector('[data-prev]').addEventListener('click', () => { if (index > 0) { index -= 1; paint(); } });
+    layer.querySelector('[data-next]').addEventListener('click', () => { if (index < images.length - 1) { index += 1; paint(); } });
+    layer.addEventListener('click', (event) => { if (event.target === layer) close(); });
+    let touchX = null;
+    layer.addEventListener('touchstart', (event) => { touchX = event.touches[0]?.clientX ?? null; }, { passive: true });
+    layer.addEventListener('touchend', (event) => {
+      if (touchX === null) return;
+      const delta = (event.changedTouches[0]?.clientX ?? touchX) - touchX;
+      touchX = null;
+      if (Math.abs(delta) < 45) return;
+      if (delta < 0 && index < images.length - 1) { index += 1; paint(); }
+      if (delta > 0 && index > 0) { index -= 1; paint(); }
+    }, { passive: true });
+    document.addEventListener('keydown', onKey);
+  };
+
+  root.querySelectorAll('[data-gallery-open]').forEach((button) => {
+    button.addEventListener('click', () => open(Number(button.dataset.galleryOpen || 0)));
+  });
+}
+
 function bindArticle(root, article) {
+  bindGallery(root, article);
   const prose = root.querySelector('#prose');
 
   root.querySelectorAll('[data-act]').forEach((button) => {

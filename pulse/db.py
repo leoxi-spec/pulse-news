@@ -26,7 +26,7 @@ from .timeutil import iso, now, parse_iso
 
 log = get_logger("db")
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS articles (
     summary            TEXT,
     author             TEXT,
     image_url          TEXT,
+    images             TEXT,
     published_at       TEXT,
     published_raw      TEXT,
     date_confidence    TEXT NOT NULL DEFAULT 'unknown',
@@ -269,6 +270,10 @@ class Database:
                 return
             conn = self.connect()
             conn.executescript(_SCHEMA)
+            # Lightweight migrations for databases created before a column existed.
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(articles)")}
+            if "images" not in columns:
+                conn.execute("ALTER TABLE articles ADD COLUMN images TEXT")
             conn.execute(
                 "INSERT INTO meta(key, value) VALUES('schema_version', ?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",

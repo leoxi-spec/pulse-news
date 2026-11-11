@@ -60,6 +60,19 @@ const THEME_COLORS = {
   honey: '#fdf7e7', seafoam: '#eefaf7', cloud: '#f7f8fc', twilight: '#171726', matcha: '#f1f6ea',
 };
 
+export const AGE_BANDS = [
+  { id: 'junior', label: 'Junior', icon: '🧸', min: 6, max: 8, mode: 'kids', goal: 2, length: 'short', scale: 1.15, blurb: 'Big pictures, play and gentle news' },
+  { id: 'kids', label: 'Kids', icon: '🎒', min: 9, max: 11, mode: 'kids', goal: 3, length: 'short', scale: 1.08, blurb: 'Quizzes, explainers and bigger type' },
+  { id: 'tween', label: 'Tween', icon: '🚀', min: 12, max: 14, mode: 'teens', goal: 5, length: 'medium', scale: 1, blurb: 'The full feed, training wheels off' },
+  { id: 'teen', label: 'Teen', icon: '🎧', min: 15, max: 16, mode: 'teens', goal: 6, length: 'medium', scale: 1, blurb: 'Deeper reads and study tools' },
+  { id: 'senior', label: 'Senior', icon: '🎓', min: 17, max: 18, mode: 'teens', goal: 8, length: 'long', scale: 1, blurb: 'Research mode and long reads' },
+];
+
+export function ageBand(age) {
+  const value = Math.max(6, Math.min(18, Number(age) || 13));
+  return AGE_BANDS.find((band) => value >= band.min && value <= band.max) || AGE_BANDS[3];
+}
+
 export const THEMES = [
   { id: 'system', label: 'Auto', bg: 'linear-gradient(135deg,#0a0c11 50%,#f6f7fb 50%)', text: '#ffffff', grad: 'linear-gradient(120deg,#7c5cff,#ff4d8d)' },
   { id: 'dark', label: 'Dark', bg: '#0a0c11', text: '#eef1f6', grad: 'linear-gradient(120deg,#7c5cff,#ff4d8d)' },
@@ -112,10 +125,13 @@ export function applyPrefs(p) {
   document.body.classList.toggle('no-confetti', p.confetti === false);
   document.body.classList.toggle('no-haptics', p.haptics === false);
   const age = Number(state.profile?.survey?.age || 13);
-  const mode = p.mode === 'kids' ? 'kids' : p.mode === 'teens' ? 'teens' : (age <= 12 ? 'kids' : 'teens');
+  const band = ageBand(age);
+  const mode = p.mode === 'kids' ? 'kids' : p.mode === 'teens' ? 'teens' : band.mode;
   document.body.dataset.mode = mode;
+  document.body.dataset.band = band.id;
   document.body.classList.toggle('mode-kids', mode === 'kids');
-  const scale = (TEXT_SCALES[Math.max(0, Math.min(4, Number(p.text_size) || 0))] || 1) * (mode === 'kids' ? 1.08 : 1);
+  const scale = (TEXT_SCALES[Math.max(0, Math.min(4, Number(p.text_size) || 0))] || 1)
+    * Math.max(band.scale || 1, mode === 'kids' ? 1.06 : 1);
   document.documentElement.style.setProperty('--text-scale', String(scale));
   document.documentElement.style.setProperty('--line-height', String(p.line_spacing || 1.72));
   try {

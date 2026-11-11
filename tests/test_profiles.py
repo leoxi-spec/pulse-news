@@ -33,6 +33,15 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(self.profile["prefs"]["theme"], "system")
         self.assertEqual(self.profile["daily_goal"], 5)
 
+    def test_age_bands_scale_reading(self):
+        self.assertEqual([profiles.goal_for_age(age) for age in (6, 10, 14, 18)], [2, 4, 6, 8])
+        self.assertEqual(profiles.length_for_age(6), "short")
+        self.assertEqual(profiles.length_for_age(13), "medium")
+        self.assertEqual(profiles.length_for_age(17), "long")
+        updated = profiles.update(self.profile["id"], survey={"age": 10})
+        self.assertEqual(updated["prefs"]["daily_goal"], 4)
+        self.assertEqual(updated["prefs"]["reading_length"], "short")
+
     def test_survey_sanitisation(self):
         updated = profiles.update(
             self.profile["id"],

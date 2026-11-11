@@ -1,7 +1,7 @@
 import { get, post, patch, del } from '../api.js';
 import {
   state, prefs, savePrefs, saveSurvey, record, setProfile, profileInitials,
-  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES,
+  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES, ageBand,
 } from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
@@ -219,7 +219,7 @@ export async function briefView(root) {
     <p class="page-sub">The handful of stories that matter today, in about two minutes.</p>
     <div id="brief-body" class="section">${skeletonFeed(3)}</div>`;
   try {
-    const data = await get('/api/brief', 60, true);
+    const data = await get(`/api/brief?size=${briefSize()}`, 60, true);
     const body = root.querySelector('#brief-body');
     if (!data.stories?.length) {
       body.innerHTML = empty({ icon: '☕', title: 'No brief yet', text: 'Feeds are still filling up. Come back after the next refresh.', action: '<a class="btn btn--primary" href="/" data-link>Go to feed</a>' });
@@ -621,6 +621,7 @@ export async function profileView(root, ctx) {
   const badges = stats.badges || profile.badges || [];
   const weekly = stats.weekly || [];
   const age = Math.max(6, Math.min(18, Number(profile.survey?.age || 13)));
+  const band = ageBand(age);
   const mode = p.mode === 'kids' ? 'kids' : p.mode === 'teens' ? 'teens' : (age <= 12 ? 'kids' : 'teens');
   const widgetIds = Array.isArray(p.widgets) && p.widgets.length ? p.widgets : DEFAULT_WIDGET_IDS;
   const days = [];
@@ -664,6 +665,7 @@ export async function profileView(root, ctx) {
           <p class="tiny muted">Level ${level.level} · ${level.title} · ${number(level.xp)} XP</p>
         </div>
         <div class="hstack">
+          <span class="pill-progress pill-progress--band" title="${band.blurb}">${band.icon} ${band.label} · ${age}</span>
           ${p.show_reading_streak !== false ? html`<span class="pill-progress streak-pill">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
           <span class="pill-progress">Today ${today.read}/${today.goal}</span>
         </div>
@@ -806,7 +808,7 @@ export async function profileView(root, ctx) {
           </select>
         </div>
         <div class="settings-row">
-          <div><div class="settings-row__label">Reading plan</div><div class="settings-row__hint">${goalForAge(age)} stories a day · ${lengthForAge(age)} reads · level ${levels().level}</div></div>
+          <div><div class="settings-row__label">Reading plan</div><div class="settings-row__hint">${band.icon} ${band.label} · ${goalForAge(age)} stories a day · ${lengthForAge(age)} reads</div></div>
           <span class="badge badge--topic">${age <= 12 ? 'Kids' : 'Teens'}</span>
         </div>
       </div>
@@ -1079,6 +1081,11 @@ function bindProfile(root, p, today, profile) {
 const ONBOARD_STEPS = ['welcome', 'grade', 'topics', 'sources', 'reading', 'extras'];
 const DRAFT_KEY = 'pulse.onboarding';
 
+function briefSize() {
+  const age = Number(state.profile?.survey?.age || 13);
+  return age <= 8 ? 3 : age <= 11 ? 4 : 5;
+}
+
 function goalForAge(age) {
   const value = Math.max(6, Math.min(18, Number(age) || 13));
   return Math.max(2, Math.min(9, 2 + Math.floor((value - 6) / 2)));
@@ -1243,7 +1250,7 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
               <span>${age}<span class="choice__sub">years</span></span>
             </button>`)}
         </div>
-        <p class="small muted" style="margin-top:.8rem">At ${draft.age || 13}, we will start you on <b>${goalForAge(draft.age || 13)} stories a day</b> and ${lengthForAge(draft.age || 13)} reads.</p>
+        <p class="small muted" style="margin-top:.8rem">${ageBand(draft.age || 13).icon} <b>${ageBand(draft.age || 13).label}</b> · at ${draft.age || 13}, we will start you on <b>${goalForAge(draft.age || 13)} stories a day</b> and ${lengthForAge(draft.age || 13)} reads. ${ageBand(draft.age || 13).blurb}.</p>
       </div>`;
   }
   if (key === 'topics') {
@@ -1339,7 +1346,7 @@ function bindStep(key, body, draft, persist) {
         body.querySelectorAll('[data-age]').forEach((b) => b.classList.toggle('is-on', b === button));
         const note = body.querySelector('.small.muted b');
         const tail = body.querySelector('.small.muted');
-        if (tail) tail.innerHTML = `At ${draft.age}, we will start you on <b>${goalForAge(draft.age)} stories a day</b> and ${lengthForAge(draft.age)} reads.`;
+        if (tail) tail.innerHTML = `${ageBand(draft.age).icon} <b>${ageBand(draft.age).label}</b> · at ${draft.age}, we will start you on <b>${goalForAge(draft.age)} stories a day</b> and ${lengthForAge(draft.age)} reads.`;
         void note;
         persist();
       });

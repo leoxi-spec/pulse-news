@@ -29,9 +29,9 @@ const NAV = [
   { href: '/sports', label: 'Scores', icon: 'trophy' },
   { href: '/brief', label: 'Brief', icon: 'bolt' },
   { href: '/saved', label: 'Saved', icon: 'bookmark', mobile: true },
-  { href: '/study', label: 'Study', icon: 'book' },
-  { href: '/research', label: 'Research', icon: 'quote' },
-  { href: '/sources', label: 'Sources', icon: 'filter' },
+  { href: '/study', label: 'Study', icon: 'book', minAge: 8 },
+  { href: '/research', label: 'Research', icon: 'quote', minAge: 12 },
+  { href: '/sources', label: 'Sources', icon: 'filter', minAge: 12 },
   { href: '/profile', label: 'Profile', icon: 'user', mobile: true },
 ];
 
@@ -73,8 +73,10 @@ function renderNav() {
   const path = currentPath();
   const isActive = (href) => (href === '/' ? path === '/' : path.startsWith(href));
   const nav = document.getElementById('nav');
+  const navAge = Number(state.profile?.survey?.age || 13);
+  const visibleNav = NAV.filter((item) => !item.minAge || navAge >= item.minAge);
   if (nav) {
-    nav.innerHTML = NAV.map((item) => html`
+    nav.innerHTML = visibleNav.map((item) => html`
       <a class="${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link title="${item.label}">
         ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
         ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}

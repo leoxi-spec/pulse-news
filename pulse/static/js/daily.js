@@ -2,7 +2,7 @@
 // make Pulse feel like a place to hang out rather than a wall of headlines.
 import { get, post } from './api.js';
 import { html, raw, icons, toast, confetti, copyText, modal } from './ui.js';
-import { state, prefs, savePrefs, dailyProgress, streak, levels } from './store.js';
+import { state, prefs, savePrefs, dailyProgress, streak, levels, ageBand } from './store.js';
 import { sectionHead } from './components.js';
 import { chooseAnimation, chooseNoise, setNoiseVolume } from './ambient.js';
 import { navigate } from './router.js';
@@ -39,11 +39,20 @@ function write(key, value) {
 }
 
 const DEFAULT_WIDGETS = ['challenge', 'word', 'poll', 'quiz', 'top3', 'photo', 'journal', 'streak'];
+const DEFAULTS_BY_BAND = {
+  junior: ['challenge', 'word', 'photo', 'top3', 'streak', 'quiz', 'guess', 'journal'],
+  kids: ['challenge', 'word', 'poll', 'quiz', 'top3', 'photo', 'thisorthat', 'streak'],
+  tween: DEFAULT_WIDGETS,
+  teen: ['challenge', 'quiz', 'top3', 'poll', 'quick', 'photo', 'debate', 'streak'],
+  senior: ['challenge', 'top3', 'longread', 'most', 'quiz', 'numbers', 'tip', 'streak'],
+};
 
 function widgetOrder() {
   const saved = Array.isArray(prefs().widgets) ? prefs().widgets : [];
   const valid = saved.filter((id) => WIDGETS.some((widget) => widget.id === id));
-  return valid.length ? valid : DEFAULT_WIDGETS;
+  if (valid.length) return valid;
+  const band = ageBand(state.profile?.survey?.age || 13);
+  return DEFAULTS_BY_BAND[band.id] || DEFAULT_WIDGETS;
 }
 
 const MOODS = [

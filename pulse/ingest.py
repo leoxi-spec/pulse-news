@@ -575,7 +575,7 @@ class IngestService:
                 conn.execute(
                     """
                     UPDATE articles SET content_blocks=?, content_text=?, word_count=?, reading_minutes=?,
-                        content_state=?, image_url=COALESCE(image_url, ?), author=COALESCE(author, ?),
+                        content_state=?, image_url=COALESCE(image_url, ?), images=?, author=COALESCE(author, ?),
                         published_at=COALESCE(published_at, ?),
                         date_confidence=CASE WHEN published_at IS NULL AND ? IS NOT NULL THEN ? ELSE date_confidence END,
                         summary=CASE WHEN (summary IS NULL OR length(summary) < 120) AND ? <> '' THEN ? ELSE summary END
@@ -583,7 +583,8 @@ class IngestService:
                     """,
                     (
                         json.dumps(blocks), text, words, minutes, "extracted",
-                        _safe_image(parsed.image), parsed.author or None,
+                        _safe_image(parsed.image), json.dumps(parsed.images[:14]),
+                        parsed.author or None,
                         iso(published) if published else None,
                         iso(published) if published else None, confidence,
                         htmltext.summarize(text, 2, 420), htmltext.summarize(text, 2, 420),

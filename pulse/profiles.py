@@ -622,7 +622,15 @@ def daily_brief(profile_id: str, *, size: int = 5) -> dict:
     rows = load_candidates(days=1, limit=400)
     if not rows:
         rows = load_candidates(days=4, limit=400)
-    picked = rank.rank(rows, model, limit=size, diversity=True)
+    from .feed import child_safe
+    age = int(profile["survey"].get("age") or 13)
+    if age <= 8:
+        allowed = {"science", "culture", "sports", "motorsport", "tech", "health"}
+        rows = [row for row in rows if row["primary_topic"] in allowed]
+    picked = rank.rank(rows, model, limit=size * 3, diversity=True)
+    if age <= 9:
+        picked = [entry for entry in picked if child_safe(entry[0], age)][:size]
+    picked = picked[:size]
     items = []
     words = 0
     for row, score_value, reasons in picked:

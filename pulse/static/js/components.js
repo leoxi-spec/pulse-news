@@ -177,6 +177,7 @@ export function mosaicCard(item, { size = 'small' } = {}) {
             <i>${item.source?.name || ''}</i>
           </span>
           <img class="mcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">
+          ${item.image_count > 1 ? html`<span class="photo-count photo-count--card">${raw(icons.camera)} ${item.image_count}</span>` : ''}
           ${isFreshBreaking(item) && !hasImage ? '' : isFreshBreaking(item) ? html`<span class="badge badge--breaking mcard__flag">Breaking</span>` : ''}
         </a>` : ''}
       ${hasImage ? '' : html`
@@ -215,6 +216,7 @@ export function topCard(item) {
             <i>${item.source?.name || ''}</i>
           </span>
           <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
+          ${item.image_count > 1 ? html`<span class="photo-count photo-count--card">${raw(icons.camera)} ${item.image_count}</span>` : ''}
         </a>` : html`
         <a class="top-card__banner" href="/article/${item.id}" data-link aria-label="${item.title}">
           <span aria-hidden="true">${topicEmoji(item.topic) || '📰'}</span>
