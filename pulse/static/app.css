@@ -1817,6 +1817,7 @@ body.reels-mode .toast-root { top: calc(env(safe-area-inset-top) + 7.4rem); bott
 .reels__track {
   height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
   scrollbar-width: none; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;
 }
 .reels__track::-webkit-scrollbar { display: none; }
 
@@ -1930,14 +1931,42 @@ body.reels-mode .toast-root { top: calc(env(safe-area-inset-top) + 7.4rem); bott
 .reel-pill svg { width: 13px; height: 13px; }
 .reel-pill.is-on { background: var(--accent); border-color: var(--accent); }
 
-.reels__bars {
+.reels__progress {
   position: absolute; top: calc(env(safe-area-inset-top) + .12rem); left: .8rem; right: .8rem; z-index: 7;
-  display: flex; gap: 3px;
+  height: 3px; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden;
 }
-.reel-bar { flex: 1; height: 2.5px; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden; }
-.reel-bar i { display: block; width: 0; height: 100%; background: #fff; border-radius: inherit; }
-.reel-bar.is-seen i { background: rgba(255,255,255,.55); }
-.reel-bar.is-active i { background: #fff; }
+.reels__progress i { display: block; width: 100%; height: 100%; background: #fff; border-radius: inherit; }
+
+.reels__live {
+  width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%;
+  background: rgba(10,12,17,.5); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(14px);
+  cursor: pointer; padding: 0;
+}
+.reels__live i {
+  width: 6px; height: 6px; border-radius: 50%; background: #37d67a;
+  box-shadow: 0 0 0 0 rgba(55,214,122,.45); animation: reel-live 2.2s ease-out infinite;
+}
+.reels__live.is-new i { background: #ff4d6d; box-shadow: 0 0 0 0 rgba(255,77,109,.5); }
+@keyframes reel-live {
+  0% { box-shadow: 0 0 0 0 rgba(55,214,122,.45); }
+  70% { box-shadow: 0 0 0 7px rgba(55,214,122,0); }
+  100% { box-shadow: 0 0 0 0 rgba(55,214,122,0); }
+}
+.reels__count {
+  min-width: 26px; height: 26px; padding: 0 .35rem; border-radius: 999px;
+  display: grid; place-items: center; background: rgba(10,12,17,.5);
+  border: 1px solid rgba(255,255,255,.16); color: #fff;
+  font-size: .64rem; font-weight: 800; font-variant-numeric: tabular-nums; backdrop-filter: blur(14px);
+}
+
+.reels__fresh {
+  position: absolute; top: calc(env(safe-area-inset-top) + 7.25rem); left: 50%; transform: translateX(-50%);
+  z-index: 9; display: inline-flex; align-items: center; gap: .35rem;
+  padding: .45rem .8rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--grad); color: #fff; font-size: .7rem; font-weight: 800;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.7); white-space: nowrap;
+}
+.reels__fresh span { font-size: .9rem; }
 
 .reels__hint {
   position: absolute; top: calc(env(safe-area-inset-top) + 7.3rem); left: 50%; transform: translateX(-50%); z-index: 5;
@@ -1959,7 +1988,8 @@ body.reels-mode .toast-root { top: calc(env(safe-area-inset-top) + 7.4rem); bott
   .reel { box-shadow: 0 0 80px rgba(0,0,0,.6); }
   .reel__content { padding-right: 5.4rem; }
   .reel__title { font-size: 2.15rem; }
-  .reels__hint { top: 5.1rem; }
+  .reels__hint, .reels__fresh { top: 5.1rem; }
+  .reels__progress { max-width: 560px; left: 50%; right: auto; transform: translateX(-50%); width: 100%; }
 }
 @media (max-width: 560px) {
   .reels__tabs { order: 3; flex: 1 0 100%; margin-top: .3rem; }
@@ -1967,3 +1997,15 @@ body.reels-mode .toast-root { top: calc(env(safe-area-inset-top) + 7.4rem); bott
 @media (max-width: 420px) {
   .reel__content { padding-bottom: 2.2rem; }
 }
+
+.reel--loader { display: grid; place-items: center; background: radial-gradient(120% 80% at 50% 0%, #161a26 0%, #05070c 70%); }
+.reel__loader { display: flex; flex-direction: column; align-items: center; gap: .8rem; text-align: center; padding: 2rem; }
+.reel__loader p { font-size: .85rem; line-height: 1.5; color: rgba(255,255,255,.68); max-width: 280px; }
+.reel--loader.is-done .reels__spinner { display: none; }
+.reel--loader.is-done { background: #05070c; }
+
+@media (max-width: 430px) {
+  .reels__top { padding-left: .6rem; padding-right: .6rem; }
+}
+
+.reels__fresh[hidden], .reel__loader [hidden] { display: none !important; }
