@@ -42,7 +42,9 @@ classes who still wants to understand what's happening. That means:
 | **Symbol key** | Sidebar → **Key** (or press `?`) explains every icon, badge and score marker. |
 | **Search everywhere** | A search bar on the home page plus a command palette (`⌘K` or `/`) with headlines, topics, sources and quick actions as you type. |
 | **Front-page sections** | Apple News-style **Top Stories** grid plus configurable rows: brief, For you, scores, any topic, long reads, saved, research. Reorder or hide them in *Customize*. |
-| **10 themes** | Auto, Dark, Light, Sepia, Midnight, Forest, Sunset, Mono, Rose, Ocean. |
+| **15 themes** | Auto, Dark, Light, Sepia, Midnight, Forest, Sunset, Mono, Rose, Ocean, plus five calmer palettes: **Dusk, Sage, Sand, Mist, Clay**. |
+| **Room to read** | A slim icon rail replaces the old wide sidebar (expandable with one click), a personalised **Today** masthead, and a wider reading column. |
+| **Sports pins** | Apple News-style **Pinned** bar: pin leagues and teams (★ on any team), filter with **My sports**, and see pinned games on the front page. Scores stream in progressively so the page never waits on 15 leagues. |
 | **Research desk** | Turn every saved story into a bibliography in MLA, APA, Chicago, Harvard or BibTeX; add books/websites by hand; export `.txt`/`.bib`; quote collector from your notes. |
 | **Reader** | Full text when the publisher allows it, paywall/preview handling when not, focus mode, adjustable type (sans/serif/dyslexia-friendly), highlight & note. |
 | **Permanent archive** | Articles are never deleted. Full-text search covers everything ever ingested, with filters (`source:bbc`, `topic:tech`, `after:2025-01-01`, `-trump`). |

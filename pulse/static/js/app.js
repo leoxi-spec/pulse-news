@@ -74,7 +74,7 @@ function renderNav() {
         ${raw(icons.search)}<span>Search</span><kbd class="kbd" style="margin-left:auto">⌘K</kbd>
       </button>
       ${NAV.map((item) => html`
-        <a class="nav__item ${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link>
+        <a class="nav__item ${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link title="${item.label}">
           ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
           ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
         </a>`)}
@@ -200,6 +200,19 @@ function bindShell() {
     if (!q) return;
     router.navigate(`/search?q=${encodeURIComponent(q)}`);
     input.blur();
+  });
+
+  document.getElementById('sidebar-toggle')?.addEventListener('click', async () => {
+    try {
+      const next = !(prefs().sidebar_slim !== false);
+      await savePrefs({ sidebar_slim: next });
+      const button = document.getElementById('sidebar-toggle');
+      if (button) {
+        button.title = next ? 'Expand sidebar' : 'Collapse sidebar';
+        button.setAttribute('aria-label', button.title);
+      }
+      renderNav();
+    } catch (err) { toast(err.message, { type: 'bad' }); }
   });
 
   document.getElementById('theme-btn')?.addEventListener('click', () => {

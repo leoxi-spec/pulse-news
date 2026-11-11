@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -182,22 +183,45 @@ def _normalise_event(event: dict, league: League) -> dict | None:
     }
 
 
-def all_scoreboards(*, force: bool = False, leagues: list[str] | None = None) -> dict:
+def all_scoreboards(*, force: bool = False, leagues: list[str] | None = None, deadline_seconds: float = 8.0) -> dict:
     selected = [LEAGUE_BY_SLUG[s] for s in (leagues or []) if s in LEAGUE_BY_SLUG] or list(LEAGUES)
     results: dict[str, dict] = {}
     if not settings.sports_enabled:
         return {"leagues": [], "events": [], "fetched_at": iso(), "disabled": True}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(selected))) as pool:
+    started = time.monotonic()
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(selected)))
+    try:
         futures = {pool.submit(scoreboard, league.slug, force=force): league for league in selected}
-        for future in concurrent.futures.as_completed(futures):
+        pending = set(futures)
+        while pending:
+            remaining = deadline_seconds - (time.monotonic() - started)
+            if remaining <= 0:
+                break
+            done, pending = concurrent.futures.wait(
+                pending, timeout=min(remaining, 0.5),
+                return_when=concurrent.futures.FIRST_COMPLETED,
+            )
+            for future in done:
+                league = futures[future]
+                try:
+                    results[league.slug] = future.result()
+                except Exception as exc:  # pragma: no cover - defensive
+                    log.warning("scoreboard %s crashed: %s", league.slug, exc)
+                    results[league.slug] = {
+                        "league": _league_meta(league), "events": [], "fetched_at": iso(), "error": str(exc)
+                    }
+        for future in pending:
             league = futures[future]
-            try:
-                results[league.slug] = future.result()
-            except Exception as exc:  # pragma: no cover - defensive
-                log.warning("scoreboard %s crashed: %s", league.slug, exc)
-                results[league.slug] = {
-                    "league": _league_meta(league), "events": [], "fetched_at": iso(), "error": str(exc)
-                }
+            future.cancel()
+            results[league.slug] = {
+                "league": _league_meta(league), "events": [], "fetched_at": iso(),
+                "error": "still loading",
+            }
+    finally:
+        # Don't block the HTTP response on stragglers: they keep warming the
+        # cache in the background and the next poll picks them up.
+        pool.shutdown(wait=False, cancel_futures=True)
+    partial = any(payload.get("error") == "still loading" for payload in results.values())
     events = []
     for payload in results.values():
         for event in payload.get("events", []):
@@ -214,6 +238,7 @@ def all_scoreboards(*, force: bool = False, leagues: list[str] | None = None) ->
         "completed_count": len(finished),
         "fetched_at": iso(),
         "cache_seconds": settings.sports_cache_seconds,
+        "partial": partial,
         "errors": [p.get("error") for p in results.values() if p.get("error")],
     }
 

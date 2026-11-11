@@ -9,13 +9,14 @@ import {
 } from '../components.js';
 import { open as openPalette, mountHomeSearch } from '../palette.js';
 
-const DEFAULT_SECTIONS = ['brief', 'top', 'for-you', 'sports', 'topic:tech', 'topic:world', 'longreads'];
+const DEFAULT_SECTIONS = ['brief', 'top', 'for-you', 'my-sports', 'topic:tech', 'topic:world', 'longreads'];
 
 const BASE_SECTIONS = [
   { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
   { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
   { id: 'for-you', label: 'For you', hint: 'Your main personalised feed' },
   { id: 'sports', label: 'Live scores', hint: 'A scoreboard strip' },
+  { id: 'my-sports', label: 'My sports', hint: 'Your pinned teams and leagues' },
   { id: 'longreads', label: 'Long reads', hint: 'Fewer, deeper pieces' },
   { id: 'saved', label: 'Saved for later', hint: 'A shortcut to your library' },
   { id: 'research', label: 'Research desk', hint: 'Citations and bibliography' },
@@ -56,11 +57,10 @@ function greeting() {
 }
 
 function todayLine() {
-  const date = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   const archive = state.boot?.archive?.total || state.boot?.stats?.articles || 0;
   const healthy = state.boot?.feed_health?.healthy || 0;
   const feeds = state.boot?.feed_health?.total || 0;
-  return `${date} · ${compactNumber(archive)} stories archived · ${healthy}/${feeds} feeds live`;
+  return `${compactNumber(archive)} stories archived · ${healthy}/${feeds} feeds live`;
 }
 
 export async function homeView(root, ctx) {
@@ -70,19 +70,17 @@ export async function homeView(root, ctx) {
   const levelInfo = levels();
 
   root.innerHTML = html`
-    <div class="greeting">
-      <div>
-        <h1>${greeting()}</h1>
-        <p class="greeting__meta">${todayLine()}</p>
+    <div class="today-bar">
+      <div class="today-bar__main">
+        <p class="today-bar__date">${new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</p>
+        <h1 class="today-bar__greeting">${greeting()}</h1>
+        <p class="today-bar__meta">${todayLine()}</p>
       </div>
-      <div class="hstack" style="gap:.5rem">
+      <div class="today-bar__actions">
         ${streakInfo.count > 0 ? html`<span class="pill-progress" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
-        <a class="pill-progress" href="/brief" data-link title="Your two-minute briefing">
-          <span aria-hidden="true">⚡</span> 2-min brief ${raw(icons.chevron)}
-        </a>
-        <a class="pill-progress" href="/profile" data-link title="Level ${levelInfo.level}">
+        <a class="pill-progress" href="/profile" data-link title="Level ${levelInfo.level} · ${levelInfo.xp} XP">
           <span class="progress" role="progressbar" aria-valuenow="${levelInfo.progress.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${levelInfo.progress.percent}%"></span></span>
-          Lv ${levelInfo.level}
+          Lv ${levelInfo.level} · ${levelInfo.xp} XP
         </a>
       </div>
     </div>
@@ -179,6 +177,7 @@ async function fillSection(root, id) {
     if (id === 'top') return renderTop(head, body);
     if (id === 'for-you') return renderForYou(root, shell, head, body);
     if (id === 'sports') return renderSports(head, body);
+    if (id === 'my-sports') return renderMySports(head, body);
     if (id === 'longreads') return renderLongreads(head, body);
     if (id === 'saved') return renderSaved(head, body);
     if (id === 'research') return renderResearch(head, body);
@@ -282,6 +281,35 @@ function attachSentinel(root, shell, body, mode, nextOffset) {
   forYouObserver.observe(sentinel);
 }
 
+async function renderMySports(head, body) {
+  const pinnedLeagues = prefs().pinned_sports || [];
+  const pinnedTeams = prefs().pinned_teams || [];
+  if (!pinnedLeagues.length && !pinnedTeams.length) {
+    head.innerHTML = '';
+    body.innerHTML = '';
+    return;
+  }
+  const teamIds = new Set(pinnedTeams.map((team) => String(team.id)));
+  const leagueSlugs = new Set(pinnedLeagues);
+  const data = await get('/api/sports', 25);
+  const games = (data.events || []).filter((game) => leagueSlugs.has(game.league)
+    || game.competitors.some((team) => teamIds.has(String(team.id)))).slice(0, 5);
+  head.innerHTML = sectionHead(
+    '★ My sports',
+    html`<a href="/sports" data-link>Open scores ${raw(icons.chevron)}</a>`,
+    { sub: pinnedTeams.map((team) => team.abbr || team.name).slice(0, 4).join(' · ') || `${leagueSlugs.size} leagues` },
+  );
+  if (!games.length) {
+    body.innerHTML = html`
+      <div class="card card-pad">
+        <p class="small muted">No games for your pinned teams today.</p>
+        <a class="btn btn--sm btn--ghost" style="margin-top:.5rem" href="/sports" data-link>Manage pins</a>
+      </div>`;
+    return;
+  }
+  body.innerHTML = html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`;
+}
+
 async function renderSports(head, body) {
   const data = await get('/api/sports', 20);
   const events = (data.events || []).slice(0, 8);
@@ -294,6 +322,12 @@ async function renderSports(head, body) {
     return;
   }
   body.innerHTML = html`<div class="score-strip">${events.map((game) => scoreMini(game))}</div>`;
+  if (data.partial) {
+    setTimeout(() => {
+      const node = document.querySelector('.home-section[data-id="sports"]');
+      if (node) fillSection(document.getElementById('view'), 'sports');
+    }, 4000);
+  }
 }
 
 async function renderTopic(head, body, slug) {

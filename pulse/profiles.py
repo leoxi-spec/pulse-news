@@ -33,10 +33,13 @@ DEFAULT_PREFS: dict = {
     "notify_breaking": True,
     "notify_topics": [],
     "sports_leagues": ["nba", "nfl", "mlb", "eng.1"],
+    "pinned_sports": [],
+    "pinned_teams": [],
     "teams": [],
     "language": "en",
     "autoplay_sports": False,
     "show_reading_streak": True,
+    "sidebar_slim": True,
     "content_filters": {"graphic": False},
 }
 
@@ -59,7 +62,10 @@ GRADES = ("middle", "9", "10", "11", "12", "uni", "other")
 GOALS = ("exam prep", "current events class", "writing & debate", "college apps",
          "general knowledge", "science & tech", "sports", "culture")
 READING_LENGTHS = ("short", "medium", "long")
-THEMES = ("system", "light", "dark", "sepia", "midnight", "forest", "sunset", "mono", "rose", "ocean")
+THEMES = (
+    "system", "light", "dark", "sepia", "midnight", "forest", "sunset", "mono",
+    "rose", "ocean", "dusk", "sage", "sand", "mist", "clay",
+)
 FONTS = ("sans", "serif", "dyslexic")
 
 _XP = {
@@ -218,12 +224,42 @@ def sanitise_prefs(prefs: dict) -> dict:
     clean["text_size"] = max(0, min(4, int(clean.get("text_size", 1))))
     clean["daily_goal"] = max(1, min(30, int(clean.get("daily_goal", 5))))
     for key in ("reduce_motion", "high_contrast", "show_images", "ai_overview", "hide_paywalled",
-                "notify_breaking", "autoplay_sports", "show_reading_streak"):
+                "notify_breaking", "autoplay_sports", "show_reading_streak", "sidebar_slim"):
         if key in prefs:
             clean[key] = bool(prefs[key])
     clean["notify_topics"] = [t for t in (prefs.get("notify_topics") or []) if t in TOPIC_SLUGS][:8]
     clean["sports_leagues"] = [str(s)[:20] for s in (prefs.get("sports_leagues") or [])][:12]
     clean["teams"] = [str(t)[:40] for t in (prefs.get("teams") or [])][:12]
+    try:
+        from .sports import LEAGUE_BY_SLUG
+        valid_leagues = set(LEAGUE_BY_SLUG)
+    except Exception:  # pragma: no cover - defensive
+        valid_leagues = set()
+    pinned_sports = []
+    for slug in prefs.get("pinned_sports") or []:
+        slug = str(slug)[:20]
+        if slug and (not valid_leagues or slug in valid_leagues) and slug not in pinned_sports:
+            pinned_sports.append(slug)
+    clean["pinned_sports"] = pinned_sports[:10]
+    pinned_teams = []
+    for team in prefs.get("pinned_teams") or []:
+        if not isinstance(team, dict):
+            continue
+        team_id = str(team.get("id") or "")[:20]
+        if not team_id:
+            continue
+        entry = {
+            "id": team_id,
+            "name": str(team.get("name") or "")[:60],
+            "abbr": str(team.get("abbr") or "")[:8],
+            "logo": str(team.get("logo") or "")[:400],
+            "league": str(team.get("league") or "")[:20],
+        }
+        if entry["logo"] and not entry["logo"].startswith("https://"):
+            entry["logo"] = ""
+        if all(existing["id"] != team_id for existing in pinned_teams):
+            pinned_teams.append(entry)
+    clean["pinned_teams"] = pinned_teams[:16]
     if isinstance(prefs.get("content_filters"), dict):
         clean["content_filters"] = {"graphic": bool(prefs["content_filters"].get("graphic"))}
     return clean

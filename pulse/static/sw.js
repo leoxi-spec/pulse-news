@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v2';
+const VERSION = 'pulse-v4';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -89,6 +89,13 @@ self.addEventListener('fetch', (event) => {
         return (await cache.match('/')) || Response.error();
       }),
     );
+    return;
+  }
+
+  // App code must always be fresh when online; the cache is only an offline
+  // fallback. This is what makes local upgrades show up immediately.
+  if (url.pathname === '/app.css' || url.pathname.startsWith('/js/') || url.pathname === '/manifest.webmanifest') {
+    event.respondWith(networkFirst(request, SHELL_CACHE));
     return;
   }
 

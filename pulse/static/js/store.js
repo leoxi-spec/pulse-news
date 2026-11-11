@@ -54,6 +54,7 @@ export function sourceOf(id) {
 const THEME_COLORS = {
   dark: '#0a0c11', light: '#f6f7fb', sepia: '#f4ecd8', midnight: '#060a14',
   forest: '#08110c', sunset: '#140a0b', mono: '#0c0c0d', rose: '#fff6f8', ocean: '#f2f8fc',
+  dusk: '#14131a', sage: '#eef2ea', sand: '#f5efe6', mist: '#eef2f5', clay: '#f7eee9',
 };
 
 export const THEMES = [
@@ -67,6 +68,11 @@ export const THEMES = [
   { id: 'mono', label: 'Mono', bg: '#0c0c0d', text: '#f4f4f5', grad: 'linear-gradient(120deg,#f4f4f5,#a1a1aa)' },
   { id: 'rose', label: 'Rose', bg: '#fff6f8', text: '#2a1219', grad: 'linear-gradient(120deg,#e11d74,#f97316)' },
   { id: 'ocean', label: 'Ocean', bg: '#f2f8fc', text: '#0b2233', grad: 'linear-gradient(120deg,#0284c7,#06b6d4)' },
+  { id: 'dusk', label: 'Dusk', bg: '#14131a', text: '#eceaf5', grad: 'linear-gradient(120deg,#a78bfa,#f0abfc)' },
+  { id: 'sage', label: 'Sage', bg: '#eef2ea', text: '#1f2a1c', grad: 'linear-gradient(120deg,#5f8d63,#a3b18a)' },
+  { id: 'sand', label: 'Sand', bg: '#f5efe6', text: '#2b2519', grad: 'linear-gradient(120deg,#b08968,#d4a373)' },
+  { id: 'mist', label: 'Mist', bg: '#eef2f5', text: '#16242c', grad: 'linear-gradient(120deg,#5f8aa6,#a3c4d4)' },
+  { id: 'clay', label: 'Clay', bg: '#f7eee9', text: '#2e211a', grad: 'linear-gradient(120deg,#c97c5d,#e0a17c)' },
 ];
 
 const TEXT_SCALES = [0.92, 1, 1.08, 1.18, 1.3];
@@ -86,6 +92,7 @@ export function applyPrefs(p) {
   document.body.classList.toggle('font-dyslexic', p.font === 'dyslexic');
   document.body.classList.toggle('contrast-high', Boolean(p.high_contrast));
   document.body.classList.toggle('reduce-motion', Boolean(p.reduce_motion));
+  document.body.classList.toggle('sidebar-slim', p.sidebar_slim !== false);
   const scale = TEXT_SCALES[Math.max(0, Math.min(4, Number(p.text_size) || 0))] || 1;
   document.documentElement.style.setProperty('--text-scale', String(scale));
   try {
