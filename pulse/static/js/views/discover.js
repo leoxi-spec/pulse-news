@@ -1,5 +1,5 @@
 import { get } from '../api.js';
-import { state, record } from '../store.js';
+import { state, record, saveSurvey, isFollowedTopic } from '../store.js';
 import { navigate } from '../router.js';
 import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo, absDate } from '../ui.js';
 import { heroCard, storyCard, rowsHtml, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot } from '../components.js';
@@ -96,13 +96,17 @@ export async function topicView(root, ctx) {
     return;
   }
   const mode = ['for-you', 'top', 'latest'].includes(ctx.query.mode) ? ctx.query.mode : 'for-you';
+  const following = isFollowedTopic(slug);
   root.innerHTML = html`
-    <div class="hstack" style="gap:.6rem">
-      <span style="font-size:2rem" aria-hidden="true">${meta.icon}</span>
-      <div>
-        <h1 class="page-title" style="font-size:1.7rem">${meta.label}</h1>
-        <p class="page-sub">The latest from ${state.boot?.catalog?.sources || 0} sources, ranked for you.</p>
+    <div class="between" style="align-items:flex-start;gap:1rem">
+      <div class="hstack" style="gap:.6rem">
+        <span style="font-size:2rem" aria-hidden="true">${meta.icon}</span>
+        <div>
+          <h1 class="page-title" style="font-size:1.7rem">${meta.label}</h1>
+          <p class="page-sub">The latest from ${state.boot?.catalog?.sources || 0} sources, ranked for you.</p>
+        </div>
       </div>
+      <button class="btn btn--sm ${following ? 'btn--ghost' : 'btn--primary'}" data-follow-topic>${following ? '✓ Following' : '+ Follow topic'}</button>
     </div>
     <div class="between" style="margin:1rem 0">
       <div class="segmented" role="tablist">
@@ -112,6 +116,25 @@ export async function topicView(root, ctx) {
       <a class="chip" href="/?stream=for-you" data-link>← Full feed</a>
     </div>
     <div id="topic-body">${skeletonFeed(4)}</div>`;
+
+  const followButton = root.querySelector('[data-follow-topic]');
+  followButton?.addEventListener('click', async () => {
+    const survey = state.profile?.survey || {};
+    const topics = { ...(survey.topics || {}) };
+    const wasFollowing = isFollowedTopic(slug);
+    if (wasFollowing) delete topics[slug]; else topics[slug] = 2;
+    followButton.disabled = true;
+    try {
+      await saveSurvey({ ...survey, topics });
+      followButton.textContent = wasFollowing ? '+ Follow topic' : '✓ Following';
+      followButton.classList.toggle('btn--primary', wasFollowing);
+      followButton.classList.toggle('btn--ghost', !wasFollowing);
+      toast(wasFollowing ? `Unfollowed ${meta.label}` : `Following ${meta.label} — it ranks higher now`);
+    } catch (err) {
+      toast(err.message || 'Could not update follows.', { type: 'bad' });
+    }
+    followButton.disabled = false;
+  });
 
   root.querySelectorAll('[data-mode]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -176,6 +199,18 @@ export async function storyView(root, ctx) {
           <p class="tiny muted">Approximate editorial spread of the coverage</p>
           ${leanBar(story.leans)}
         </div>` : ''}
+      <div class="section" style="margin-top:1.2rem">
+        ${sectionHead('How the story unfolded', html`<span class="tiny muted">oldest → newest</span>`)}
+        <div class="timeline">
+          ${articles.slice().sort((a, b) => String(a.published_at || a.first_seen_at).localeCompare(String(b.published_at || b.first_seen_at))).map((item) => html`
+            <a class="timeline__item" href="/article/${item.id}" data-link>
+              <span class="timeline__dot" aria-hidden="true"></span>
+              <span class="timeline__time">${item.published_relative || timeAgo(item.published_at || item.first_seen_at)}</span>
+              <span class="timeline__title">${item.title}</span>
+              <span class="timeline__source">${item.source?.name || ''}</span>
+            </a>`)}
+        </div>
+      </div>
       <div class="news-rows" style="margin-top:1rem">
         ${rowsHtml(articles.slice().reverse(), { seed: `story-${id}` })}
       </div>`;

@@ -230,13 +230,17 @@ export async function briefView(root) {
             <p class="eyebrow">${localGreeting()}</p>
             <h2 style="font-size:1.3rem;letter-spacing:-.02em;margin-top:.2rem">${data.stories.length} stories · ${data.minutes} min</h2>
           </div>
-          <button class="btn btn--primary" id="complete-brief">${raw(icons.check)} I'm briefed</button>
+          <div class="hstack">
+            <button class="btn btn--ghost" id="print-brief">${raw(icons.printer)} Print</button>
+            <button class="btn btn--primary" id="complete-brief">${raw(icons.check)} I'm briefed</button>
+          </div>
         </div>
         <p class="tiny muted" style="margin-top:.5rem">Built from today's coverage, ranked for your interests. Tap a card to read the preview and overview.</p>
       </div>
       <div class="feed" style="margin-top:.9rem">
         ${briefRows(data.stories)}
       </div>`;
+    root.querySelector('#print-brief')?.addEventListener('click', () => window.print());
     root.querySelector('#complete-brief')?.addEventListener('click', async (event) => {
       event.target.disabled = true;
       try {
@@ -578,6 +582,18 @@ export async function profileView(root, ctx) {
     heat.push({ key, count: found?.read_count || 0 });
   }
   const heatMax = Math.max(1, ...heat.map((d) => d.count));
+  const dayKeyFor = (offset) => { const d = new Date(); d.setDate(d.getDate() - offset); return d.toISOString().slice(0, 10); };
+  const thisWeek = weekly.filter((row) => row.day >= dayKeyFor(6));
+  const lastWeek = weekly.filter((row) => row.day >= dayKeyFor(13) && row.day < dayKeyFor(6));
+  const sumField = (rows, field) => rows.reduce((total, row) => total + Number(row[field] || 0), 0);
+  const weekReads = sumField(thisWeek, 'read_count');
+  const prevReads = sumField(lastWeek, 'read_count');
+  const weekMinutes = Math.round(sumField(thisWeek, 'minutes'));
+  const bestDay = [...thisWeek].sort((a, b) => Number(b.read_count) - Number(a.read_count))[0];
+  const bestLabel = bestDay && Number(bestDay.read_count)
+    ? new Date(`${bestDay.day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })
+    : '—';
+  const topWeekTopic = stats.week_topics?.[0]?.topic;
 
   root.innerHTML = html`
     <div class="card card-pad-lg">
@@ -598,6 +614,24 @@ export async function profileView(root, ctx) {
       <div class="level-bar">
         <div class="level-bar__labels"><span>${level.progress.into} / ${level.progress.needed} XP to level ${level.level + 1}</span><span>${level.progress.percent}%</span></div>
         <div class="progress"><span style="width:${level.progress.percent}%"></span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      ${sectionHead('Your week', html`<span class="tiny muted">last 7 days</span>`)}
+      <div class="card card-pad-lg recap-card">
+        <div class="between">
+          <div>
+            <p class="eyebrow">${weekReads} ${weekReads === 1 ? 'story' : 'stories'} · ${weekMinutes} min</p>
+            <h2 style="font-size:1.25rem;margin-top:.2rem">${weekReads ? 'You stayed curious' : 'A fresh week starts now'}</h2>
+          </div>
+          <span class="badge badge--topic">${prevReads ? `${weekReads - prevReads >= 0 ? '+' : ''}${weekReads - prevReads} vs last week` : 'New week'}</span>
+        </div>
+        <div class="stat-grid" style="margin-top:.8rem">
+          ${stat(bestLabel, 'best day')}
+          ${stat(topWeekTopic ? topicLabel(topWeekTopic) : '—', 'top topic')}
+          ${stat(streakInfo.count, 'day streak')}
+        </div>
       </div>
     </div>
 

@@ -98,6 +98,9 @@ function articleMarkup(a, p) {
         <span class="spacer"></span>
         <button class="btn" data-act="focus" title="Distraction-free reading">${raw(icons.eye)} Focus</button>
         <button class="btn" data-act="font" title="Reading font">${raw(icons.text)}</button>
+        <button class="btn" data-act="text-smaller" title="Smaller text" aria-label="Smaller text">A−</button>
+        <button class="btn" data-act="text-larger" title="Larger text" aria-label="Larger text">A+</button>
+        <button class="btn" data-act="print" title="Print or save as PDF">${raw(icons.printer)} Print</button>
         <a class="btn article__source-btn" href="${a.read_url}" target="_blank" rel="noopener noreferrer" title="Open at ${source.name}">${raw(icons.external)} Source</a>
       </div>
       <div class="reaction-bar" id="reaction-bar" aria-label="React to this story"></div>
@@ -405,9 +408,98 @@ function renderStoryExtras(root, article) {
               ${questions.map((question) => html`<li>${question}</li>`)}
             </ol>
           </div>
+          <div class="card card-pad ask-card">
+            <h3 class="extras-card__title">🔎 Ask this article</h3>
+            <p class="tiny muted">Type a question. The answer is always a sentence from this story — no invented facts.</p>
+            <form class="ask-form" data-ask-form>
+              <input data-ask-input type="search" placeholder="What did the coach say about…?" aria-label="Ask this article">
+              <button class="btn btn--sm btn--primary" type="submit">Ask</button>
+            </form>
+            <div class="hstack ask-chips">
+              <button type="button" class="chip" data-ask-suggest="Who is involved?">Who is involved?</button>
+              <button type="button" class="chip" data-ask-suggest="What happens next?">What happens next?</button>
+              <button type="button" class="chip" data-ask-suggest="What are the key numbers?">Key numbers</button>
+            </div>
+            <div class="ask-results" data-ask-results></div>
+          </div>
         </div>
       </section>`;
+
+    const askForm = slot.querySelector('[data-ask-form]');
+    const askInput = slot.querySelector('[data-ask-input]');
+    const askResults = slot.querySelector('[data-ask-results]');
+    const runAsk = (question) => {
+      const tokens = askTokens(question);
+      const found = askArticle(text, question);
+      if (found.length) {
+        askResults.innerHTML = html`<div class="ask-answer">
+          ${found.map((row) => html`<p>${raw(markTerms(row.sentence, tokens))}</p>`)}
+          <p class="tiny faint">Found in this story · not an AI answer</p>
+        </div>`;
+        return;
+      }
+      // Broad questions ("who is involved?") may not share a word with the
+      // text. Show the opening lines instead of pretending there is no story.
+      const opening = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length >= 45).slice(0, 2);
+      askResults.innerHTML = opening.length
+        ? html`<div class="ask-answer">
+            ${opening.map((sentence) => html`<p>${sentence}</p>`)}
+            <p class="tiny faint">No exact match — here is the opening of the story.</p>
+          </div>`
+        : html`<p class="tiny faint">No sentence matched. Try fewer, more specific words.</p>`;
+    };
+    askForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const question = askInput.value.trim();
+      if (question) runAsk(question);
+    });
+    slot.querySelectorAll('[data-ask-suggest]').forEach((button) => {
+      button.addEventListener('click', () => {
+        askInput.value = button.dataset.askSuggest;
+        runAsk(button.dataset.askSuggest);
+      });
+    });
   }
+}
+
+function adjustText(delta) {
+  const current = Number(prefs().text_size ?? 1);
+  const next = Math.max(0, Math.min(4, current + delta));
+  if (next === current) return;
+  savePrefs({ text_size: next }).catch(() => {});
+}
+
+function askTokens(question) {
+  const stop = new Set(('the and for with from that this will have has are was were but not you your its his her their they them who what when where why how after before over under into than then more most can could would should may might says said new now one two three first last next about amid as at by in of on to up out off is it be or an a').split(' '));
+  return [...new Set((question.toLowerCase().match(/[a-z0-9']{3,}/g) || []).filter((token) => !stop.has(token)))];
+}
+
+function askArticle(text, question) {
+  const tokens = askTokens(question);
+  if (!tokens.length) return [];
+  const phrase = question.toLowerCase().trim();
+  return text.split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 45 && sentence.length <= 320)
+    .map((sentence) => {
+      const low = sentence.toLowerCase();
+      let score = tokens.reduce((total, token) => total + (low.includes(token) ? 1 : 0), 0);
+      if (phrase.length > 6 && low.includes(phrase)) score += 4;
+      return { sentence, score };
+    })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}
+
+function markTerms(sentence, tokens) {
+  let markup = esc(sentence);
+  for (const token of tokens) {
+    try {
+      markup = markup.replace(new RegExp(`\\b(${token}[a-z']*)`, 'gi'), '<mark>$1</mark>');
+    } catch { /* ignore bad token */ }
+  }
+  return markup;
 }
 
 function speechChunks(article) {
@@ -496,6 +588,9 @@ function bindArticle(root, article) {
       if (act === 'listen') return onListen(button, article);
       if (act === 'focus') return toggleFocus();
       if (act === 'font') return cycleFont();
+      if (act === 'text-smaller') return adjustText(-1);
+      if (act === 'text-larger') return adjustText(1);
+      if (act === 'print') return window.print();
     });
   });
 

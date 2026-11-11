@@ -514,6 +514,12 @@ def stats(profile_id: str) -> dict:
            GROUP BY topic ORDER BY n DESC""",
         (profile_id,),
     )
+    week_topic_rows = db.query(
+        """SELECT topic, COUNT(*) AS n FROM events
+           WHERE profile_id=? AND kind='read' AND topic IS NOT NULL AND created_at >= ?
+           GROUP BY topic ORDER BY n DESC LIMIT 5""",
+        (profile_id, start_of_day(6)),
+    )
     source_rows = db.query(
         """SELECT source_id, COUNT(*) AS n FROM events
            WHERE profile_id=? AND kind='read' AND source_id IS NOT NULL
@@ -528,6 +534,7 @@ def stats(profile_id: str) -> dict:
         "minutes": round(minutes),
         "weekly": [dict(row) for row in weekly],
         "topic_breakdown": [{"topic": row["topic"], "count": row["n"]} for row in topic_rows],
+        "week_topics": [{"topic": row["topic"], "count": row["n"]} for row in week_topic_rows],
         "source_breakdown": [
             {"source_id": row["source_id"], "name": (SOURCES.get(row["source_id"]).name if SOURCES.get(row["source_id"]) else row["source_id"]),
              "count": row["n"]}
