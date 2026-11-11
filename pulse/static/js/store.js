@@ -56,6 +56,8 @@ const THEME_COLORS = {
   dark: '#0a0c11', light: '#f6f7fb', sepia: '#f4ecd8', midnight: '#060a14',
   forest: '#08110c', sunset: '#140a0b', mono: '#0c0c0d', rose: '#fff6f8', ocean: '#f2f8fc',
   dusk: '#14131a', sage: '#eef2ea', sand: '#f5efe6', mist: '#eef2f5', clay: '#f7eee9',
+  lavender: '#f4f1fb', mint: '#edf9f3', peach: '#fff3ec', sky: '#eef7fe', cocoa: '#1a1412',
+  honey: '#fdf7e7', seafoam: '#eefaf7', cloud: '#f7f8fc', twilight: '#171726', matcha: '#f1f6ea',
 };
 
 export const THEMES = [
@@ -74,6 +76,16 @@ export const THEMES = [
   { id: 'sand', label: 'Sand', bg: '#f5efe6', text: '#2b2519', grad: 'linear-gradient(120deg,#b08968,#d4a373)' },
   { id: 'mist', label: 'Mist', bg: '#eef2f5', text: '#16242c', grad: 'linear-gradient(120deg,#5f8aa6,#a3c4d4)' },
   { id: 'clay', label: 'Clay', bg: '#f7eee9', text: '#2e211a', grad: 'linear-gradient(120deg,#c97c5d,#e0a17c)' },
+  { id: 'lavender', label: 'Lavender', bg: '#f4f1fb', text: '#241f33', grad: 'linear-gradient(120deg,#8b7ad6,#c4a7e7)' },
+  { id: 'mint', label: 'Mint', bg: '#edf9f3', text: '#122620', grad: 'linear-gradient(120deg,#3f9d7d,#8fd4b8)' },
+  { id: 'peach', label: 'Peach', bg: '#fff3ec', text: '#2d1d15', grad: 'linear-gradient(120deg,#d97c55,#f2b8a0)' },
+  { id: 'sky', label: 'Sky', bg: '#eef7fe', text: '#102433', grad: 'linear-gradient(120deg,#3f8bc9,#9ec9ea)' },
+  { id: 'cocoa', label: 'Cocoa', bg: '#1a1412', text: '#f7ece4', grad: 'linear-gradient(120deg,#c98f6a,#e8c3a0)' },
+  { id: 'honey', label: 'Honey', bg: '#fdf7e7', text: '#2c2410', grad: 'linear-gradient(120deg,#c99a2e,#e8c766)' },
+  { id: 'seafoam', label: 'Seafoam', bg: '#eefaf7', text: '#102622', grad: 'linear-gradient(120deg,#2f9d8e,#8fd4c8)' },
+  { id: 'cloud', label: 'Cloud', bg: '#f7f8fc', text: '#1b2033', grad: 'linear-gradient(120deg,#6f7db8,#b4bfe3)' },
+  { id: 'twilight', label: 'Twilight', bg: '#171726', text: '#efedff', grad: 'linear-gradient(120deg,#8d8bf0,#c4b5fd)' },
+  { id: 'matcha', label: 'Matcha', bg: '#f1f6ea', text: '#1e2a16', grad: 'linear-gradient(120deg,#6f9445,#b5c98f)' },
 ];
 
 const TEXT_SCALES = [0.92, 1, 1.08, 1.18, 1.3];
@@ -94,8 +106,18 @@ export function applyPrefs(p) {
   document.body.classList.toggle('contrast-high', Boolean(p.high_contrast));
   document.body.classList.toggle('reduce-motion', Boolean(p.reduce_motion));
   document.body.classList.toggle('sidebar-slim', p.sidebar_slim !== false);
-  const scale = TEXT_SCALES[Math.max(0, Math.min(4, Number(p.text_size) || 0))] || 1;
+  document.body.classList.toggle('no-images', p.show_images === false);
+  document.body.classList.toggle('hide-why', p.show_why === false);
+  document.body.classList.toggle('compact-cards', Boolean(p.compact_cards));
+  document.body.classList.toggle('no-confetti', p.confetti === false);
+  document.body.classList.toggle('no-haptics', p.haptics === false);
+  const age = Number(state.profile?.survey?.age || 13);
+  const mode = p.mode === 'kids' ? 'kids' : p.mode === 'teens' ? 'teens' : (age <= 12 ? 'kids' : 'teens');
+  document.body.dataset.mode = mode;
+  document.body.classList.toggle('mode-kids', mode === 'kids');
+  const scale = (TEXT_SCALES[Math.max(0, Math.min(4, Number(p.text_size) || 0))] || 1) * (mode === 'kids' ? 1.08 : 1);
   document.documentElement.style.setProperty('--text-scale', String(scale));
+  document.documentElement.style.setProperty('--line-height', String(p.line_spacing || 1.72));
   try {
     localStorage.setItem('pulse.prefs', JSON.stringify({ theme: p.theme, font: p.font, text_size: p.text_size }));
   } catch { /* storage may be full or blocked */ }

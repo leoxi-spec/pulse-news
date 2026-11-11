@@ -93,7 +93,8 @@ let toastTimer = null;
 export function confetti(count = 48) {
   if (typeof document === 'undefined') return;
   const reduce = document.documentElement.dataset.reduceMotion === '1'
-    || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    || document.body.classList.contains('no-confetti');
   if (reduce) return;
   const colors = ['#ff4d6d', '#ffd166', '#06d6a0', '#4cc9f0', '#b388ff', '#ff9f1c'];
   const layer = document.createElement('div');
@@ -111,6 +112,11 @@ export function confetti(count = 48) {
   }
   document.body.appendChild(layer);
   setTimeout(() => layer.remove(), 3000);
+}
+
+export function haptic(ms = 8) {
+  if (document.body.classList.contains('no-haptics')) return;
+  navigator.vibrate?.(ms);
 }
 
 export function toast(message, { type = '', actionLabel = '', onAction = null, duration = 3600 } = {}) {
@@ -151,7 +157,7 @@ export function modal({ title, body, actions = [], wide = false, onClose = null 
       <button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="modal__body"></div>
-    ${actions.length ? '<div class="modal__foot"></div>' : ''}`;
+    ${actions.length ? raw('<div class="modal__foot"></div>') : ''}`;
   const bodyNode = $('.modal__body', wrapper);
   if (body instanceof Node) bodyNode.append(body);
   else bodyNode.innerHTML = body || '';

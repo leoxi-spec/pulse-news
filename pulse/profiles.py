@@ -42,6 +42,17 @@ DEFAULT_PREFS: dict = {
     "sidebar_slim": True,
     "content_filters": {"graphic": False},
     "mood": "balanced",
+    "mode": "auto",
+    "animation": "theme",
+    "noise": "off",
+    "noise_volume": 0.35,
+    "compact_cards": False,
+    "autoplay_shorts": False,
+    "shorts_sound": False,
+    "haptics": True,
+    "confetti": True,
+    "show_why": True,
+    "widgets": ["challenge", "word", "poll", "quiz", "top3", "photo", "journal", "streak"],
 }
 
 DEFAULT_SURVEY: dict = {
@@ -54,6 +65,7 @@ DEFAULT_SURVEY: dict = {
     "avoid": [],
     "reading_length": "medium",
     "daily_goal": 5,
+    "age": 13,
     "experience": "some",
     "completed_at": None,
     "skipped": False,
@@ -66,7 +78,14 @@ READING_LENGTHS = ("short", "medium", "long")
 THEMES = (
     "system", "light", "dark", "sepia", "midnight", "forest", "sunset", "mono",
     "rose", "ocean", "dusk", "sage", "sand", "mist", "clay",
+    "lavender", "mint", "peach", "sky", "cocoa", "honey", "seafoam", "cloud",
+    "twilight", "matcha",
 )
+ANIMATIONS = (
+    "theme", "none", "rain", "snow", "meteors", "birds", "bubbles", "stars",
+    "leaves", "fireflies", "petals", "aurora",
+)
+NOISES = ("off", "white", "pink", "brown", "rain", "waves", "wind")
 FONTS = ("sans", "serif", "dyslexic")
 
 _XP = {
@@ -204,9 +223,24 @@ def sanitise_survey(survey: dict) -> dict:
         clean["daily_goal"] = 5
     clean["experience"] = str(survey.get("experience") or "some")[:20]
     clean["skipped"] = bool(survey.get("skipped", False))
+    try:
+        clean["age"] = max(6, min(18, int(survey.get("age", clean.get("age", 13)))))
+    except (TypeError, ValueError):
+        clean["age"] = 13
     if survey.get("completed_at"):
         clean["completed_at"] = str(survey["completed_at"])[:40]
     return clean
+
+
+def goal_for_age(age: int) -> int:
+    """Reading amount grows with the reader: 2 stories at 6, 8 at 18."""
+    age = max(6, min(18, int(age or 13)))
+    return max(2, min(9, 2 + (age - 6) // 2))
+
+
+def length_for_age(age: int) -> str:
+    age = max(6, min(18, int(age or 13)))
+    return "short" if age <= 11 else "medium" if age <= 15 else "long"
 
 
 def sanitise_prefs(prefs: dict) -> dict:
@@ -219,6 +253,19 @@ def sanitise_prefs(prefs: dict) -> dict:
         clean["reading_length"] = prefs["reading_length"]
     if prefs.get("mood") in ("Chill", "Hype", "Deep", "Light", "Just facts"):
         clean["mood"] = prefs["mood"]
+    if prefs.get("mode") in ("auto", "kids", "teens"):
+        clean["mode"] = prefs["mode"]
+    if prefs.get("animation") in ANIMATIONS:
+        clean["animation"] = prefs["animation"]
+    if prefs.get("noise") in NOISES:
+        clean["noise"] = prefs["noise"]
+    try:
+        clean["noise_volume"] = max(0, min(1, float(prefs.get("noise_volume", clean.get("noise_volume", .35)))))
+    except (TypeError, ValueError):
+        clean["noise_volume"] = .35
+    for key in ("compact_cards", "autoplay_shorts", "shorts_sound", "haptics", "confetti", "show_why", "line_spacing"):
+        if key in prefs and not isinstance(prefs[key], dict):
+            clean[key] = prefs[key]
     for key in ("text_size", "daily_goal"):
         if key in prefs:
             try:
@@ -231,6 +278,16 @@ def sanitise_prefs(prefs: dict) -> dict:
                 "notify_breaking", "autoplay_sports", "show_reading_streak", "sidebar_slim"):
         if key in prefs:
             clean[key] = bool(prefs[key])
+    try:
+        clean["line_spacing"] = max(1.2, min(2.2, float(prefs.get("line_spacing", clean.get("line_spacing", 1.55)))))
+    except (TypeError, ValueError):
+        clean["line_spacing"] = 1.55
+    widgets = []
+    for widget in prefs.get("widgets") or clean.get("widgets") or []:
+        value = str(widget)[:40]
+        if value and value not in widgets:
+            widgets.append(value)
+    clean["widgets"] = widgets[:60]
     clean["notify_topics"] = [t for t in (prefs.get("notify_topics") or []) if t in TOPIC_SLUGS][:8]
     clean["sports_leagues"] = [str(s)[:20] for s in (prefs.get("sports_leagues") or [])][:12]
     clean["teams"] = [str(t)[:40] for t in (prefs.get("teams") or [])][:12]
@@ -278,6 +335,12 @@ def update(profile_id: str, *, name: str | None = None, survey: dict | None = No
     new_prefs = sanitise_prefs({**profile["prefs"], **(prefs or {})}) if prefs else profile["prefs"]
     new_name = (name or profile["name"]).strip()[:40] or profile["name"]
     is_onboarded = profile["onboarded"] if onboarded is None else bool(onboarded)
+    if survey and "age" in survey and int(new_survey.get("age") or 13) != int(profile["survey"].get("age") or 13):
+        age = int(new_survey.get("age") or 13)
+        if "daily_goal" not in (prefs or {}):
+            new_prefs["daily_goal"] = goal_for_age(age)
+        if "reading_length" not in (prefs or {}):
+            new_prefs["reading_length"] = length_for_age(age)
     daily_goal = int(new_prefs.get("daily_goal") or new_survey.get("daily_goal") or 5)
     db.execute(
         """UPDATE profiles SET name=?, survey=?, prefs=?, onboarded=?, daily_goal=?, updated_at=? WHERE id=?""",

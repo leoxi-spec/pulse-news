@@ -9,6 +9,7 @@ events rather than invented.
 """
 from __future__ import annotations
 
+import json
 import random
 import re
 import time
@@ -267,13 +268,17 @@ def wyr_of_day() -> dict:
 
 def _article_brief(row) -> dict:
     published = row["published_at"] or row["first_seen_at"]
+    summary = re.sub(r"<[^>]+>", " ", row["summary"] or "")
+    summary = re.sub(r"\s+", " ", summary).strip()
     return {
         "id": row["id"],
         "title": row["title"],
+        "preview": summary[:240],
         "image": "/api/img?u=" + quote(row["image_url"], safe="") if row["image_url"] else None,
         "topic": row["primary_topic"],
         "topic_label": (row["primary_topic"] or "world").replace("-", " ").title(),
         "source": {"name": row["source_name"]},
+        "story": {"source_count": int(row["source_count"] or 1)} if "source_count" in row.keys() else {"source_count": 1},
         "published_relative": relative(published),
         "published_at": published,
         "reading_minutes": row["reading_minutes"] or 1,
@@ -285,7 +290,7 @@ def history_today(limit: int = 2) -> tuple[list[dict], str]:
     today = date.today()
     stamp = today.strftime("%m-%d")
     rows = db.query(
-        """SELECT a.id, a.title, a.image_url, a.primary_topic, a.reading_minutes,
+        """SELECT a.id, a.title, a.summary, a.image_url, a.primary_topic, a.reading_minutes,
                   a.published_at, a.first_seen_at, s.name AS source_name
            FROM articles a JOIN sources s ON s.id = a.source_id
            WHERE strftime('%m-%d', COALESCE(a.published_at, a.first_seen_at)) = ?
@@ -302,7 +307,7 @@ def history_today(limit: int = 2) -> tuple[list[dict], str]:
         # a year ago, preferring ones that actually have a picture, instead of
         # the oldest newsletter boilerplate in the database.
         rows = db.query(
-            """SELECT a.id, a.title, a.image_url, a.primary_topic, a.reading_minutes,
+            """SELECT a.id, a.title, a.summary, a.image_url, a.primary_topic, a.reading_minutes,
                       a.published_at, a.first_seen_at, s.name AS source_name
                FROM articles a
                JOIN sources s ON s.id = a.source_id
@@ -318,7 +323,7 @@ def history_today(limit: int = 2) -> tuple[list[dict], str]:
         )
         if not rows:
             rows = db.query(
-                """SELECT a.id, a.title, a.image_url, a.primary_topic, a.reading_minutes,
+                """SELECT a.id, a.title, a.summary, a.image_url, a.primary_topic, a.reading_minutes,
                           a.published_at, a.first_seen_at, s.name AS source_name
                    FROM articles a JOIN sources s ON s.id = a.source_id
                    WHERE a.image_url IS NOT NULL AND a.image_url <> ''
@@ -434,8 +439,15 @@ def challenge(profile_id: str | None) -> dict:
     quizzes = count("SELECT COUNT(DISTINCT article_id) n FROM events WHERE profile_id=? AND kind='quiz_attempt' AND created_at>=?")
     saves = count("SELECT COUNT(*) n FROM events WHERE profile_id=? AND kind='save' AND created_at>=?")
     topics = count("SELECT COUNT(DISTINCT topic) n FROM events WHERE profile_id=? AND kind IN ('read','open') AND topic IS NOT NULL AND created_at>=?")
+    target = 2
+    try:
+        row = db.query_one("SELECT survey FROM profiles WHERE id=?", (profile_id,))
+        age = int(json.loads(row["survey"] or "{}").get("age", 13)) if row else 13
+        target = 2 if age <= 10 else 3 if age <= 14 else 4
+    except (ValueError, TypeError, AttributeError):
+        target = 2
     tasks = [
-        {"id": "read", "icon": "📖", "label": "Read 2 stories", "target": 2, "now": min(2, read_now)},
+        {"id": "read", "icon": "📖", "label": f"Read {target} stories", "target": target, "now": min(target, read_now)},
         {"id": "quiz", "icon": "🧠", "label": "Try one quiz", "target": 1, "now": min(1, quizzes)},
         {"id": "save", "icon": "🔖", "label": "Save one for later", "target": 1, "now": min(1, saves)},
         {"id": "topics", "icon": "🧭", "label": "Read 2 different topics", "target": 2, "now": min(2, topics)},
@@ -444,6 +456,71 @@ def challenge(profile_id: str | None) -> dict:
         task["done"] = task["now"] >= task["target"]
     done = sum(1 for task in tasks if task["done"])
     return {"tasks": tasks, "done": done, "total": len(tasks), "percent": round(done / len(tasks) * 100)}
+
+
+_WIDGET_CACHE: tuple[float, dict] = (0.0, {})
+_WIDGET_SELECT = """
+    SELECT a.id, a.title, a.summary, a.image_url, a.primary_topic, a.reading_minutes,
+           a.published_at, a.first_seen_at, s.name AS source_name,
+           COALESCE(st.source_count, 1) AS source_count
+    FROM articles a
+    JOIN sources s ON s.id = a.source_id
+    LEFT JOIN stories st ON st.id = a.story_id
+"""
+
+
+def _widget_rows(where: str, params: tuple = (), limit: int = 3, order: str = "COALESCE(a.published_at, a.first_seen_at) DESC"):
+    rows = db.query(f"{_WIDGET_SELECT} WHERE {where} ORDER BY {order} LIMIT ?", (*params, limit))
+    return [_article_brief(row) for row in rows]
+
+
+def widget_stories() -> dict:
+    """Small ready-made story sets for the customisable Today board."""
+    global _WIDGET_CACHE
+    if time.time() - _WIDGET_CACHE[0] < 300:
+        return _WIDGET_CACHE[1]
+    topics = [row["primary_topic"] for row in db.query(
+        "SELECT primary_topic FROM articles GROUP BY primary_topic ORDER BY COUNT(*) DESC LIMIT 12"
+    )]
+    day = date.today().toordinal()
+    spotlight_topic = topics[day % len(topics)] if topics else "world"
+    source_row = db.query_one(
+        "SELECT source_id FROM articles WHERE primary_topic = ? AND image_url IS NOT NULL "
+        "ORDER BY COALESCE(published_at, first_seen_at) DESC LIMIT 1",
+        (spotlight_topic,),
+    )
+    data = {
+        "top": _widget_rows("a.content_state = 'extracted'", order="COALESCE(st.heat, 0) DESC, COALESCE(a.published_at, a.first_seen_at) DESC"),
+        "quick": _widget_rows("a.reading_minutes <= 2 AND a.content_state = 'extracted'"),
+        "long": _widget_rows("a.reading_minutes >= 6 AND a.content_state = 'extracted'", limit=2),
+        "good": _widget_rows("a.primary_topic IN ('science','health','culture') AND a.is_breaking = 0"),
+        "photo": _widget_rows("a.image_url IS NOT NULL AND a.image_url <> ''"),
+        "sports": _widget_rows("a.primary_topic = 'sports'"),
+        "motorsport": _widget_rows("a.primary_topic = 'motorsport'"),
+        "science": _widget_rows("a.primary_topic = 'science'", limit=2),
+        "culture": _widget_rows("a.primary_topic = 'culture'", limit=2),
+        "most": _widget_rows("a.content_state = 'extracted'", order="COALESCE(st.source_count, 0) DESC, COALESCE(a.published_at, a.first_seen_at) DESC", limit=2),
+        "next": _widget_rows("a.content_state = 'extracted'", order="RANDOM()", limit=2),
+        "topic": {
+            "topic": spotlight_topic,
+            "topic_label": spotlight_topic.replace("-", " ").title(),
+            "items": _widget_rows("a.primary_topic = ?", (spotlight_topic,), limit=2),
+        },
+        "source": {
+            "name": (source_row["source_id"] if source_row else ""),
+            "items": _widget_rows("a.source_id = ? AND a.image_url IS NOT NULL", (source_row["source_id"],), limit=2) if source_row else [],
+        },
+    }
+    # A number worth pausing on, pulled from a real headline or summary.
+    number = None
+    for item in data["top"] + data["most"]:
+        match = re.search(r"\b\d[\d,.]*\s?(?:%|percent|million|billion|trillion|bn|km|kg|years?|people|students?|seats?|votes?|goals?|points?)\b", f"{item['title']} {item['preview']}", re.I)
+        if match:
+            number = {"value": match.group(0), "context": item["title"], "item": item}
+            break
+    data["number"] = number
+    _WIDGET_CACHE = (time.time(), data)
+    return data
 
 
 def payload(profile_id: str | None = None) -> dict:
@@ -460,4 +537,5 @@ def payload(profile_id: str | None = None) -> dict:
         "history_label": history_label,
         "quiz": quiz(),
         "challenge": challenge(profile_id),
+        "widgets": widget_stories(),
     }

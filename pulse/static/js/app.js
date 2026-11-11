@@ -20,6 +20,7 @@ import { reelsView } from './views/reels.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
 import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
+import { applyAmbient } from './ambient.js';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
@@ -321,7 +322,8 @@ registerAction('toggle-save', async (button) => {
   const rail = document.getElementById('rail-brief');
 });
 
-on('profile', () => { renderNav(); });
+on('profile', () => { renderNav(); applyAmbient(); });
+on('prefs', () => applyAmbient());
 on('save', ({ id, saved }) => {
   document.querySelectorAll(`[data-action="toggle-save"][data-id="${id}"]`).forEach((button) => {
     button.classList.toggle('is-on', saved);
@@ -353,6 +355,7 @@ async function boot() {
     return;
   }
   setBoot(data);
+  applyAmbient();
   document.getElementById('shell').hidden = false;
   if (bootEl) bootEl.remove();
   document.body.dataset.ready = '1';

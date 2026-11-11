@@ -10,6 +10,8 @@ import {
 import { storyCard, rowsHtml, newsRows, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js';
 import { navigate } from '../router.js';
 import { openLegend } from '../legend.js';
+import { openWidgetEditor, WIDGET_COUNT, DEFAULT_WIDGET_IDS } from '../daily.js';
+import { chooseAnimation, chooseNoise, setNoiseVolume } from '../ambient.js';
 
 // ---------------------------------------------------------------- search
 export async function searchView(root, ctx) {
@@ -618,6 +620,9 @@ export async function profileView(root, ctx) {
   const stats = statsData?.stats || {};
   const badges = stats.badges || profile.badges || [];
   const weekly = stats.weekly || [];
+  const age = Math.max(6, Math.min(18, Number(profile.survey?.age || 13)));
+  const mode = p.mode === 'kids' ? 'kids' : p.mode === 'teens' ? 'teens' : (age <= 12 ? 'kids' : 'teens');
+  const widgetIds = Array.isArray(p.widgets) && p.widgets.length ? p.widgets : DEFAULT_WIDGET_IDS;
   const days = [];
   for (let i = 6; i >= 0; i -= 1) {
     const d = new Date(); d.setDate(d.getDate() - i);
@@ -752,7 +757,7 @@ export async function profileView(root, ctx) {
       <h3 class="small muted" style="margin:.6rem 0 .4rem">Appearance</h3>
       <div class="settings-group">
         <div class="settings-row" style="display:block">
-          <div style="margin-bottom:.6rem"><div class="settings-row__label">Theme</div><div class="settings-row__hint">Ten palettes. Auto follows your device; Mono is pure grayscale; Rose and Ocean are light.</div></div>
+          <div style="margin-bottom:.6rem"><div class="settings-row__label">Theme</div><div class="settings-row__hint">25 palettes including ten calming ones. Auto follows your device; Mono is pure grayscale.</div></div>
           <div class="theme-grid">
             ${THEMES.map((theme) => html`
               <button class="theme-swatch ${p.theme === theme.id ? 'is-on' : ''}" data-pref="theme" data-value="${theme.id}" aria-pressed="${p.theme === theme.id}">
@@ -784,6 +789,28 @@ export async function profileView(root, ctx) {
         </div>
       </div>
 
+      <h3 class="small muted" style="margin:1rem 0 .4rem">You</h3>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div><div class="settings-row__label">Mode</div><div class="settings-row__hint">Kids gets bigger type, shorter reads and a gentler feed. Teens gets the full edition.</div></div>
+          <div class="segmented">
+            <button data-profile-mode="kids" class="${mode === 'kids' ? 'is-on' : ''}">Kids</button>
+            <button data-profile-mode="teens" class="${mode === 'teens' ? 'is-on' : ''}">Teens</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-row__label">Age</div><div class="settings-row__hint">6–18. Your daily goal and reading length grow with age.</div></div>
+          <select data-profile-age style="width:auto;min-width:92px" aria-label="Age">
+            ${Array.from({ length: 13 }, (_, index) => index + 6).map((value) => html`
+              <option value="${value}" ${value === age ? 'selected' : ''}>${value} years</option>`)}
+          </select>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-row__label">Reading plan</div><div class="settings-row__hint">${goalForAge(age)} stories a day · ${lengthForAge(age)} reads · level ${levels().level}</div></div>
+          <span class="badge badge--topic">${age <= 12 ? 'Kids' : 'Teens'}</span>
+        </div>
+      </div>
+
       <h3 class="small muted" style="margin:1rem 0 .4rem">Reading & AI</h3>
       <div class="settings-group">
         <div class="settings-row">
@@ -807,6 +834,65 @@ export async function profileView(root, ctx) {
             <button class="btn btn--sm btn--ghost" data-goal="-1">−</button>
             <span class="mono">${today.goal}</span>
             <button class="btn btn--sm btn--ghost" data-goal="1">+</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="small muted" style="margin:1rem 0 .4rem">Ambience</h3>
+      <div class="settings-group">
+        <div class="settings-row" style="display:block">
+          <div style="margin-bottom:.55rem"><div class="settings-row__label">Background animation</div><div class="settings-row__hint">Pick a little weather for the page. “Theme” follows your palette.</div></div>
+          <div class="ambience-grid">
+            ${[['theme','Theme'],['rain','Rain'],['snow','Snow'],['meteors','Meteors'],['birds','Birds'],['stars','Stars'],['fireflies','Fireflies'],['petals','Petals'],['leaves','Leaves'],['bubbles','Bubbles'],['aurora','Aurora'],['none','Off']].map(([id,label]) => html`
+              <button class="chip ${p.animation === id ? 'is-on' : ''}" data-setting-anim="${id}">${label}</button>`)}
+          </div>
+        </div>
+        <div class="settings-row" style="display:block">
+          <div style="margin-bottom:.55rem"><div class="settings-row__label">Focus noise</div><div class="settings-row__hint">White, pink, brown, rain, waves or wind. Tap to start; it stays on this device.</div></div>
+          <div class="chip-row">
+            ${[['off','Off'],['white','White'],['pink','Pink'],['brown','Brown'],['rain','Rain'],['waves','Waves'],['wind','Wind']].map(([id,label]) => html`
+              <button class="chip ${p.noise === id ? 'is-on' : ''}" data-setting-noise="${id}">${label}</button>`)}
+          </div>
+          <div class="hstack" style="margin-top:.6rem;gap:.5rem">
+            <span class="tiny faint">Volume</span>
+            <input type="range" data-setting-volume min="0" max="100" value="${Math.round((p.noise_volume || .35) * 100)}" aria-label="Noise volume" style="flex:1">
+          </div>
+        </div>
+      </div>
+
+      <h3 class="small muted" style="margin:1rem 0 .4rem">Today board</h3>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div><div class="settings-row__label">Widgets</div><div class="settings-row__hint">${widgetIds.length} of ${WIDGET_COUNT} on your board — word games, scores, quotes, timers and more.</div></div>
+          <button class="btn btn--sm btn--primary" id="edit-widgets">Edit</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-row__label">Reset board</div><div class="settings-row__hint">Back to the starter mix.</div></div>
+          <button class="btn btn--sm btn--ghost" id="reset-widgets">Reset</button>
+        </div>
+      </div>
+
+      <h3 class="small muted" style="margin:1rem 0 .4rem">Fun & focus</h3>
+      <div class="settings-group">
+        ${[
+          ['autoplay_shorts', 'Autoplay Shorts', 'Advance to the next story every 14 seconds.'],
+          ['shorts_sound', 'Shorts sound', 'Read the active short aloud.'],
+          ['haptics', 'Haptics', 'Tiny buzz on likes and saves (phone only).'],
+          ['confetti', 'Confetti', 'Celebrate streaks, quizzes and saves.'],
+          ['compact_cards', 'Compact cards', 'Fit a little more news on the page.'],
+          ['show_why', '“Why this story” chips', 'Show why a story reached your feed.'],
+          ['show_images', 'Article images', 'Load publisher photos.'],
+          ['show_reading_streak', 'Show reading streak', 'Display the flame in your header.'],
+        ].map(([key, label, hint]) => html`
+          <div class="settings-row">
+            <div><div class="settings-row__label">${label}</div><div class="settings-row__hint">${hint}</div></div>
+            <button class="switch ${p[key] ? 'is-on' : ''}" data-toggle="${key}" aria-pressed="${Boolean(p[key])}"></button>
+          </div>`)}
+        <div class="settings-row">
+          <div><div class="settings-row__label">Line spacing</div><div class="settings-row__hint">Comfort for long reading.</div></div>
+          <div class="segmented">
+            ${[1.35, 1.55, 1.75, 1.95].map((value) => html`
+              <button data-pref="line_spacing" data-value="${value}" class="${Number(p.line_spacing) === value ? 'is-on' : ''}">${value === 1.35 ? 'Tight' : value === 1.55 ? 'Normal' : value === 1.75 ? 'Airy' : 'Wide'}</button>`)}
           </div>
         </div>
       </div>
@@ -858,7 +944,7 @@ function bindProfile(root, p, today, profile) {
     button.addEventListener('click', async () => {
       const key = button.dataset.pref;
       const rawValue = button.dataset.value;
-      const value = key === 'text_size' ? Number(rawValue) : rawValue;
+      const value = (key === 'text_size' || key === 'line_spacing') ? Number(rawValue) : rawValue;
       try {
         await savePrefs({ [key]: value });
         button.parentElement.querySelectorAll('button').forEach((b) => b.classList.toggle('is-on', b === button));
@@ -884,6 +970,57 @@ function bindProfile(root, p, today, profile) {
         profileView(root, {});
       } catch (err) { toast(err.message, { type: 'bad' }); }
     });
+  });
+  root.querySelectorAll('[data-profile-mode]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const nextMode = button.dataset.profileMode;
+      try {
+        await savePrefs(nextMode === 'kids'
+          ? { mode: nextMode, hide_paywalled: true, content_filters: { graphic: true } }
+          : { mode: nextMode, hide_paywalled: false, content_filters: { graphic: false } });
+        root.querySelectorAll('[data-profile-mode]').forEach((node) => node.classList.toggle('is-on', node === button));
+        toast(nextMode === 'kids' ? 'Kids mode on — bigger type, gentler feed' : 'Teens mode on');
+      } catch (err) { toast(err.message, { type: 'bad' }); }
+    });
+  });
+  root.querySelector('[data-profile-age]')?.addEventListener('change', async (event) => {
+    const nextAge = Number(event.target.value) || 13;
+    try {
+      await saveSurvey({ ...profile.survey, age: nextAge });
+      await savePrefs({
+        daily_goal: goalForAge(nextAge),
+        reading_length: lengthForAge(nextAge),
+        mode: nextAge <= 12 ? 'kids' : 'teens',
+        hide_paywalled: nextAge <= 12,
+        content_filters: { graphic: nextAge <= 12 },
+      });
+      toast(`Age ${nextAge}: ${goalForAge(nextAge)} stories a day`);
+      profileView(root, {});
+    } catch (err) { toast(err.message, { type: 'bad' }); }
+  });
+  root.querySelectorAll('[data-setting-anim]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      root.querySelectorAll('[data-setting-anim]').forEach((node) => node.classList.toggle('is-on', node === button));
+      await chooseAnimation(button.dataset.settingAnim);
+    });
+  });
+  root.querySelectorAll('[data-setting-noise]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      root.querySelectorAll('[data-setting-noise]').forEach((node) => node.classList.toggle('is-on', node === button));
+      await chooseNoise(button.dataset.settingNoise);
+    });
+  });
+  const volume = root.querySelector('[data-setting-volume]');
+  volume?.addEventListener('change', async () => {
+    const value = Number(volume.value) / 100;
+    setNoiseVolume(value);
+    await savePrefs({ noise_volume: value }).catch(() => {});
+  });
+  root.querySelector('#edit-widgets')?.addEventListener('click', () => openWidgetEditor(root));
+  root.querySelector('#reset-widgets')?.addEventListener('click', async () => {
+    await savePrefs({ widgets: DEFAULT_WIDGET_IDS }).catch(() => {});
+    toast('Widget board reset');
+    profileView(root, {});
   });
   root.querySelector('#edit-name')?.addEventListener('click', () => {
     const input = document.createElement('input');
@@ -942,6 +1079,16 @@ function bindProfile(root, p, today, profile) {
 const ONBOARD_STEPS = ['welcome', 'grade', 'topics', 'sources', 'reading', 'extras'];
 const DRAFT_KEY = 'pulse.onboarding';
 
+function goalForAge(age) {
+  const value = Math.max(6, Math.min(18, Number(age) || 13));
+  return Math.max(2, Math.min(9, 2 + Math.floor((value - 6) / 2)));
+}
+
+function lengthForAge(age) {
+  const value = Math.max(6, Math.min(18, Number(age) || 13));
+  return value <= 11 ? 'short' : value <= 15 ? 'medium' : 'long';
+}
+
 export async function onboardingView(root, ctx) {
   const editing = ctx.query.edit === '1';
   const boot = state.boot || {};
@@ -951,6 +1098,7 @@ export async function onboardingView(root, ctx) {
     topics: { ...(existing.topics || {}) },
     sources: [...(existing.sources || [])],
     grade: existing.grade || '',
+    age: Number(existing.age || 13),
     goals: [...(existing.goals || [])],
     reading_length: existing.reading_length || prefs().reading_length || 'medium',
     region: existing.region || '',
@@ -1030,22 +1178,29 @@ export async function onboardingView(root, ctx) {
     // than an empty one. The ranker refines this from what they read.
     const fallbackTopics = { world: 2, tech: 2, sports: 2, science: 1, culture: 1 };
     const topics = Object.keys(draft.topics).length ? draft.topics : fallbackTopics;
+    const age = Math.max(6, Math.min(18, Number(draft.age) || 13));
+    const readingLength = lengthForAge(age);
     const survey = {
       topics,
       sources: draft.sources,
       keywords: draft.keywords,
-      grade: draft.grade,
+      age,
       goals: draft.goals,
-      reading_length: draft.reading_length || 'medium',
+      reading_length: readingLength,
       region: draft.region,
-      daily_goal: prefs().daily_goal || 5,
+      daily_goal: goalForAge(age),
       experience: 'some',
       completed_at: new Date().toISOString(),
       skipped,
     };
     try {
       await saveSurvey(survey, { onboarded: true, name: draft.name || 'Student' });
-      await savePrefs({ reading_length: survey.reading_length });
+      await savePrefs({
+        reading_length: readingLength,
+        daily_goal: goalForAge(age),
+        hide_paywalled: age <= 12,
+        content_filters: { graphic: age <= 12 },
+      });
       try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       toast(skipped ? 'Starting with a general feed — personalise any time in Profile' : 'Your feed is ready', { type: 'good' });
       navigate('/', { replace: true });
@@ -1078,15 +1233,17 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
   }
   if (key === 'grade') {
     return html`
-      <h1>What are you studying?</h1>
-      <p class="onboarding__sub">We use this to tune reading level and suggest study features. It never changes which facts you see.</p>
+      <h1>How old are you?</h1>
+      <p class="onboarding__sub">This sets your reading level, daily goal and the tone of your feed. Younger readers get shorter stories and bigger type; the goal grows as you do.</p>
       <div class="onboarding__body">
-        <div class="choice-grid">
-          ${[['middle', 'Middle school', 'Ages 11–14'], ['9', 'Grade 9', ''], ['10', 'Grade 10', ''], ['11', 'Grade 11', ''], ['12', 'Grade 12', ''], ['uni', 'University', ''], ['other', 'Something else', '']].map(([id, label, sub]) => html`
-            <button class="choice ${draft.grade === id ? 'is-on' : ''}" data-grade="${id}">
-              <span class="choice__icon">🎓</span><span>${label}${sub ? html`<span class="choice__sub">${sub}</span>` : ''}</span>
+        <div class="age-grid">
+          ${Array.from({ length: 13 }, (_, index) => index + 6).map((age) => html`
+            <button class="choice age-choice ${Number(draft.age) === age ? 'is-on' : ''}" data-age="${age}" aria-pressed="${Number(draft.age) === age}">
+              <span class="choice__icon">${age <= 8 ? '🧸' : age <= 11 ? '🎒' : age <= 14 ? '🚀' : '🎓'}</span>
+              <span>${age}<span class="choice__sub">years</span></span>
             </button>`)}
         </div>
+        <p class="small muted" style="margin-top:.8rem">At ${draft.age || 13}, we will start you on <b>${goalForAge(draft.age || 13)} stories a day</b> and ${lengthForAge(draft.age || 13)} reads.</p>
       </div>`;
   }
   if (key === 'topics') {
@@ -1176,10 +1333,14 @@ function bindStep(key, body, draft, persist) {
     body.querySelector('#name')?.addEventListener('input', (event) => { draft.name = event.target.value; persist(); });
   }
   if (key === 'grade') {
-    body.querySelectorAll('[data-grade]').forEach((button) => {
+    body.querySelectorAll('[data-age]').forEach((button) => {
       button.addEventListener('click', () => {
-        draft.grade = button.dataset.grade;
-        body.querySelectorAll('[data-grade]').forEach((b) => b.classList.toggle('is-on', b === button));
+        draft.age = Number(button.dataset.age);
+        body.querySelectorAll('[data-age]').forEach((b) => b.classList.toggle('is-on', b === button));
+        const note = body.querySelector('.small.muted b');
+        const tail = body.querySelector('.small.muted');
+        if (tail) tail.innerHTML = `At ${draft.age}, we will start you on <b>${goalForAge(draft.age)} stories a day</b> and ${lengthForAge(draft.age)} reads.`;
+        void note;
         persist();
       });
     });

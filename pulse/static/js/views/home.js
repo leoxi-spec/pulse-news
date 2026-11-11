@@ -124,7 +124,7 @@ export async function homeView(root, ctx) {
         <p class="today-bar__meta">${todayLine()}</p>
       </div>
       <div class="today-bar__actions">
-        ${streakInfo.count > 0 ? html`<span class="pill-progress streak-pill" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
+        ${streakInfo.count > 0 && prefs().show_reading_streak !== false ? html`<span class="pill-progress streak-pill" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
         <a class="pill-progress" href="/profile" data-link title="Level ${levelInfo.level} · ${levelInfo.xp} XP">
           <span class="progress" role="progressbar" aria-valuenow="${levelInfo.progress.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${levelInfo.progress.percent}%"></span></span>
           Lv ${levelInfo.level} · ${levelInfo.xp} XP

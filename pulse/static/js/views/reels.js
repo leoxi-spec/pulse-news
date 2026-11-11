@@ -2,8 +2,8 @@
 // It pages through several ranked streams, appends more as you approach the
 // end, polls for fresh stories, and lets you jump to what arrived since.
 import { get } from '../api.js';
-import { html, raw, icons, toast, copyText, confetti } from '../ui.js';
-import { state, record, toggleSave } from '../store.js';
+import { html, raw, icons, toast, copyText, confetti, haptic } from '../ui.js';
+import { state, prefs, record, toggleSave } from '../store.js';
 import { navigate } from '../router.js';
 
 const MODES = [
@@ -209,10 +209,10 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
   let loading = false;
   let noMore = false;
   let active = 0;
-  let auto = false;
+  let auto = Boolean(prefs().autoplay_shorts);
   let autoTimer = null;
   let pollTimer = null;
-  let soundOn = false;
+  let soundOn = Boolean(prefs().shorts_sound);
   let utterance = null;
   let cleaned = false;
   let lastTap = 0;
@@ -365,7 +365,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
     if (next) {
       record('like', { articleId: item.id }).catch(() => {});
       confetti(14);
-      navigator.vibrate?.(8);
+      haptic(8);
     }
   };
 
@@ -378,7 +378,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
       button.setAttribute('aria-pressed', String(saved));
       button.querySelector('span').textContent = saved ? 'Saved' : 'Save';
       toast(saved ? 'Saved to your library' : 'Removed from saved');
-      if (saved) { confetti(8); navigator.vibrate?.(6); }
+      if (saved) { confetti(8); haptic(6); }
     } catch (err) {
       toast(err.message || 'Could not save this one.', { type: 'bad' });
     }
@@ -581,6 +581,14 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
   });
   watcher.observe(root, { childList: true });
 
+  if (auto) {
+    autoButton.classList.add('is-on');
+    autoButton.setAttribute('aria-pressed', 'true');
+    autoButton.innerHTML = html`${raw(icons.pause)} Auto on`;
+    aimAuto();
+    scheduleAuto();
+  }
+  if (soundOn) soundButton.classList.add('is-on');
   paintProgress();
   if (items[0]) record('view', { articleId: items[0].id, silent: true }).catch(() => {});
   maybeLoadMore();
