@@ -515,11 +515,87 @@ def is_fragment(sentence: str) -> bool:
     return False
 
 
+_US_DATE_STAMP = re.compile(
+    r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+"
+    r"(?:January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+\d{1,2},\s*\d{4}\s+at\s+\d{1,2}:\d{2}\s*(?:AM|PM)?\s*(?:UTC|GMT|ET|EST|EDT|BST)?\b",
+    re.I,
+)
+
+
+def _strip_leading_widgets(text: str) -> str:
+    """Drop a leading stack of trending links/headline teasers before a body.
+
+    Yahoo, MSN and several local-news templates put a "more headlines" list at
+    the top of the page, and the extractor keeps those short lines.  When the
+    first real paragraph is far enough down, cut the teaser stack instead of
+    letting it leak into the summary.
+    """
+    if not text:
+        return ""
+    text = _US_DATE_STAMP.sub(" ", text)
+    parts = [part.strip() for part in re.split(r"\n+", text) if part.strip()]
+    if len(parts) < 3:
+        return text
+    index = 0
+    while index < len(parts) and index < 10:
+        part = parts[index]
+        if len(part) >= 100 or (len(part) >= 60 and part.endswith((".", "!", "?", "”", '"'))):
+            break
+        if part.endswith(":"):
+            break
+        index += 1
+    if index >= 2 and len(parts) - index >= 2:
+        return "\n\n".join(parts[index:])
+    return text
+
+
+def clean_blocks(blocks: list[dict]) -> list[dict]:
+    """Remove leading widget links and stray timestamps from stored blocks."""
+    cleaned: list[dict] = []
+    for block in blocks or []:
+        text = (block.get("text") or "").strip()
+        if not text:
+            continue
+        if len(text) < 90 and (_US_DATE_STAMP.search(text) or _DATE_STAMP.search(text)):
+            continue
+        cleaned.append(block)
+    # A run of short list items before any paragraph is a navigation/trending
+    # list, not article content.
+    index = 0
+    while index < len(cleaned) and index < 10:
+        block = cleaned[index]
+        text = (block.get("text") or "").strip()
+        if block.get("type") == "li" and len(text) < 100:
+            index += 1
+            continue
+        break
+    if index >= 2 and len(cleaned) - index >= 1:
+        cleaned = cleaned[index:]
+    # A short headline stack before the first long paragraph.
+    index = 0
+    while index < len(cleaned) and index < 6:
+        block = cleaned[index]
+        text = (block.get("text") or "").strip()
+        if len(text) >= 100:
+            break
+        if block.get("type") in ("h2", "h3", "h4") or text.endswith(":"):
+            break
+        if len(text) >= 60 and text.endswith((".", "!", "?", "”", '"')):
+            break
+        index += 1
+    if index >= 2 and len(cleaned) - index >= 2:
+        cleaned = cleaned[index:]
+    return cleaned
+
+
 def strip_boilerplate(text: str) -> str:
     """Remove bylines, widget junk and date stamps from stored article text."""
     if not text:
         return ""
-    cleaned = _WIDGET_JUNK.sub(" ", text)
+    cleaned = _strip_leading_widgets(text)
+    cleaned = _PHOTO_CREDIT.sub("", cleaned.strip())
+    cleaned = _WIDGET_JUNK.sub(" ", cleaned)
     cleaned = _DATE_STAMP.sub(" ", cleaned)
     cleaned = _strip_byline(cleaned)
     kept = []
@@ -536,7 +612,12 @@ def summarize(text: str, max_sentences: int = 3, max_chars: int = 700) -> str:
     """Extractive summary: keep the most central sentences, in order."""
     if not text:
         return ""
-    candidates = [s for s in sentences(text) if 45 <= len(s) <= 420 and not is_fragment(s)]
+    candidates = [
+        s for s in sentences(text)
+        if 45 <= len(s) <= 420 and not is_fragment(s)
+        and not _US_DATE_STAMP.search(s)
+        and not re.search(r"\b(?:NFL|NBA|MLB|NHL)\b.*\b(?:grades|tracker|recap)\b", s, re.I)
+    ]
     if not candidates:
         return truncate_words(text, max_chars // 6)
     tokens_per_sentence = [set(_tokenise(s)) for s in candidates]
@@ -721,9 +802,17 @@ _DATE_STAMP = re.compile(
 )
 
 
+_PHOTO_CREDIT = re.compile(
+    r"^(?:photo|image|picture|credit|illustration)\s*(?:by|:)?\s*[^.]{0,90}?"
+    r"(?:getty images|associated press|\bap\b|reuters|afp|shutterstock|unsplash|epa)\s*[.·—–-]?\s*",
+    re.I,
+)
+
+
 def clean_summary(text: str, limit: int = 520) -> str:
     plain = text_of(text or "")
     plain = re.sub(r"\s+", " ", plain).strip()
+    plain = _PHOTO_CREDIT.sub("", plain).strip()
     for prefix in ("Read more", "Continue reading", "Watch:", "Listen:"):
         if plain.startswith(prefix):
             plain = plain[len(prefix):].lstrip(" :–-")

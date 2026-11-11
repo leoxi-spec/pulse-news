@@ -212,7 +212,7 @@ def extractive_overview(article: dict) -> dict:
     ][:4]
     if not points and summary:
         points = [s for s in htmltext.sentences(summary)[:3]]
-    why = _why_it_matters(article, text)
+    why = _why_it_matters(article, text, summary)
     return {
         "engine": "extractive",
         "provider": None,
@@ -227,9 +227,17 @@ def extractive_overview(article: dict) -> dict:
     }
 
 
-def _why_it_matters(article: dict, text: str) -> str:
+def _why_it_matters(article: dict, text: str, summary: str = "") -> str:
+    summary_tokens = [set(htmltext._tokenise(s)) for s in htmltext.sentences(summary)]
     candidates = []
     for sentence in htmltext.sentences(text):
+        tokens = set(htmltext._tokenise(sentence))
+        overlap = max(
+            (len(tokens & other) / max(1, len(tokens | other)) for other in summary_tokens),
+            default=0.0,
+        )
+        if overlap > 0.6:
+            continue
         low = sentence.lower()
         if any(word in low for word in ("could", "expected", "means", "will affect", "impact", "if approved", "next step", "because")):
             candidates.append(sentence)

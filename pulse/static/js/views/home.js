@@ -5,14 +5,16 @@ import {
 import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
 import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed } from '../components.js';
 import { open as openPalette, mountHomeSearch } from '../palette.js';
+import { dailySection, bindDaily, loadDaily } from '../daily.js';
 
 const DEFAULT_SECTIONS = [
-  'brief', 'top', 'for-you', 'picks', 'my-sports',
+  'brief', 'daily', 'top', 'for-you', 'picks', 'my-sports',
   'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
 ];
 
 const BASE_SECTIONS = [
   { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
+  { id: 'daily', label: 'Today', hint: 'Word, poll, quiz, debate and challenge' },
   { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
   { id: 'for-you', label: 'For you', hint: 'The main personalised feed' },
   { id: 'picks', label: "Editor's picks", hint: 'Full-text stories worth the time' },
@@ -40,10 +42,13 @@ function activeSections() {
   if (valid.length) {
     // one-time migration: make sure people who customised before motorsport
     // existed still get a Formula 1 row on the front page.
-    if (!prefs().sections_v2 && !valid.includes('topic:motorsport')) {
+    if (!prefs().sections_v2) {
       const next = [...valid];
-      const world = next.indexOf('topic:world');
-      next.splice(world >= 0 ? world + 1 : next.length, 0, 'topic:motorsport');
+      if (!next.includes('daily')) next.splice(next.indexOf('brief') + 1 || 0, 0, 'daily');
+      if (!next.includes('topic:motorsport')) {
+        const world = next.indexOf('topic:world');
+        next.splice(world >= 0 ? world + 1 : next.length, 0, 'topic:motorsport');
+      }
       savePrefs({ home_sections: next, sections_v2: true });
       return next;
     }
@@ -90,6 +95,7 @@ function feedUrl(mode, offset, limit = 20) {
 async function loadSection(id, timeoutMs = 3000) {
   const task = (async () => {
     if (id === 'brief') return get('/api/brief', 60, true);
+    if (id === 'daily') return loadDaily();
     if (id === 'top') return get('/api/feed?mode=top&limit=3&days=2', 45);
     if (id === 'picks') return get('/api/discover', 120);
     if (id === 'for-you') return get(feedUrl('for-you', 0), 20);
@@ -118,7 +124,7 @@ export async function homeView(root, ctx) {
         <p class="today-bar__meta">${todayLine()}</p>
       </div>
       <div class="today-bar__actions">
-        ${streakInfo.count > 0 ? html`<span class="pill-progress" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
+        ${streakInfo.count > 0 ? html`<span class="pill-progress streak-pill" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
         <a class="pill-progress" href="/profile" data-link title="Level ${levelInfo.level} · ${levelInfo.xp} XP">
           <span class="progress" role="progressbar" aria-valuenow="${levelInfo.progress.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${levelInfo.progress.percent}%"></span></span>
           Lv ${levelInfo.level} · ${levelInfo.xp} XP
@@ -173,6 +179,7 @@ export async function homeView(root, ctx) {
   if (!container) return;
   container.innerHTML = sections.map((id) => sectionMarkup(id, data.get(id))).filter(Boolean).join('');
   bindSectionActions(root, sections, data);
+  bindDaily(root, data.get('daily'));
 
   // Sports is the slow one: a placeholder reserves its space and fills later,
   // which only moves content below it, never above.
@@ -187,6 +194,7 @@ export async function homeView(root, ctx) {
 function sectionMarkup(id, data) {
   const meta = sectionMeta(id);
   if (id === 'brief') return briefSection(data);
+  if (id === 'daily') return dailySection(data);
   if (id === 'top') return topSection(data);
   if (id === 'picks') return picksSection(data);
   if (id === 'for-you') return forYouSection(data, 'for-you');
@@ -239,8 +247,24 @@ function picksSection(data) {
     rowsHtml(items, { seed: 'picks' }));
 }
 
+function applyMood(list, mood) {
+  const copy = [...list];
+  if (mood === 'Hype') return copy.sort((a, b) => Number(b.breaking) - Number(a.breaking));
+  if (mood === 'Deep') return copy.sort((a, b) => (b.reading_minutes || 0) - (a.reading_minutes || 0));
+  if (mood === 'Chill') return copy.sort((a, b) => Number(a.breaking) - Number(b.breaking));
+  if (mood === 'Light') {
+    const light = new Set(['culture', 'entertainment', 'music', 'sports', 'motorsport']);
+    return copy.sort((a, b) => Number(light.has(b.topic)) - Number(light.has(a.topic)));
+  }
+  if (mood === 'Just facts') {
+    const facts = new Set(['world', 'politics', 'business', 'science', 'tech', 'health']);
+    return copy.sort((a, b) => Number(facts.has(b.topic)) - Number(facts.has(a.topic)));
+  }
+  return copy;
+}
+
 function forYouSection(data, mode, items, hasMore, offset) {
-  const list = items || data?.items || [];
+  const list = items || applyMood(data?.items || [], items ? null : prefs().mood);
   const more = hasMore === undefined ? Boolean(data?.has_more) : hasMore;
   const startOffset = offset === undefined ? list.length : offset;
   const head = html`

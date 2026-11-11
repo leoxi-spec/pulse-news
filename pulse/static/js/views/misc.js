@@ -5,9 +5,9 @@ import {
 } from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
-  errorState, emptyState, compactNumber, number, toastProgress,
+  errorState, emptyState, compactNumber, number, toastProgress, confetti,
 } from '../ui.js';
-import { storyCard, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js';
+import { storyCard, rowsHtml, newsRows, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js';
 import { navigate } from '../router.js';
 import { openLegend } from '../legend.js';
 
@@ -145,22 +145,27 @@ async function runSearch(root, { q, topic, source, since, sort, offset, append }
       loadMore.innerHTML = '';
       return;
     }
-    const markup = data.results.map((item) => html`
-      <article class="card" style="padding:1rem;margin-bottom:.6rem">
-        <div class="hstack" style="gap:.4rem;margin-bottom:.35rem">
-          <span class="badge badge--topic">${item.topic_label}</span>
-          <span class="tiny muted">${item.source_name}</span>
-          <span class="tiny faint">·</span>
-          <span class="tiny muted">${item.published_relative || ''}${item.date_label === 'First seen' ? ' (first seen)' : ''}</span>
-          ${item.paywalled ? html`<span class="tiny faint">🔒</span>` : ''}
-        </div>
-        <h3 style="font-size:1.02rem;line-height:1.3"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
-        ${item.snippet ? html`<p class="small muted" style="margin-top:.35rem">${raw(highlight(item.snippet))}</p>` : ''}
-        <div class="hstack" style="gap:.5rem;margin-top:.5rem">
-          <span class="tiny faint">${item.reading_minutes} min read${item.word_count ? ` · ${item.word_count} words` : ''}</span>
-          ${item.story_id ? html`<span class="tiny faint">·</span><a class="tiny muted" style="text-decoration:underline;text-underline-offset:2px" href="/story/${item.story_id}" data-link>${item.story_source_count} outlets</a>` : ''}
-        </div>
-      </article>`).join('');
+    const rows = newsRows(data.results, { seed: `search-${offset}` })
+      .flatMap((row) => (row.length === 4 ? [row.slice(0, 2), row.slice(2)] : [row]));
+    const markup = rows.map((row) => html`
+      <div class="news-row row-${row.length}">
+        ${row.map((item) => html`
+          <article class="card search-hit">
+            <div class="hstack" style="gap:.35rem;flex-wrap:wrap">
+              <span class="badge badge--topic">${item.topic_label}</span>
+              <span class="tiny muted">${item.source_name}</span>
+              <span class="tiny faint">·</span>
+              <span class="tiny muted">${item.published_relative || ''}${item.date_label === 'First seen' ? ' (first seen)' : ''}</span>
+              ${item.paywalled ? html`<span class="tiny faint" title="Subscription">🔒</span>` : ''}
+            </div>
+            <h3 class="search-hit__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+            ${item.snippet ? html`<p class="search-hit__snippet">${raw(highlight(item.snippet))}</p>` : ''}
+            <div class="hstack" style="gap:.5rem;margin-top:auto">
+              <span class="tiny faint">${item.reading_minutes} min read${item.word_count ? ` · ${item.word_count} words` : ''}</span>
+              ${item.story_id ? html`<span class="tiny faint">·</span><a class="tiny muted" style="text-decoration:underline;text-underline-offset:2px" href="/story/${item.story_id}" data-link>${item.story_source_count} outlets</a>` : ''}
+            </div>
+          </article>`)}
+      </div>`).join('');
     if (append) results.insertAdjacentHTML('beforeend', markup);
     else results.innerHTML = markup;
     loadMore.innerHTML = data.has_more
@@ -199,7 +204,7 @@ export async function savedView(root) {
     }
     body.innerHTML = html`
       <div class="section">${sectionHead(`${data.items.length} saved stories`)}</div>
-      <div class="feed">${data.items.map((item) => storyCard(item))}</div>`;
+      <div class="news-rows">${rowsHtml(data.items, { lead: true, seed: 'saved' })}</div>`;
   } catch (err) {
     errorState(root.querySelector('#saved-body'), err.message, () => savedView(root));
   }
@@ -230,18 +235,7 @@ export async function briefView(root) {
         <p class="tiny muted" style="margin-top:.5rem">Built from today's coverage, ranked for your interests. Tap a card to read the preview and overview.</p>
       </div>
       <div class="feed" style="margin-top:.9rem">
-        ${data.stories.map((item, index) => html`
-          <article class="card" style="padding:1rem" data-article-card="${item.id}">
-            <div class="hstack" style="gap:.4rem">
-              <span class="badge badge--topic">${index + 1}</span>
-              <span class="tiny muted">${item.source?.name || ''}</span>
-              <span class="tiny faint">·</span>
-              <span class="tiny muted">${item.published_relative}</span>
-              ${item.story?.source_count > 1 ? html`<span class="tiny faint">· ${item.story.source_count} outlets</span>` : ''}
-            </div>
-            <h3 style="font-size:1.05rem;line-height:1.3;margin-top:.4rem"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
-            <p class="small muted" style="margin-top:.3rem">${item.preview || ''}</p>
-          </article>`)}
+        ${briefRows(data.stories)}
       </div>`;
     root.querySelector('#complete-brief')?.addEventListener('click', async (event) => {
       event.target.disabled = true;
@@ -264,6 +258,7 @@ export async function studyView(root) {
     <p class="page-sub">Turn today's news into revision: quick quizzes, a jargon decoder and citation help.</p>
     <div id="study-quiz" class="section">${skeletonFeed(2)}</div>
     <div id="study-jargon" class="section"></div>
+    <div id="study-extras" class="section"></div>
     <div class="section">
       ${sectionHead('Citation helper')}
       <div class="card card-pad-lg">
@@ -277,6 +272,162 @@ export async function studyView(root) {
     </div>`;
   loadStudyQuiz(root);
   loadStudyJargon(root);
+  loadStudyExtras(root);
+}
+
+const SLANG = [
+  ['rizz', 'Charm or flirting skill — “he has zero rizz”.'],
+  ['sigma', 'A lone-wolf type, usually said ironically.'],
+  ['bet', 'Okay / deal / you got it.'],
+  ['no cap', 'I am not lying. “Cap” means a lie.'],
+  ['bussin', 'Really good, usually about food.'],
+  ['mid', 'Average or disappointing.'],
+  ['sus', 'Suspicious or sketchy.'],
+  ['flex', 'To show off something you have.'],
+  ['ghosting', 'Disappearing from a chat without explanation.'],
+  ['ick', 'A sudden feeling of cringe about someone.'],
+  ['slay', 'Doing something exceptionally well.'],
+  ['vibe check', 'Reading the mood of a room or situation.'],
+  ['touch grass', 'Go outside; you have been online too long.'],
+  ['delulu', 'Delusional, usually about a crush or a plan.'],
+  ['glazing', 'Over-the-top flattery.'],
+  ['aura', 'The reputation or energy you give off.'],
+  ['brainrot', 'Content that melts your attention span.'],
+  ['cooked', 'In trouble, or completely exhausted.'],
+  ['yap', 'To talk a lot about nothing much.'],
+  ['moots', 'Mutuals — people you follow who follow you back.'],
+  ['ratio', 'A reply with more likes than the original post.'],
+  ['fr', 'For real.'],
+  ['lowkey', 'Slightly / quietly / kind of.'],
+  ['highkey', 'Openly / very much.'],
+  ['GOAT', 'Greatest of all time.'],
+  ['main character energy', 'Acting like the story is about you.'],
+];
+
+let focusTimer = null;
+
+function loadStudyExtras(root) {
+  const slot = root.querySelector('#study-extras');
+  if (!slot) return;
+  let words = [];
+  try { words = JSON.parse(localStorage.getItem('pulse.glossary') || '[]'); } catch { words = []; }
+  slot.innerHTML = html`
+    ${sectionHead('Focus tools', html`<span class="tiny muted">made for homework nights</span>`)}
+    <div class="study-tools">
+      <div class="card card-pad">
+        <div class="between"><h3 class="extras-card__title">⏱️ Focus timer</h3><span class="tiny faint">25 min</span></div>
+        <div class="focus-ring" data-focus-ring style="--p:0"><span data-focus-time>25:00</span></div>
+        <div class="hstack" style="margin-top:.7rem">
+          <button class="btn btn--sm btn--primary" data-focus-toggle>Start</button>
+          <button class="btn btn--sm btn--ghost" data-focus-reset>Reset</button>
+        </div>
+        <p class="tiny faint" data-focus-note style="margin-top:.5rem">One Pomodoro. Phone face down.</p>
+      </div>
+      <div class="card card-pad">
+        <div class="between"><h3 class="extras-card__title">📚 Your words</h3><span class="tiny faint">${words.length}</span></div>
+        ${words.length ? html`
+          <div class="word-list">
+            ${words.slice(0, 8).map((entry) => html`<div class="word-row"><b>${entry.word}</b><span>${entry.meaning}</span></div>`)}
+          </div>` : html`
+          <p class="tiny muted">Add words from the <a class="link" href="/" data-link>Today</a> card and they show up here for revision.</p>`}
+      </div>
+    </div>
+    <div class="card card-pad" style="margin-top:.7rem">
+      <div class="between"><h3 class="extras-card__title">💬 Slang decoder</h3><span class="tiny faint">${SLANG.length} terms</span></div>
+      <input type="search" id="slang-search" placeholder="Type a word or meaning…" style="margin:.5rem 0 .7rem" aria-label="Search slang">
+      <div id="slang-list"></div>
+    </div>`;
+
+  const timeEl = slot.querySelector('[data-focus-time]');
+  const ringEl = slot.querySelector('[data-focus-ring]');
+  const toggle = slot.querySelector('[data-focus-toggle]');
+  const reset = slot.querySelector('[data-focus-reset]');
+  const note = slot.querySelector('[data-focus-note]');
+  let remaining = 25 * 60;
+  let running = false;
+  const paint = () => {
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    timeEl.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+    ringEl.style.setProperty('--p', String(Math.round((1 - remaining / 1500) * 100)));
+  };
+  toggle.addEventListener('click', () => {
+    if (running) {
+      clearInterval(focusTimer);
+      focusTimer = null;
+      running = false;
+      toggle.textContent = 'Resume';
+      note.textContent = 'Paused. Pick it back up when you are ready.';
+      return;
+    }
+    running = true;
+    toggle.textContent = 'Pause';
+    note.textContent = 'Focus mode. You got this.';
+    focusTimer = setInterval(() => {
+      if (!document.body.contains(slot)) { clearInterval(focusTimer); return; }
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(focusTimer);
+        focusTimer = null;
+        running = false;
+        remaining = 0;
+        paint();
+        toggle.textContent = 'Start';
+        note.textContent = 'Done. Stretch, drink water, then one more?';
+        confetti(60);
+        toast('25 minutes done — take a 5-minute break.');
+      } else {
+        paint();
+      }
+    }, 1000);
+  });
+  reset.addEventListener('click', () => {
+    clearInterval(focusTimer);
+    focusTimer = null;
+    running = false;
+    remaining = 25 * 60;
+    paint();
+    toggle.textContent = 'Start';
+    note.textContent = 'One Pomodoro. Phone face down.';
+  });
+  paint();
+
+  const list = slot.querySelector('#slang-list');
+  const search = slot.querySelector('#slang-search');
+  const paintSlang = (query = '') => {
+    const q = query.trim().toLowerCase();
+    const found = SLANG.filter(([term, meaning]) => `${term} ${meaning}`.toLowerCase().includes(q));
+    list.innerHTML = found.length
+      ? html`<div class="slang-list">${found.map(([term, meaning]) => html`<div class="slang-row"><b>${term}</b><span>${meaning}</span></div>`)}</div>`
+      : html`<p class="tiny faint">No match. Try another spelling.</p>`;
+  };
+  search.addEventListener('input', () => paintSlang(search.value));
+  paintSlang();
+}
+
+function briefCard(item, index) {
+  return html`
+    <article class="card brief-card" data-article-card="${item.id}">
+      <div class="hstack" style="gap:.4rem">
+        <span class="badge badge--topic">${index + 1}</span>
+        <span class="tiny muted">${item.source?.name || ''}</span>
+        <span class="tiny faint">·</span>
+        <span class="tiny muted">${item.published_relative}</span>
+        ${item.story?.source_count > 1 ? html`<span class="tiny faint">· ${item.story.source_count} outlets</span>` : ''}
+      </div>
+      <h3 class="brief-card__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+      <p class="brief-card__preview">${item.preview || ''}</p>
+    </article>`;
+}
+
+function briefRows(stories) {
+  const rows = [];
+  rows.push(html`<div class="news-row row-1">${briefCard(stories[0], 0)}</div>`);
+  for (let index = 1; index < stories.length; index += 2) {
+    const pair = stories.slice(index, index + 2);
+    rows.push(html`<div class="news-row row-${pair.length}">${pair.map((item, offset) => briefCard(item, index + offset))}</div>`);
+  }
+  return rows;
 }
 
 async function loadStudyQuiz(root) {
@@ -419,6 +570,14 @@ export async function profileView(root, ctx) {
     days.push({ key, label: d.toLocaleDateString(undefined, { weekday: 'short' }), count: found?.read_count || 0 });
   }
   const maxDay = Math.max(1, ...days.map((d) => d.count));
+  const heat = [];
+  for (let i = 27; i >= 0; i -= 1) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const found = weekly.find((w) => w.day === key);
+    heat.push({ key, count: found?.read_count || 0 });
+  }
+  const heatMax = Math.max(1, ...heat.map((d) => d.count));
 
   root.innerHTML = html`
     <div class="card card-pad-lg">
@@ -432,7 +591,7 @@ export async function profileView(root, ctx) {
           <p class="tiny muted">Level ${level.level} · ${level.title} · ${number(level.xp)} XP</p>
         </div>
         <div class="hstack">
-          ${p.show_reading_streak !== false ? html`<span class="pill-progress">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
+          ${p.show_reading_streak !== false ? html`<span class="pill-progress streak-pill">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
           <span class="pill-progress">Today ${today.read}/${today.goal}</span>
         </div>
       </div>
@@ -451,6 +610,18 @@ export async function profileView(root, ctx) {
               <div class="week__bar">${day.count ? html`<span style="height:${Math.max(6, (day.count / maxDay) * 100)}%"></span>` : ''}</div>
               <span>${day.label}</span>
             </div>`)}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      ${sectionHead('Reading heatmap', html`<span class="tiny muted">last 28 days</span>`)}
+      <div class="card card-pad">
+        <div class="heatmap">
+          ${heat.map((day) => html`<span class="heat-cell" style="--v:${(day.count / heatMax).toFixed(2)}" title="${day.key}: ${day.count} stories"></span>`)}
+        </div>
+        <div class="between" style="margin-top:.45rem">
+          <span class="tiny faint">Less</span><span class="tiny faint">More</span>
         </div>
       </div>
     </div>

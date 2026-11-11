@@ -16,7 +16,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import ai, citations, feed, ingest, profiles, rank, search, sports, stories
+from . import ai, citations, daily, feed, ingest, profiles, rank, search, sports, stories
 from .config import APP_NAME, APP_TAGLINE, APP_VERSION, settings
 from .db import db
 from .httpclient import FetchError, FetchResult, HttpClient, validate_url
@@ -141,6 +141,19 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             return 200, feed.discover(profile), {}
         if path == "/api/brief" and method == "GET":
             return 200, profiles.daily_brief(profile["id"], size=request.int_param("size", 5, minimum=3, maximum=10)), {}
+        if path == "/api/daily" and method == "GET":
+            return 200, daily.payload(profile["id"]), {}
+        if path == "/api/random" and method == "GET":
+            row = db.query_one(
+                """SELECT id FROM articles
+                   WHERE content_state='extracted' AND length(COALESCE(content_text,'')) > 1200
+                   ORDER BY RANDOM() LIMIT 1"""
+            )
+            if row is None:
+                row = db.query_one("SELECT id FROM articles ORDER BY RANDOM() LIMIT 1")
+            if row is None:
+                raise ApiError(404, "The archive is empty")
+            return 200, {"id": int(row["id"])}, {}
         if path == "/api/brief/complete" and method == "POST":
             result = profiles.record_event(profile["id"], "brief_complete", value=1)
             return 200, {"progress": result}, {}

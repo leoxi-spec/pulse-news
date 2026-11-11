@@ -1,7 +1,7 @@
 import { get, post, del } from '../api.js';
 import { state, record, emit, savePrefs, prefs, toggleSave } from '../store.js';
 import {
-  html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog,
+  html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog, confetti,
   errorState, toastProgress, setLoading,
 } from '../ui.js';
 import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js';
@@ -48,6 +48,7 @@ export async function articleView(root, ctx) {
   const p = prefs();
   root.innerHTML = articleMarkup(article, p);
   bindArticle(root, article);
+  renderStoryExtras(root, article);
   trackReading(article);
   loadOverview(root, article);
   if (article.notes?.length) renderNotes(root, article);
@@ -85,6 +86,7 @@ function articleMarkup(a, p) {
       </div>
 
       ${renderAccessBanner(a)}
+      <div class="story-facts" id="story-facts"></div>
 
       <div class="article__actions" role="toolbar" aria-label="Story actions">
         ${renderSaveButton(a)}
@@ -98,6 +100,7 @@ function articleMarkup(a, p) {
         <button class="btn" data-act="font" title="Reading font">${raw(icons.text)}</button>
         <a class="btn article__source-btn" href="${a.read_url}" target="_blank" rel="noopener noreferrer" title="Open at ${source.name}">${raw(icons.external)} Source</a>
       </div>
+      <div class="reaction-bar" id="reaction-bar" aria-label="React to this story"></div>
 
       ${a.image ? html`<figure class="article__hero"><img src="${a.image}" alt="" fetchpriority="high" decoding="async"></figure>` : ''}
 
@@ -112,6 +115,8 @@ function articleMarkup(a, p) {
       </div>
 
       <div class="prose" id="prose" data-font="${document.body.classList.contains('font-serif') ? 'serif' : ''}">${renderBlocks(a, blocks)}</div>
+
+      <div id="extras-slot"></div>
 
       ${!hasBody ? renderNoBody(a) : ''}
 
@@ -282,6 +287,129 @@ function renderNotes(root, article, notes = null) {
   });
 }
 
+const REACTIONS = [['🔥', 'Hype'], ['😮', 'Whoa'], ['😂', 'Funny'], ['😢', 'Sad'], ['💡', 'Learned']];
+
+function readabilityOf(text) {
+  const words = text.match(/[A-Za-z’'-]+/g) || [];
+  if (words.length < 60) return { label: 'Quick read', help: 'Short piece' };
+  const sentences = Math.max(1, (text.match(/[.!?]+/g) || []).length);
+  const syllables = words.reduce((total, word) => {
+    const lower = word.toLowerCase();
+    return total + Math.max(1, (lower.match(/[aeiouy]+/g) || []).length - (lower.endsWith('e') ? 1 : 0));
+  }, 0);
+  let score = 206.835 - 1.015 * (words.length / sentences) - 84.6 * (syllables / words.length);
+  score = Math.max(0, Math.min(100, score));
+  const label = score >= 65 ? 'Easy read' : score >= 45 ? 'Moderate read' : 'Dense read';
+  return { label, help: `Flesch reading ease ${Math.round(score)}/100` };
+}
+
+const POSITIVE = new Set(('win wins won boost boosts growth success successful agree agreement hope improve improved record breakthrough recovery support celebrate rise gain safe peace progress best top').split(' '));
+const NEGATIVE = new Set(('war killed kill death dead crisis fall fell drop loss lose lost attack threat risk fear crash decline cut cuts strike protest inflation layoff layoffs damage hate abuse fail failed warning concern danger').split(' '));
+
+function toneOf(text) {
+  const tokens = text.toLowerCase().match(/[a-z']+/g) || [];
+  let positive = 0;
+  let negative = 0;
+  for (const token of tokens) {
+    if (POSITIVE.has(token)) positive += 1;
+    if (NEGATIVE.has(token)) negative += 1;
+  }
+  if (positive > negative * 1.4) return { label: 'Upbeat tone', icon: '🌤️' };
+  if (negative > positive * 1.4) return { label: 'Critical tone', icon: '🌧️' };
+  return { label: 'Neutral tone', icon: '🌥️' };
+}
+
+function numbersOf(text) {
+  const out = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    if (sentence.length < 35 || sentence.length > 260) continue;
+    const match = sentence.match(/(?:[$£€]\s?)?\d[\d,.]*\s?(?:%|percent|million|billion|trillion|bn|km|kg|°c|years?|months?|days?|hours?|people|students?|seats?|votes?|goals?|points?|miles?)/i);
+    if (!match) continue;
+    out.push({ value: match[0].trim(), context: sentence.trim().slice(0, 150) });
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+function classQuestions(article) {
+  const stop = new Set(['The', 'This', 'That', 'After', 'Before', 'Why', 'How', 'What', 'When', 'Where', 'Who', 'New', 'One', 'Two', 'Three', 'First', 'Last', 'From', 'With', 'And']);
+  const names = [...new Set((article.title.match(/\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?\b/g) || [])
+    .filter((name) => !stop.has(name.split(' ')[0])))].slice(0, 2);
+  const who = names[0] || 'the main person';
+  return [
+    `What does ${who} want — and who stands to lose?`,
+    'Which number in this story would you check first, and where would you look?',
+    `If you had 30 seconds with ${article.source?.name || 'the reporter'}, what would you ask?`,
+  ];
+}
+
+function reactionMap() {
+  try { return JSON.parse(localStorage.getItem('pulse.reactions') || '{}'); } catch { return {}; }
+}
+
+function renderStoryExtras(root, article) {
+  const text = (article.blocks || []).map((block) => block.text).join(' ');
+  const facts = root.querySelector('#story-facts');
+  const bar = root.querySelector('#reaction-bar');
+  const slot = root.querySelector('#extras-slot');
+  if (!text) return;
+
+  if (facts) {
+    const read = readabilityOf(text);
+    const tone = toneOf(text);
+    const reasons = (article.reasons || []).slice(0, 2);
+    facts.innerHTML = html`
+      <span class="fact-pill" title="${read.help}">${raw(icons.text)} ${read.label}</span>
+      <span class="fact-pill" title="Rough tone estimate from the story's own words">${tone.icon} ${tone.label}</span>
+      ${reasons.map((reason) => html`<span class="fact-pill fact-pill--why" title="Why Pulse included this">${reason}</span>`)}`;
+  }
+
+  if (bar) {
+    const stored = reactionMap()[article.id];
+    bar.innerHTML = html`
+      <span class="reaction-bar__label">React</span>
+      ${REACTIONS.map(([emoji, label]) => html`
+        <button type="button" class="reaction ${stored === emoji ? 'is-on' : ''}" data-reaction="${emoji}" title="${label}" aria-label="${label}">${emoji}</button>`)}
+      <span class="reaction-bar__note" data-reaction-note>${stored ? `You reacted ${stored}` : ''}</span>`;
+    bar.querySelectorAll('[data-reaction]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const emoji = button.dataset.reaction;
+        const map = reactionMap();
+        map[article.id] = map[article.id] === emoji ? null : emoji;
+        try { localStorage.setItem('pulse.reactions', JSON.stringify(map)); } catch { /* ignore */ }
+        bar.querySelectorAll('[data-reaction]').forEach((node) => node.classList.toggle('is-on', node === button && Boolean(map[article.id])));
+        const note = bar.querySelector('[data-reaction-note]');
+        if (note) note.textContent = map[article.id] ? `You reacted ${emoji}` : '';
+        if (map[article.id]) confetti(8);
+      });
+    });
+  }
+
+  if (slot) {
+    const numbers = numbersOf(text);
+    const questions = classQuestions(article);
+    slot.innerHTML = html`
+      <section class="section extras">
+        <div class="section-head" style="margin-top:1.5rem"><h2>Go deeper</h2><span class="tiny muted">made from this story</span></div>
+        <div class="extras-grid">
+          ${numbers.length ? html`
+            <div class="card card-pad">
+              <h3 class="extras-card__title">🔢 By the numbers</h3>
+              <ul class="numbers-list">
+                ${numbers.map((number) => html`<li><b>${number.value}</b><span>${number.context}</span></li>`)}
+              </ul>
+            </div>` : ''}
+          <div class="card card-pad">
+            <h3 class="extras-card__title">🗣️ Three questions for class</h3>
+            <ol class="class-list">
+              ${questions.map((question) => html`<li>${question}</li>`)}
+            </ol>
+          </div>
+        </div>
+      </section>`;
+  }
+}
+
 function speechChunks(article) {
   const parts = [article.title, article.summary || ''];
   for (const block of article.blocks || []) {
@@ -446,6 +574,7 @@ async function onSave(button, article) {
     const label = button.querySelector('[data-save-label]');
     if (label) label.textContent = saved ? 'Saved' : 'Save';
     toast(saved ? 'Saved to your library' : 'Removed from saved');
+    if (saved) confetti(10);
   } catch (err) {
     toast(err.message, { type: 'bad' });
   }

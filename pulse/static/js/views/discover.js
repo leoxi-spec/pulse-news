@@ -2,7 +2,7 @@ import { get } from '../api.js';
 import { state, record } from '../store.js';
 import { navigate } from '../router.js';
 import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo, absDate } from '../ui.js';
-import { heroCard, storyCard, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot } from '../components.js';
+import { heroCard, storyCard, rowsHtml, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot } from '../components.js';
 
 export async function discoverView(root) {
   root.classList.add('view--wide');
@@ -50,13 +50,13 @@ export async function discoverView(root) {
     ${data.editors_picks?.length ? html`
       <div class="section">
         ${sectionHead('Worth your time', '<span class="tiny muted">full text available in-app</span>')}
-        <div class="feed">${data.editors_picks.map((item) => storyCard(item))}</div>
+        <div class="news-rows">${rowsHtml(data.editors_picks, { seed: 'discover-picks' })}</div>
       </div>` : ''}
 
     ${data.longreads?.length ? html`
       <div class="section">
         ${sectionHead('Long reads', html`<a href="/?stream=longreads" data-link>More ${raw(icons.chevron)}</a>`)}
-        <div class="feed">${data.longreads.slice(0, 4).map((item) => storyCard(item))}</div>
+        <div class="news-rows">${rowsHtml(data.longreads.slice(0, 4), { seed: 'discover-long' })}</div>
       </div>` : ''}
 
     ${data.sources?.length ? html`
@@ -138,9 +138,9 @@ async function loadTopicFeed(root, slug, mode, offset, append) {
       return;
     }
     if (!append) {
-      body.innerHTML = html`<div class="feed" id="topic-list">${items.map((item) => storyCard(item))}</div><div id="topic-sentinel" style="height:1px"></div>`;
+      body.innerHTML = html`<div class="news-rows" id="topic-list">${rowsHtml(items, { lead: true, seed: `${slug}-${mode}` })}</div><div id="topic-sentinel" style="height:1px"></div>`;
     } else {
-      root.querySelector('#topic-list')?.insertAdjacentHTML('beforeend', items.map((item) => storyCard(item)).join(''));
+      root.querySelector('#topic-list')?.insertAdjacentHTML('beforeend', rowsHtml(items, { seed: `${slug}-${offset}` }).join(''));
     }
     if (data.has_more) {
       const sentinel = root.querySelector('#topic-sentinel');
@@ -176,8 +176,8 @@ export async function storyView(root, ctx) {
           <p class="tiny muted">Approximate editorial spread of the coverage</p>
           ${leanBar(story.leans)}
         </div>` : ''}
-      <div class="feed" style="margin-top:1rem">
-        ${articles.slice().reverse().map((item) => storyCard(item))}
+      <div class="news-rows" style="margin-top:1rem">
+        ${rowsHtml(articles.slice().reverse(), { seed: `story-${id}` })}
       </div>`;
     if (lead) record('view', { storyId: id, silent: true });
     void heroCard;

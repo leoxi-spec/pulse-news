@@ -564,12 +564,12 @@ class IngestService:
                 self._set_content_state(row["id"], "linkonly")
                 return False
 
-            blocks = [b.to_dict() for b in parsed.blocks]
-            text = "\n\n".join(b.text for b in parsed.blocks)[:60000]
+            blocks = htmltext.clean_blocks([b.to_dict() for b in parsed.blocks])
+            text = "\n\n".join(b.get("text", "") for b in blocks)[:60000]
             if not settings.archive_full_text:
                 text = text[:1500]
-            words = htmltext.word_count(" ".join(b.text for b in parsed.blocks))
-            minutes = htmltext.reading_minutes(" ".join(b.text for b in parsed.blocks))
+            words = htmltext.word_count(" ".join(b.get("text", "") for b in blocks))
+            minutes = htmltext.reading_minutes(" ".join(b.get("text", "") for b in blocks))
             published, confidence, raw = parse_date(parsed.published_hint)
             with db.writer() as conn:
                 conn.execute(

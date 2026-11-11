@@ -198,6 +198,10 @@ def _preview_of(summary: str, limit: int = 260) -> str:
     if len(summary) <= limit:
         return summary
     cut = summary[:limit]
+    # Prefer a real sentence boundary over a mid-clause cut.
+    boundary = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
+    if boundary >= int(limit * 0.55):
+        return cut[: boundary + 1]
     if " " in cut:
         cut = cut.rsplit(" ", 1)[0]
     return cut.rstrip(",;:") + "…"
@@ -323,6 +327,7 @@ def article_detail(article_id: int, profile: dict) -> dict | None:
         block for block in blocks
         if not (len(block.get("text", "")) < 160 and "preferred source" in block.get("text", "").lower())
     ]
+    blocks = htmltext.clean_blocks(blocks)
     payload.update(
         {
             "blocks": blocks[:120],

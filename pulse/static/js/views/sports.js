@@ -1,7 +1,7 @@
 import { get } from '../api.js';
 import { state, prefs, savePrefs } from '../store.js';
 import { html, raw, icons, toast, errorState, emptyState, timeAgo, absDate, proxyImg, modal } from '../ui.js';
-import { sectionHead } from '../components.js';
+import { sectionHead, rowsHtml } from '../components.js';
 
 let refreshTimer = null;
 let currentFilter = 'all';
@@ -420,15 +420,8 @@ async function loadSportsNews(root) {
     slot.innerHTML = html`
       <div class="section">
         ${sectionHead('Sports stories', html`<a href="/topic/sports" data-link>All sports ${raw(icons.chevron)}</a>`)}
-        <div class="row-list card card-pad">
-          ${data.items.map((item) => html`
-            <div class="row">
-              ${item.image ? html`<img class="row__img" src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
-              <div class="row__body">
-                <a class="row__title" href="/article/${item.id}" data-link>${item.title}</a>
-                <div class="row__meta"><span>${item.source.name}</span><span>·</span><span>${item.published_relative}</span></div>
-              </div>
-            </div>`)}
+        <div class="news-rows">
+          ${rowsHtml(data.items, { seed: 'sports-news' })}
         </div>
       </div>`;
   } catch { slot.innerHTML = ''; }

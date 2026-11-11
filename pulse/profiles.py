@@ -41,6 +41,7 @@ DEFAULT_PREFS: dict = {
     "show_reading_streak": True,
     "sidebar_slim": True,
     "content_filters": {"graphic": False},
+    "mood": "balanced",
 }
 
 DEFAULT_SURVEY: dict = {
@@ -80,6 +81,7 @@ _XP = {
     "note": 3,
     "streak_day": 10,
     "search": 1,
+    "challenge_complete": 25,
 }
 
 BADGES = (
@@ -215,6 +217,8 @@ def sanitise_prefs(prefs: dict) -> dict:
         clean["font"] = prefs["font"]
     if prefs.get("reading_length") in READING_LENGTHS:
         clean["reading_length"] = prefs["reading_length"]
+    if prefs.get("mood") in ("Chill", "Hype", "Deep", "Light", "Just facts"):
+        clean["mood"] = prefs["mood"]
     for key in ("text_size", "daily_goal"):
         if key in prefs:
             try:
@@ -502,7 +506,7 @@ def stats(profile_id: str) -> dict:
         "SELECT COALESCE(SUM(minutes),0) FROM daily_stats WHERE profile_id=?", (profile_id,), default=0) or 0)
     weekly = db.query(
         "SELECT day, read_count, minutes, xp FROM daily_stats WHERE profile_id=? AND day >= ? ORDER BY day",
-        (profile_id, day_key(now() - timedelta(days=6))),
+        (profile_id, day_key(now() - timedelta(days=27))),
     )
     topic_rows = db.query(
         """SELECT topic, COUNT(*) AS n FROM events

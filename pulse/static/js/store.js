@@ -1,4 +1,5 @@
 import { get, patch, post, del, invalidate } from './api.js';
+import { toast, confetti } from './ui.js';
 
 export const state = {
   boot: null,
@@ -136,8 +137,13 @@ export async function saveSurvey(survey, { onboarded = null, name = null } = {})
 
 export async function record(kind, { articleId = null, storyId = null, value = 0, meta = null, silent = false } = {}) {
   try {
+    const beforeLevel = state.profile?.level || 1;
     const result = await post('/api/events', { kind, article_id: articleId, story_id: storyId, value, meta });
     if (result.profile) setProfile(result.profile, { silent: true });
+    if (result.profile && Number(result.profile.level) > Number(beforeLevel)) {
+      confetti(90);
+      toast(`Level up — you are now level ${result.profile.level}.`, { type: 'good' });
+    }
     emit('progress', result.progress);
     if (!silent) emit('activity', { kind, articleId });
     return result.progress;

@@ -78,11 +78,18 @@ LEXICON: dict[str, tuple[str, ...]] = {
         "extreme weather", "glacier",
     ),
     "motorsport": (
-        "f1", "formula 1", "formula one", "grand prix", "verstappen", "hamilton", "norris",
-        "leclerc", "russell", "piastri", "ferrari", "mercedes", "red bull racing", "mclaren",
-        "aston martin", "alpine", "williams", "haas", "sauber", "motogp", "indycar", "nascar",
-        "rally", "rallying", "le mans", "wec", "formula e", "pole position", "podium",
-        "constructors", "drs", "sprint race", "qualifying", "race weekend", "paddock",
+        # series and event names are unambiguous
+        "formula 1", "formula one", "f1", "grand prix", "motogp", "indycar", "nascar",
+        "rally", "rallying", "wrc", "le mans", "wec", "formula e", "supercars",
+        "pole position", "sprint race", "pit lane", "race weekend", "chequered flag",
+        "constructors", "drivers championship", "world endurance",
+        # named drivers avoid the "Russell Brand" / "qualifying offer" false positives
+        "max verstappen", "lewis hamilton", "charles leclerc", "lando norris",
+        "oscar piastri", "george russell", "carlos sainz", "fernando alonso",
+        "sergio perez", "kimi antonelli", "daniel ricciardo", "valtteri bottas",
+        # teams, with the motorsport context spelled out
+        "red bull racing", "mclaren f1", "scuderia ferrari", "ferrari f1",
+        "mercedes-amg", "aston martin f1", "williams racing", "alpine f1", "haas f1",
     ),
     "sports": (
         "game", "games", "match", "matches", "team", "teams", "coach", "league", "season",

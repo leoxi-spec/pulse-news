@@ -90,6 +90,29 @@ export function dateChip(item) {
 
 // ------------------------------------------------------------------- toasts
 let toastTimer = null;
+export function confetti(count = 48) {
+  if (typeof document === 'undefined') return;
+  const reduce = document.documentElement.dataset.reduceMotion === '1'
+    || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  const colors = ['#ff4d6d', '#ffd166', '#06d6a0', '#4cc9f0', '#b388ff', '#ff9f1c'];
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < count; i += 1) {
+    const bit = document.createElement('i');
+    bit.className = 'confetti-bit';
+    bit.style.left = `${Math.random() * 100}%`;
+    bit.style.background = colors[i % colors.length];
+    bit.style.animationDelay = `${Math.random() * 0.5}s`;
+    bit.style.animationDuration = `${1.4 + Math.random() * 1.1}s`;
+    bit.style.transform = `rotate(${Math.random() * 360}deg)`;
+    layer.appendChild(bit);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 3000);
+}
+
 export function toast(message, { type = '', actionLabel = '', onAction = null, duration = 3600 } = {}) {
   const root = document.getElementById('toast-root');
   if (!root) return;

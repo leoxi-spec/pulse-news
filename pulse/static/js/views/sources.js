@@ -1,7 +1,7 @@
 import { get, post } from '../api.js';
 import { state, sourceOf, topicLabel, record } from '../store.js';
 import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo } from '../ui.js';
-import { sectionHead, storyCard, sourceDot, skeletonFeed } from '../components.js';
+import { sectionHead, storyCard, rowsHtml, sourceDot, skeletonFeed } from '../components.js';
 
 const LEAN_LABEL = {
   left: 'Left', 'center-left': 'Center-left', center: 'Center',
@@ -162,7 +162,7 @@ export async function sourceView(root, ctx) {
       </div>
       <div class="section">
         ${sectionHead('Recent stories')}
-        <div class="feed">${data.articles.map((item) => storyCard(item)) || emptyState({ icon: '📭', title: 'No recent stories', text: 'This source has nothing in the last 30 days on this network.' })}</div>
+        <div class="news-rows">${data.articles?.length ? rowsHtml(data.articles, { lead: true, seed: `source-${source.id}` }) : emptyState({ icon: '📭', title: 'No recent stories', text: 'This source has nothing in the last 30 days on this network.' })}</div>
       </div>
       <details class="section">
         <summary class="small muted" style="cursor:pointer">Feed diagnostics</summary>

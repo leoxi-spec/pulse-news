@@ -13,6 +13,7 @@ const ACTIONS = [
   { id: 'research', label: 'Research & citations', hint: 'Build a bibliography', icon: 'quote', path: '/research' },
   { id: 'saved', label: 'Saved stories', hint: 'Your reading list', icon: 'bookmark', path: '/saved' },
   { id: 'profile', label: 'Profile & settings', hint: 'Themes, goals, AI, data', icon: 'user', path: '/profile' },
+  { id: 'random', label: 'Surprise me', hint: 'Open a random story from the archive', icon: 'sparkle' },
 ];
 
 let root = null;
@@ -221,6 +222,13 @@ function activate(item) {
   if (item.kind === 'headline') { close(); navigate(`/article/${item.id}`); return; }
   if (item.kind === 'topic') { close(); navigate(`/topic/${item.slug}`); return; }
   if (item.kind === 'source') { close(); navigate(`/source/${item.id}`); return; }
+  if (item.kind === 'action' && item.id === 'random') {
+    close();
+    get('/api/random', 5)
+      .then((data) => { if (data.id) navigate(`/article/${data.id}`); })
+      .catch(() => toast('Could not pick a story just now.'));
+    return;
+  }
   if (item.kind === 'action') { close(); navigate(item.path); return; }
   if (item.kind === 'recent' || item.kind === 'search') {
     remember(item.query);
