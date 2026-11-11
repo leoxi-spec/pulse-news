@@ -12,7 +12,9 @@ const ACTIONS = [
   { id: 'sports', label: 'Live scores', hint: 'NBA, NFL, football and more', icon: 'trophy', path: '/sports' },
   { id: 'study', label: 'Study mode', hint: 'Quiz, flashcards, jargon', icon: 'book', path: '/study' },
   { id: 'research', label: 'Research & citations', hint: 'Build a bibliography', icon: 'quote', path: '/research' },
+  { id: 'sources', label: 'Sources directory', hint: '336 outlets and feed health', icon: 'filter', path: '/sources' },
   { id: 'saved', label: 'Saved stories', hint: 'Your reading list', icon: 'bookmark', path: '/saved' },
+  { id: 'account', label: 'Account & sign in', hint: 'Email, password and account settings', icon: 'user', path: '/account' },
   { id: 'profile', label: 'Profile & settings', hint: 'Themes, goals, AI, data', icon: 'user', path: '/profile' },
   { id: 'random', label: 'Surprise me', hint: 'Open a random story from the archive', icon: 'sparkle' },
 ];

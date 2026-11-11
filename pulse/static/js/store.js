@@ -4,6 +4,7 @@ import { toast, confetti } from './ui.js';
 export const state = {
   boot: null,
   profile: null,
+  account: null,
   topicMap: new Map(),
   sourceMap: new Map(),
   route: null,
@@ -28,6 +29,8 @@ export function setBoot(boot) {
   state.topicMap = new Map((boot.topics || []).map((t) => [t.slug, t]));
   state.sourceMap = new Map((boot.sources || []).map((s) => [s.id, s]));
   if (boot.profile) setProfile(boot.profile, { silent: true });
+  state.account = boot.account || null;
+  emit('account', state.account);
   emit('boot', boot);
 }
 
@@ -36,6 +39,11 @@ export function setProfile(profile, { silent = false } = {}) {
   state.profile = profile;
   applyPrefs(profile.prefs || {});
   if (!silent) emit('profile', profile);
+}
+
+export function setAccount(account) {
+  state.account = account || null;
+  emit('account', state.account);
 }
 
 export const getProfile = () => state.profile;

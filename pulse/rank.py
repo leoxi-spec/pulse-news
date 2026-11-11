@@ -27,7 +27,7 @@ _ENGAGEMENT_WEIGHTS = {
     "view": 0.5,
     "open": 0.7,
     "read": 1.6,
-    "dwell": 0.02,      # per second, capped later
+    "dwell": 0.028,     # per second, capped later
     "save": 3.0,
     "like": 3.0,
     "share": 2.0,
@@ -52,6 +52,7 @@ class ProfileModel:
     hidden_topics: set[str] = field(default_factory=set)
     read_ids: set[int] = field(default_factory=set)
     saved_ids: set[int] = field(default_factory=set)
+    dwell_topics: dict[str, float] = field(default_factory=dict)
     region: str = ""
     reading_pref: str = "medium"
     daily_goal: int = 5
@@ -119,13 +120,15 @@ def build_model(profile_id: str, survey: dict | None = None, prefs: dict | None 
     for row in rows:
         weight = _ENGAGEMENT_WEIGHTS.get(row["kind"], 0.0)
         if row["kind"] == "dwell":
-            weight = min(weight * float(row["value"] or 0), 2.0)
+            weight = min(weight * float(row["value"] or 0), 2.4)
         if not weight:
             continue
         decayed = weight * _decay(row["created_at"])
         topic = row["topic"]
         if topic:
             model.topic_weights[topic] = model.topic_weights.get(topic, 0.12) + decayed * 0.055
+            if row["kind"] == "dwell":
+                model.dwell_topics[topic] = model.dwell_topics.get(topic, 0.0) + float(row["value"] or 0) * _decay(row["created_at"])
         if row["source_id"]:
             model.source_weights[row["source_id"]] = model.source_weights.get(row["source_id"], 0.0) + decayed * 0.05
         if row["kind"] in ("view", "open", "read") and row["article_id"]:
@@ -187,6 +190,8 @@ def score(row, model: ProfileModel) -> tuple[float, list[str]]:
     value = weight * 7.0
     if topic in model.followed_topics:
         reasons.append(f"You follow {TOPIC_LABELS.get(topic, topic.title())}")
+    elif model.dwell_topics.get(topic, 0) >= 12:
+        reasons.append(f"You watch {TOPIC_LABELS.get(topic, topic.title())} shorts")
     for extra in extra_topics[:3]:
         if extra != topic:
             value += model.topic_weights.get(extra, 0.12) * 1.1

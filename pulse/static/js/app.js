@@ -17,6 +17,7 @@ import { discoverView, topicView, storyView, archiveView } from './views/discove
 import { sourcesView, sourceView } from './views/sources.js';
 import { sportsView } from './views/sports.js';
 import { reelsView } from './views/reels.js';
+import { accountView } from './views/account.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
 import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
@@ -30,8 +31,6 @@ const NAV = [
   { href: '/brief', label: 'Brief', icon: 'bolt' },
   { href: '/saved', label: 'Saved', icon: 'bookmark', mobile: true },
   { href: '/study', label: 'Study', icon: 'book', minAge: 8 },
-  { href: '/research', label: 'Research', icon: 'quote', minAge: 12 },
-  { href: '/sources', label: 'Sources', icon: 'filter', minAge: 12 },
   { href: '/profile', label: 'Profile', icon: 'user', mobile: true },
 ];
 
@@ -60,6 +59,7 @@ function registerRoutes() {
   router.add('/sources', sourcesView);
   router.add('/source/:id', sourceView);
   router.add('/archive', archiveView);
+  router.add('/account', accountView);
   router.add('/profile', profileView);
   router.add('/settings', (root, ctx) => profileView(root, { ...ctx, query: { ...ctx.query, focus: 'settings' } }));
   router.add('/onboarding', onboardingView);
@@ -365,7 +365,7 @@ async function boot() {
   renderNav();
   router.start();
 
-  if (!data.profile?.onboarded && !location.pathname.startsWith('/onboarding')) {
+  if (!data.profile?.onboarded && !location.pathname.startsWith('/onboarding') && !location.pathname.startsWith('/account')) {
     router.navigate('/onboarding', { replace: true });
   }
 

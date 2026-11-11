@@ -193,6 +193,12 @@ class Handler(BaseHTTPRequestHandler):
             return exc.status
 
         extra = dict(headers or {})
+        api_cookies = extra.pop("Set-Cookie", None)
+        if api_cookies:
+            if isinstance(api_cookies, str):
+                set_cookies.append(api_cookies)
+            else:
+                set_cookies.extend(api_cookies)
         explicit_profile = extra.pop("Set-Profile", None)
         if explicit_profile:
             set_cookies.append(

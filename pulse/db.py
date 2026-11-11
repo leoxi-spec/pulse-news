@@ -26,7 +26,7 @@ from .timeutil import iso, now, parse_iso
 
 log = get_logger("db")
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -164,6 +164,29 @@ CREATE TABLE IF NOT EXISTS profiles (
     streak_last   TEXT,
     daily_goal    INTEGER NOT NULL DEFAULT 5
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    name          TEXT,
+    password_hash TEXT NOT NULL,
+    salt          TEXT NOT NULL,
+    is_admin      INTEGER NOT NULL DEFAULT 0,
+    profile_id    TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+    created_at    TEXT NOT NULL,
+    last_login_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_profile ON users(profile_id);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash   TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at   TEXT NOT NULL,
+    expires_at   TEXT NOT NULL,
+    last_seen_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 
 CREATE TABLE IF NOT EXISTS events (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,

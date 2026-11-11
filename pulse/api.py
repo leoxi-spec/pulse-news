@@ -16,7 +16,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import ai, citations, daily, feed, ingest, profiles, rank, search, sports, stories
+from . import ai, auth, citations, daily, feed, ingest, profiles, rank, search, sports, stories
 from .config import APP_NAME, APP_TAGLINE, APP_VERSION, settings
 from .db import db
 from .httpclient import FetchError, FetchResult, HttpClient, validate_url
@@ -42,6 +42,7 @@ class Request:
     profile_id: str | None = None
     client_id: str | None = None
     remote: str = ""
+    account: dict | None = None
 
     def json(self) -> dict:
         if not self.body:
@@ -79,6 +80,13 @@ def handle(request: Request) -> tuple[int, dict, dict]:
     except Exception:
         log.exception("profile bootstrap failed")
         profile = profiles.create()
+
+    account = auth.session_user(request)
+    request.account = account
+    if account and account.get("profile_id"):
+        linked = profiles.get(account["profile_id"])
+        if linked:
+            profile = linked
     request.profile_id = profile["id"]
 
     path = request.path
@@ -87,6 +95,57 @@ def handle(request: Request) -> tuple[int, dict, dict]:
     try:
         if path == "/api/bootstrap" and method == "GET":
             return 200, _bootstrap(profile, request), {}
+        if path == "/api/auth/signup" and method == "POST":
+            payload = request.json()
+            try:
+                result = auth.signup(
+                    str(payload.get("email", "")),
+                    str(payload.get("password", "")),
+                    str(payload.get("name", "")),
+                    request.profile_id,
+                    request.remote,
+                )
+            except auth.AuthError as exc:
+                raise ApiError(exc.status, exc.message) from exc
+            return 201, {"account": result["account"], "profile": result["profile"]}, {
+                "Set-Profile": result["profile"]["id"],
+                "Set-Cookie": auth.cookie(result["token"], secure=_secure_request(request)),
+            }
+        if path == "/api/auth/login" and method == "POST":
+            payload = request.json()
+            try:
+                result = auth.login(
+                    str(payload.get("email", "")),
+                    str(payload.get("password", "")),
+                    request.remote,
+                )
+            except auth.AuthError as exc:
+                raise ApiError(exc.status, exc.message) from exc
+            return 200, {"account": result["account"], "profile": result["profile"]}, {
+                "Set-Profile": result["profile"]["id"],
+                "Set-Cookie": auth.cookie(result["token"], secure=_secure_request(request)),
+            }
+        if path == "/api/auth/logout" and method == "POST":
+            auth.logout(request)
+            guest = profiles.create()
+            return 200, {"ok": True, "profile": guest}, {
+                "Set-Profile": guest["id"],
+                "Set-Cookie": auth.clear_cookie(secure=_secure_request(request)),
+            }
+        if path == "/api/auth/me" and method == "GET":
+            return 200, {"account": auth.public(request.account)}, {}
+        if path == "/api/admin/users" and method == "GET":
+            if not request.account or not request.account.get("is_admin"):
+                raise ApiError(403, "Admin access only")
+            users = auth.all_users()
+            return 200, {"users": users, "count": len(users)}, {}
+        if path == "/api/admin/users.csv" and method == "GET":
+            if not request.account or not request.account.get("is_admin"):
+                raise ApiError(403, "Admin access only")
+            return 200, auth.users_csv(), {
+                "Content-Type": "text/csv; charset=utf-8",
+                "Content-Disposition": 'attachment; filename="pulse-users.csv"',
+            }
         if path == "/api/health" and method == "GET":
             return 200, _health(), {}
         if path == "/api/profiles" and method == "POST":
@@ -112,6 +171,8 @@ def handle(request: Request) -> tuple[int, dict, dict]:
         if path == "/api/profile/reset" and method == "POST":
             profiles.delete(profile["id"])
             new_profile = profiles.create()
+            if request.account:
+                auth.link_profile(request.account["id"], new_profile["id"])
             return 200, {"profile": new_profile}, {"Set-Profile": new_profile["id"]}
         if path == "/api/profile/follows" and method == "POST":
             payload = request.json()
@@ -340,6 +401,11 @@ def handle(request: Request) -> tuple[int, dict, dict]:
 
 
 # ------------------------------------------------------------------ handlers
+def _secure_request(request: Request) -> bool:
+    proto = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip().lower()
+    return proto == "https"
+
+
 def _bootstrap(profile: dict, request: Request) -> dict:
     stats = db.stats()
     health = _feed_summary()
@@ -356,6 +422,7 @@ def _bootstrap(profile: dict, request: Request) -> dict:
         "topics": [{"slug": slug, "label": label, "icon": icon} for slug, label, icon in TOPICS],
         "sources": _compact_sources(),
         "profile": profile,
+        "account": auth.public(request.account),
         "ai": ai.status(),
         "ingest": ingest.ingest.status(),
         "sports": {"leagues": sports.LEAGUES_PAYLOAD() if hasattr(sports, "LEAGUES_PAYLOAD") else [

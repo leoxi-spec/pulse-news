@@ -8,12 +8,13 @@ import { open as openPalette, mountHomeSearch } from '../palette.js';
 import { dailySection, bindDaily, loadDaily } from '../daily.js';
 
 const DEFAULT_SECTIONS = [
-  'brief', 'daily', 'top', 'for-you', 'picks', 'my-sports',
+  'brief', 'shorts', 'daily', 'top', 'for-you', 'picks', 'my-sports',
   'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
 ];
 
 const BASE_SECTIONS = [
   { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
+  { id: 'shorts', label: 'Pulse Shorts', hint: 'Full-screen swipeable news' },
   { id: 'daily', label: 'Today', hint: 'Word, poll, quiz, debate and challenge' },
   { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
   { id: 'for-you', label: 'For you', hint: 'The main personalised feed' },
@@ -55,14 +56,23 @@ function activeSections() {
       savePrefs({ home_sections: next, sections_v2: true });
       return next;
     }
+    if (!prefs().sections_v3) {
+      const next = [...valid];
+      if (!next.includes('shorts')) {
+        const brief = next.indexOf('brief');
+        next.splice(brief >= 0 ? brief + 1 : 0, 0, 'shorts');
+      }
+      savePrefs({ home_sections: next, sections_v3: true });
+      return next;
+    }
     if (!prefs().sections_v2) savePrefs({ sections_v2: true });
     return valid;
   }
   if (younger) {
-    return ['brief', 'daily', 'top', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
+    return ['brief', 'shorts', 'daily', 'top', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
   }
   if (olderKid) {
-    return ['brief', 'daily', 'top', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
+    return ['brief', 'shorts', 'daily', 'top', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
   }
   const withInterests = [...DEFAULT_SECTIONS];
   for (const slug of followedTopics()) {
@@ -104,6 +114,7 @@ function feedUrl(mode, offset, limit = 20) {
 async function loadSection(id, timeoutMs = 3000) {
   const task = (async () => {
     if (id === 'brief') return get(`/api/brief?size=${briefSize()}`, 60, true);
+    if (id === 'shorts') return get('/api/feed?mode=top&limit=6&days=2', 45);
     if (id === 'daily') return loadDaily();
     if (id === 'top') return get('/api/feed?mode=top&limit=3&days=2', 45);
     if (id === 'picks') return get('/api/discover', 120);
@@ -136,6 +147,7 @@ export async function homeView(root, ctx) {
       </div>
       <div class="today-bar__actions">
         ${streakInfo.count > 0 && prefs().show_reading_streak !== false ? html`<span class="pill-progress streak-pill" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
+        ${state.account ? '' : html`<a class="pill-progress pill-progress--signin" href="/account" data-link>Sign in</a>`}
         <a class="pill-progress" href="/profile" data-link title="Level ${levelInfo.level} · ${levelInfo.xp} XP">
           <span class="progress" role="progressbar" aria-valuenow="${levelInfo.progress.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${levelInfo.progress.percent}%"></span></span>
           Lv ${levelInfo.level} · ${levelInfo.xp} XP
@@ -206,6 +218,7 @@ export async function homeView(root, ctx) {
 function sectionMarkup(id, data) {
   const meta = sectionMeta(id);
   if (id === 'brief') return briefSection(data);
+  if (id === 'shorts') return shortsSection(data);
   if (id === 'daily') return dailySection(data);
   if (id === 'top') return topSection(data);
   if (id === 'picks') return picksSection(data);
@@ -328,6 +341,36 @@ function savedSection(data) {
   const head = sectionHead('Saved for later', html`<a href="/saved" data-link>Library ${raw(icons.chevron)}</a>`);
   if (!items.length) return sectionWrap('saved', head, html`<div class="card card-pad"><p class="small muted">Nothing saved yet. Tap the bookmark on any story to keep it for revision or a citation.</p></div>`);
   return sectionWrap('saved', head, rowsHtml(items, { lead: false, seed: 'saved' }));
+}
+
+function shortsSection(data) {
+  const items = (data?.items || []).slice(0, 4);
+  if (!items.length) return '';
+  const lead = items[0];
+  const head = sectionHead('Pulse Shorts', html`<a href="/reels" data-link>Open Shorts ${raw(icons.chevron)}</a>`, { sub: 'full-screen stories · watch time tunes For you' });
+  return sectionWrap('shorts', head, html`
+    <div class="shorts-home">
+      <a class="shorts-home__lead" href="/reels?start=${lead.id}" data-link>
+        ${lead.image ? html`<img src="${lead.image}" alt="" loading="lazy">` : html`<span class="shorts-home__fallback">📰</span>`}
+        <span class="shorts-home__shade"></span>
+        <span class="shorts-home__play" aria-hidden="true">▶</span>
+        <span class="shorts-home__copy">
+          <span class="eyebrow">Pulse Shorts</span>
+          <strong>${lead.title}</strong>
+          <i>Tap to watch · double-tap to like</i>
+        </span>
+      </a>
+      <div class="shorts-home__side">
+        ${items.slice(1, 4).map((item) => html`
+          <a class="shorts-home__tile" href="/reels?start=${item.id}" data-link>
+            ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="shorts-home__fallback">📰</span>`}
+            <span class="shorts-home__tile-shade"></span>
+            <b>${item.title}</b>
+            <i>${item.reading_minutes} min</i>
+          </a>`)}
+        <a class="shorts-home__all" href="/reels" data-link>All Shorts <span>→</span></a>
+      </div>
+    </div>`);
 }
 
 function researchSection() {

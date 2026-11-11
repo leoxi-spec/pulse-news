@@ -264,6 +264,10 @@ export async function studyView(root) {
   root.innerHTML = html`
     <h1 class="page-title">Study mode</h1>
     <p class="page-sub">Turn today's news into revision: quick quizzes, a jargon decoder and citation help.</p>
+    <div class="chip-row" style="margin:.4rem 0 .2rem">
+      <a class="chip" href="/research" data-link>Research desk & citations</a>
+      <a class="chip" href="/saved" data-link>Saved for revision</a>
+    </div>
     <div id="study-quiz" class="section">${skeletonFeed(2)}</div>
     <div id="study-jargon" class="section"></div>
     <div id="study-extras" class="section"></div>
@@ -673,6 +677,20 @@ export async function profileView(root, ctx) {
       <div class="level-bar">
         <div class="level-bar__labels"><span>${level.progress.into} / ${level.progress.needed} XP to level ${level.level + 1}</span><span>${level.progress.percent}%</span></div>
         <div class="progress"><span style="width:${level.progress.percent}%"></span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      ${sectionHead('Account')}
+      <div class="card card-pad between" style="gap:1rem">
+        <div>
+          ${state.account
+            ? html`<div class="settings-row__label">${state.account.email}${state.account.is_admin ? html` <span class="badge badge--topic">admin</span>` : ''}</div>
+                   <div class="settings-row__hint">Signed in · your reading history is attached to this account.</div>`
+            : html`<div class="settings-row__label">You are reading as a guest</div>
+                   <div class="settings-row__hint">Create an email account to keep your streak, saves and history across browsers.</div>`}
+        </div>
+        <a class="btn btn--sm ${state.account ? 'btn--ghost' : 'btn--primary'}" href="/account" data-link>${state.account ? 'Manage account' : 'Create account'}</a>
       </div>
     </div>
 

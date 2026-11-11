@@ -15,6 +15,13 @@ const TOPICS = ['world', 'tech', 'science', 'sports', 'culture', 'business', 'po
 const AUTO_MS = 14000;
 const POLL_MS = 45000;
 
+function readLocal(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value === null || value === undefined ? fallback : value;
+  } catch { return fallback; }
+}
+
 function reactionMap() {
   try { return JSON.parse(localStorage.getItem('pulse.reactions') || '{}'); } catch { return {}; }
 }
@@ -40,6 +47,7 @@ function buildStreams(mode) {
 export async function reelsView(root, ctx) {
   document.body.classList.add('reels-mode');
   const mode = MODES.some(([id]) => id === ctx.query.mode) ? ctx.query.mode : 'for-you';
+  const startId = Number(ctx.query.start) || 0;
   root.innerHTML = html`
     <div class="reels reels--loading">
       <div class="reels__loading">
@@ -133,7 +141,7 @@ export async function reelsView(root, ctx) {
       <div class="reels__hint" data-hint><span>Swipe up</span><b>↑</b></div>
     </div>`;
 
-  bind(root, items, mode, streams, fetchNext, seen);
+  bind(root, items, mode, streams, fetchNext, seen, startId);
 }
 
 function reelCard(item) {
@@ -191,7 +199,7 @@ function loaderCard() {
     </section>`;
 }
 
-function bind(root, initialItems, mode, streams, fetchNext, seen) {
+function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   const track = root.querySelector('#reels-track');
   const loader = root.querySelector('[data-loader]');
   const loaderText = root.querySelector('[data-loader-text]');
@@ -216,6 +224,34 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
   let utterance = null;
   let cleaned = false;
   let lastTap = 0;
+  let activeStarted = performance.now();
+
+  const saveDwell = (keepalive = false) => {
+    const item = items[active];
+    if (!item) return;
+    const seconds = Math.min(180, (performance.now() - activeStarted) / 1000);
+    activeStarted = performance.now();
+    if (seconds < 1) return;
+    const value = Math.round(seconds * 10) / 10;
+    try {
+      if (keepalive) {
+        fetch('/api/events', {
+          method: 'POST',
+          keepalive: true,
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-Pulse-Client': 'web' },
+          body: JSON.stringify({ kind: 'dwell', article_id: item.id, value }),
+        }).catch(() => {});
+      } else {
+        record('dwell', { articleId: item.id, value }).catch(() => {});
+      }
+      const watch = readLocal('pulse.watch', {});
+      watch[item.id] = { seconds: value, topic: item.topic, title: item.title, at: Date.now() };
+      const keys = Object.keys(watch);
+      if (keys.length > 240) delete watch[keys[0]];
+      localStorage.setItem('pulse.watch', JSON.stringify(watch));
+    } catch { /* ignore */ }
+  };
 
   const realReels = () => [...track.querySelectorAll('.reel:not(.reel--loader)')];
 
@@ -296,7 +332,9 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
 
   const setActive = (index) => {
     if (cleaned || index === active) return;
+    saveDwell();
     active = index;
+    activeStarted = performance.now();
     realReels().forEach((reel, i) => reel.classList.toggle('is-active', i === index));
     paintProgress();
     hint?.classList.add('is-gone');
@@ -565,14 +603,40 @@ function bind(root, initialItems, mode, streams, fetchNext, seen) {
   };
   document.addEventListener('keydown', onKey);
 
+  const onVisibility = () => {
+    if (document.hidden) saveDwell(true);
+    else activeStarted = performance.now();
+  };
+  document.addEventListener('visibilitychange', onVisibility);
+  const onUnload = () => saveDwell(true);
+  window.addEventListener('pagehide', onUnload);
+
+  if (startId) {
+    const target = items.findIndex((item) => item.id === startId);
+    if (target > 0) {
+      requestAnimationFrame(() => {
+        track.scrollTo({ top: target * track.clientHeight, behavior: 'instant' });
+        setActive(target);
+      });
+    }
+  }
+  try {
+    if (!sessionStorage.getItem('pulse.reels.watchHint')) {
+      sessionStorage.setItem('pulse.reels.watchHint', '1');
+      toast('For You learns from how long you watch each story');
+    }
+  } catch { /* ignore */ }
+
   const cleanup = () => {
     cleaned = true;
     observer.disconnect();
     loaderObserver.disconnect();
     clearTimeout(autoTimer);
     clearInterval(pollTimer);
+    saveDwell(true);
     document.removeEventListener('keydown', onKey);
-    document.removeEventListener('visibilitychange', onVisible);
+    document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('pagehide', onUnload);
     stopSpeech();
   };
 

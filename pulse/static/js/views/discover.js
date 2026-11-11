@@ -9,6 +9,11 @@ export async function discoverView(root) {
   root.innerHTML = html`
     <h1 class="page-title">Explore</h1>
     <p class="page-sub">Every topic, every outlet, every story you've ever seen. ${compactNumber(state.boot?.archive?.total)} articles and counting.</p>
+    <div class="chip-row" style="margin:.5rem 0 .2rem">
+      <a class="chip" href="/sources" data-link>All sources</a>
+      <a class="chip" href="/archive" data-link>Archive</a>
+      <a class="chip" href="/research" data-link>Research desk</a>
+    </div>
     <div id="discover-body">${skeletonFeed(4)}</div>`;
 
   let data;

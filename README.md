@@ -394,3 +394,17 @@ Back up one file: `pulse.sqlite3` (plus `-wal` while running, or use
 Application code: MIT. News content, headlines, images and summaries remain the
 property of their publishers; Pulse stores them locally for personal reading and
 search, and every article links back to the original.
+
+---
+
+## Email accounts (optional)
+
+Open `/account` (or **Profile → Account**) to create an email account or sign in.
+The first account created becomes the server admin. Accounts and sessions live
+in the same `pulse.sqlite3` file as the archive, in the `users` and `sessions`
+tables. The admin sees every account at `/account` with its email, join date,
+last login and reading level, and can download the list as `pulse-users.csv`.
+
+This is a self-hosted build: emails are recorded but **not verified**, because
+there is no mail server, and there is no password-reset email. The account
+cookie keeps a profile, streak and saved stories attached across browsers.

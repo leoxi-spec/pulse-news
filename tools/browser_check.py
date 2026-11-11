@@ -387,6 +387,8 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.ok(checker.count("#breaking-slot .breaking-strip") <= 1, "breaking strip deduped")
     checker.ok(checker.count(".daily-section") == 1, "daily corner renders")
     checker.ok(checker.count(".daily-card") >= 8, "daily widgets render")
+    checker.ok(checker.count(".shorts-home") == 1, "Shorts section is on the homepage")
+    checker.ok(not checker.cdp.js("!!document.querySelector('.appnav a[href=\"/research\"]')"), "top nav is simplified")
     checker.ok(checker.cdp.js("document.querySelectorAll('.daily-card').length >= 8 && !!document.querySelector('[data-customize-widgets]')"), "widget board is editable")
     checker.shot("01-home")
 
@@ -575,6 +577,10 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.cdp.js("(()=>{const r=document.querySelectorAll('.reel')[0]; r.dispatchEvent(new MouseEvent('click',{bubbles:true})); r.dispatchEvent(new MouseEvent('click',{bubbles:true}));})()")
     time.sleep(0.4)
     checker.ok(checker.cdp.js("document.querySelectorAll('.reel')[0].querySelector('[data-like]').classList.contains('is-on')"), "double-tap likes a short")
+    time.sleep(2)
+    checker.cdp.js("(() => { const t = document.querySelector('.reels__track'); t.scrollTo({ top: t.clientHeight * 2, behavior: 'instant' }); })()")
+    time.sleep(1)
+    checker.ok(int(checker.cdp.js("Object.keys(JSON.parse(localStorage.getItem('pulse.watch') || '{}')).length") or 0) >= 1, "Shorts records watch time")
     checker.shot("07b-shorts")
     checker.click("[data-close]")
     checker.wait_for("location.pathname === '/'", 10, "close shorts")
@@ -632,6 +638,32 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.click('[data-toggle="reduce_motion"]')
     checker.ok(checker.count(".badge-tile") >= 10, "badges render")
     checker.shot("10-profile")
+
+    print("\n[5b] Email accounts")
+    account_pid = create_profile(base, onboarded=True)
+    account_email = f"e2e-{account_pid[:8]}@example.com"
+    checker.goto(f"/account?profile={account_pid}")
+    checker.wait_for("Boolean(document.querySelector('[data-signup-form]'))", 15, "account page")
+    checker.cdp.js(f"""(() => {{
+        const f = document.querySelector('[data-signup-form]');
+        f.querySelector('#signup-name').value = 'E2E Reader';
+        f.querySelector('#signup-email').value = '{account_email}';
+        f.querySelector('#signup-password').value = 'correct horse 9';
+        f.requestSubmit();
+    }})()""")
+    checker.wait_for("location.pathname === '/'", 15, "signup redirect")
+    checker.ok(True, "email signup creates an account")
+    checker.goto("/account")
+    checker.wait_for("document.querySelectorAll('.admin-table tbody tr').length >= 1", 15, "admin user table")
+    checker.ok(checker.count(".admin-table tbody tr") >= 1, "admin can see all users")
+    csv = checker.cdp.js("fetch('/api/admin/users.csv').then(r => r.text()).then(t => t.includes('%s'))" % account_email)
+    checker.ok(bool(csv), "users can be exported to CSV")
+    checker.click("[data-logout]")
+    checker.wait_for("location.pathname === '/'", 10, "logout redirect")
+    checker.goto("/account")
+    checker.wait_for("Boolean(document.querySelector('[data-signup-form]'))", 10, "logged out account page")
+    checker.ok(True, "logout returns to the guest state")
+    checker.shot("05b-account")
 
     print("\n[6] Onboarding skip path")
     cdp.call("Page.navigate", url=f"{base}/?profile={skip_profile}")
