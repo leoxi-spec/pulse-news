@@ -231,6 +231,7 @@ export async function briefView(root) {
             <h2 style="font-size:1.3rem;letter-spacing:-.02em;margin-top:.2rem">${data.stories.length} stories · ${data.minutes} min</h2>
           </div>
           <div class="hstack">
+            <button class="btn btn--ghost" id="listen-brief">${raw(icons.sound)} Listen</button>
             <button class="btn btn--ghost" id="print-brief">${raw(icons.printer)} Print</button>
             <button class="btn btn--primary" id="complete-brief">${raw(icons.check)} I'm briefed</button>
           </div>
@@ -241,6 +242,7 @@ export async function briefView(root) {
         ${briefRows(data.stories)}
       </div>`;
     root.querySelector('#print-brief')?.addEventListener('click', () => window.print());
+    root.querySelector('#listen-brief')?.addEventListener('click', (event) => speakBrief(data.stories, event.currentTarget));
     root.querySelector('#complete-brief')?.addEventListener('click', async (event) => {
       event.target.disabled = true;
       try {
@@ -432,6 +434,56 @@ function briefRows(stories) {
     rows.push(html`<div class="news-row row-${pair.length}">${pair.map((item, offset) => briefCard(item, index + offset))}</div>`);
   }
   return rows;
+}
+
+function speakBrief(stories, button) {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    toast('This browser cannot read the brief aloud.', { type: 'bad' });
+    return;
+  }
+  if (button.dataset.mode === 'playing') {
+    synth.pause();
+    button.dataset.mode = 'paused';
+    button.innerHTML = html`${raw(icons.sound)} Resume`;
+    return;
+  }
+  if (button.dataset.mode === 'paused') {
+    synth.resume();
+    button.dataset.mode = 'playing';
+    button.innerHTML = html`${raw(icons.pause)} Pause`;
+    return;
+  }
+  const chunks = stories.map((story, index) => {
+    const preview = (story.preview || '').replace(/\s+/g, ' ').trim();
+    return `Story ${index + 1}. ${story.title}. ${preview}`.slice(0, 340);
+  });
+  if (!chunks.length) return;
+  synth.cancel();
+  let index = 0;
+  let stopped = false;
+  const finish = () => {
+    if (stopped) return;
+    stopped = true;
+    button.dataset.mode = '';
+    button.innerHTML = html`${raw(icons.sound)} Listen`;
+  };
+  const next = () => {
+    if (stopped) return;
+    if (index >= chunks.length) { finish(); toast('Brief finished'); return; }
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    utterance.rate = Math.min(2, Math.max(0.7, Number(prefs().listen_rate) || 1.02));
+    utterance.lang = 'en-US';
+    utterance.onend = () => { index += 1; next(); };
+    utterance.onerror = (event) => {
+      if (event.error !== 'interrupted' && event.error !== 'canceled') toast('Read aloud stopped.', { type: 'bad' });
+      finish();
+    };
+    synth.speak(utterance);
+  };
+  button.dataset.mode = 'playing';
+  button.innerHTML = html`${raw(icons.pause)} Pause`;
+  next();
 }
 
 async function loadStudyQuiz(root) {
