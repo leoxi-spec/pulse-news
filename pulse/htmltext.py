@@ -225,7 +225,9 @@ def first_image(markup: str) -> str | None:
 _IMG_SKIP = re.compile(
     r"(logo|icon|avatar|sprite|badge|pixel|track|analytics|spacer|advert|\bads?/|emoji|"
     r"favicon|placeholder|default|masthead|brand|share|social|subscribe|newsletter|"
-    r"author|headshot|profile|thumbnail-default)",
+    r"author|headshot|profile|thumbnail-default|related|recommend|promo|thumb|teaser|"
+    r"widget|card|most-read|also-read|read-more|more-stories|elsewhere|outbrain|taboola|"
+    r"mobileapp|sponsor|partner|banner|promo|(?:^|[-_/])ads?(?:[-_.]|$))",
     re.I,
 )
 _IMG_EXT = re.compile(r"\.(?:jpe?g|png|webp|avif)(?:[?#]|$)", re.I)
@@ -237,15 +239,16 @@ def image_urls(markup: str, base_url: str = "", limit: int = 14) -> list[str]:
         return []
     found: list[str] = []
 
-    def add(url: str | None, width: int | None = None, height: int | None = None) -> None:
+    def add(url: str | None, width: int | None = None, height: int | None = None,
+            min_width: int = 220, min_height: int = 130) -> None:
         if not url:
             return
         url = html_lib.unescape(str(url)).strip().strip('"\'')
         if not url or url.startswith(("data:", "blob:", "javascript:")):
             return
-        if width is not None and width < 180:
+        if width is not None and width < min_width:
             return
-        if height is not None and height < 110:
+        if height is not None and height < min_height:
             return
         if url.startswith("//"):
             url = "https:" + url
@@ -299,7 +302,13 @@ def image_urls(markup: str, base_url: str = "", limit: int = 14) -> list[str]:
                     size = 0
             if size > best_width:
                 best, best_width = candidate, size
-        add(best or attrs.get("src") or attrs.get("data-src") or attrs.get("data-original"), width, height)
+        # Article figures are trustworthy; loose <img> tags need to be large
+        # enough to be real photography rather than an ad or a related thumb.
+        inside_figure = markup.rfind("<figure", 0, tag.start()) > markup.rfind("</figure>", 0, tag.start())
+        if inside_figure:
+            add(best or attrs.get("src") or attrs.get("data-src") or attrs.get("data-original"), width, height, 200, 120)
+        elif best_width >= 480 or (width or 0) >= 480 or (height or 0) >= 270:
+            add(best or attrs.get("src") or attrs.get("data-src") or attrs.get("data-original"), width, height, 480, 270)
         if len(found) >= limit:
             break
 
@@ -358,16 +367,6 @@ def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> Extra
         or ""
     ).strip()
     result.image = meta_content(markup, "og:image", "twitter:image")
-    result.images = image_urls(markup, url)
-    if result.image:
-        if result.image.startswith("//"):
-            result.image = "https:" + result.image
-        elif result.image.startswith("/"):
-            result.image = urljoin(url, result.image)
-        if result.image not in result.images:
-            result.images.insert(0, result.image)
-    if not result.image and result.images:
-        result.image = result.images[0]
     result.site_name = meta_content(markup, "og:site_name")
     result.author = meta_content(markup, "author", "article:author", "parsely-author")
     result.published_hint = meta_content(
@@ -388,6 +387,7 @@ def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> Extra
             candidates.append(match.group(1))
 
     best = ExtractedArticle()
+    best_markup = ""
     best_score = 0.0
     for chunk in candidates:
         blocks = _clean_blocks(blocks_of(chunk))
@@ -400,6 +400,7 @@ def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> Extra
             best_score = score
             best.blocks = blocks
             best.word_count = words
+            best_markup = chunk
 
     if not best.blocks:
         blocks = _clean_blocks(blocks_of(_strip_chrome(markup)))
@@ -408,6 +409,21 @@ def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> Extra
 
     result.blocks = _strip_boilerplate(best.blocks, result.title or htmltext_safe_title(markup))
     result.word_count = len(" ".join(b.text for b in result.blocks).split())
+
+    # Prefer images inside the winning article container so related-story
+    # thumbnails, logos and promo cards do not end up in the gallery.
+    result.images = image_urls(best_markup or markup, url)
+    if not result.images:
+        result.images = image_urls(markup, url)
+    if result.image:
+        if result.image.startswith("//"):
+            result.image = "https:" + result.image
+        elif result.image.startswith("/"):
+            result.image = urljoin(url, result.image)
+        if result.image not in result.images:
+            result.images.insert(0, result.image)
+    if not result.image and result.images:
+        result.image = result.images[0]
 
     if not result.image:
         for block_source in candidates[:1] or [markup]:
