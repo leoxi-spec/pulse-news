@@ -1,5 +1,5 @@
-import { errorState } from './ui.js?v=1.4.0';
-import { emptyState } from './components.js?v=1.4.0';
+import { errorState } from './ui.js';
+import { emptyState } from './components.js';
 
 const routes = [];
 const scrollMemory = new Map();
@@ -46,18 +46,24 @@ export async function render(url = window.location.pathname + window.location.se
   }
   const context = { path, query, params: match.params, url };
   window.__pulseRoute = context;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   document.body.classList.toggle('onboarding-mode', path === '/onboarding');
   document.title = 'Pulse — news that keeps up with you';
+
+  // Move to the top *before* rendering. Doing it after the async handler used
+  // to yank the viewport back down while you were already scrolling a
+  // half-loaded page.
+  if (restoreScroll && scrollMemory.has(path)) {
+    window.scrollTo({ top: scrollMemory.get(path), behavior: 'instant' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
   try {
     await match.route.handler(view, context);
   } catch (err) {
     console.error('route failed', path, err);
     errorState(view, err?.message || 'This page failed to load.', () => render(url));
-  }
-  if (restoreScroll && scrollMemory.has(path)) {
-    requestAnimationFrame(() => window.scrollTo({ top: scrollMemory.get(path), behavior: 'instant' }));
-  } else {
-    window.scrollTo({ top: 0, behavior: 'instant' });
   }
   const main = document.getElementById('main');
   if (main && !restoreScroll) main.focus({ preventScroll: true });

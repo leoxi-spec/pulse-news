@@ -1,15 +1,15 @@
-import { get, post, patch, del } from '../api.js?v=1.4.0';
+import { get, post, patch, del } from '../api.js';
 import {
   state, prefs, savePrefs, saveSurvey, record, setProfile, profileInitials,
   levels, streak, dailyProgress, topicLabel, followedTopics, THEMES,
-} from '../store.js?v=1.4.0';
+} from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
   errorState, emptyState, compactNumber, number, toastProgress,
-} from '../ui.js?v=1.4.0';
-import { storyCard, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js?v=1.4.0';
-import { navigate } from '../router.js?v=1.4.0';
-import { openLegend } from '../legend.js?v=1.4.0';
+} from '../ui.js';
+import { storyCard, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js';
+import { navigate } from '../router.js';
+import { openLegend } from '../legend.js';
 
 // ---------------------------------------------------------------- search
 export async function searchView(root, ctx) {

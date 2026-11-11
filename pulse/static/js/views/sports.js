@@ -1,7 +1,7 @@
-import { get } from '../api.js?v=1.4.0';
-import { state, prefs, savePrefs } from '../store.js?v=1.4.0';
-import { html, raw, icons, toast, errorState, emptyState, timeAgo, absDate, proxyImg, modal } from '../ui.js?v=1.4.0';
-import { sectionHead } from '../components.js?v=1.4.0';
+import { get } from '../api.js';
+import { state, prefs, savePrefs } from '../store.js';
+import { html, raw, icons, toast, errorState, emptyState, timeAgo, absDate, proxyImg, modal } from '../ui.js';
+import { sectionHead } from '../components.js';
 
 let refreshTimer = null;
 let currentFilter = 'all';

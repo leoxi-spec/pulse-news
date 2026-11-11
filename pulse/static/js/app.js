@@ -1,24 +1,24 @@
-import { get, post } from './api.js?v=1.4.0';
+import { get, post } from './api.js';
 import {
   state, setBoot, on, emit, prefs, savePrefs, toggleSave, profileInitials,
   dailyProgress, streak, levels, followedTopics, topicLabel, setProfile,
-} from './store.js?v=1.4.0';
+} from './store.js';
 import {
   html, raw, icons, toast, modal, errorState, esc, timeAgo, compactNumber, registerAction,
   toastProgress, absDate,
-} from './ui.js?v=1.4.0';
-import { scoreMini } from './components.js?v=1.4.0';
-import { bindShortcuts as bindPaletteShortcuts, open as openPalette } from './palette.js?v=1.4.0';
-import { openLegend } from './legend.js?v=1.4.0';
-import * as router from './router.js?v=1.4.0';
-import { homeView } from './views/home.js?v=1.4.0';
-import { articleView } from './views/article.js?v=1.4.0';
-import { discoverView, topicView, storyView, archiveView } from './views/discover.js?v=1.4.0';
-import { sourcesView, sourceView } from './views/sources.js?v=1.4.0';
-import { sportsView } from './views/sports.js?v=1.4.0';
-import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js?v=1.4.0';
-import { researchView } from './views/research.js?v=1.4.0';
-import { bootPrefsFromStorage } from './store.js?v=1.4.0';
+} from './ui.js';
+import { scoreMini } from './components.js';
+import { bindShortcuts as bindPaletteShortcuts, open as openPalette } from './palette.js';
+import { openLegend } from './legend.js';
+import * as router from './router.js';
+import { homeView } from './views/home.js';
+import { articleView } from './views/article.js';
+import { discoverView, topicView, storyView, archiveView } from './views/discover.js';
+import { sourcesView, sourceView } from './views/sources.js';
+import { sportsView } from './views/sports.js';
+import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
+import { researchView } from './views/research.js';
+import { bootPrefsFromStorage } from './store.js';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },

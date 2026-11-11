@@ -1,21 +1,21 @@
-import { get, post } from '../api.js?v=1.4.0';
-import { navigate } from '../router.js?v=1.4.0';
+import { get, post } from '../api.js';
 import {
   state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel,
-} from '../store.js?v=1.4.0';
-import { html, raw, icons, toast, compactNumber, modal } from '../ui.js?v=1.4.0';
-import {
-  storyCard, topCard, hCard, mosaicCard, scoreMini, sectionHead, emptyState, skeletonFeed,
-} from '../components.js?v=1.4.0';
-import { open as openPalette, mountHomeSearch } from '../palette.js?v=1.4.0';
+} from '../store.js';
+import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
+import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed } from '../components.js';
+import { open as openPalette, mountHomeSearch } from '../palette.js';
 
-const DEFAULT_SECTIONS = ['brief', 'top', 'for-you', 'picks', 'my-sports', 'topic:tech', 'topic:world', 'topic:motorsport', 'longreads'];
+const DEFAULT_SECTIONS = [
+  'brief', 'top', 'for-you', 'picks', 'my-sports',
+  'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
+];
 
 const BASE_SECTIONS = [
   { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
   { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
+  { id: 'for-you', label: 'For you', hint: 'The main personalised feed' },
   { id: 'picks', label: "Editor's picks", hint: 'Full-text stories worth the time' },
-  { id: 'for-you', label: 'For you', hint: 'Your main personalised feed' },
   { id: 'sports', label: 'Live scores', hint: 'A scoreboard strip' },
   { id: 'my-sports', label: 'My sports', hint: 'Your pinned teams and leagues' },
   { id: 'longreads', label: 'Long reads', hint: 'Fewer, deeper pieces' },
@@ -32,14 +32,31 @@ function allSections() {
   return [...BASE_SECTIONS, ...topics];
 }
 
-function sectionMeta(id) {
-  return allSections().find((section) => section.id === id) || { id, label: id, hint: '' };
-}
+const sectionMeta = (id) => allSections().find((section) => section.id === id) || { id, label: id, hint: '' };
 
 function activeSections() {
   const saved = Array.isArray(prefs().home_sections) ? prefs().home_sections : [];
   const valid = saved.filter((id) => allSections().some((section) => section.id === id));
-  return valid.length ? valid : DEFAULT_SECTIONS;
+  if (valid.length) {
+    // one-time migration: make sure people who customised before motorsport
+    // existed still get a Formula 1 row on the front page.
+    if (!prefs().sections_v2 && !valid.includes('topic:motorsport')) {
+      const next = [...valid];
+      const world = next.indexOf('topic:world');
+      next.splice(world >= 0 ? world + 1 : next.length, 0, 'topic:motorsport');
+      savePrefs({ home_sections: next, sections_v2: true });
+      return next;
+    }
+    if (!prefs().sections_v2) savePrefs({ sections_v2: true });
+    return valid;
+  }
+  const withInterests = [...DEFAULT_SECTIONS];
+  for (const slug of followedTopics()) {
+    const id = `topic:${slug}`;
+    if (!withInterests.includes(id)) withInterests.push(id);
+    if (withInterests.length > DEFAULT_SECTIONS.length + 3) break;
+  }
+  return withInterests;
 }
 
 function localGreeting() {
@@ -50,7 +67,7 @@ function localGreeting() {
   return `Good ${part}${who}`;
 }
 
-function greeting() {
+function greetingLine() {
   const hour = new Date().getHours();
   const part = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
   const name = (state.profile?.name || '').trim();
@@ -64,31 +81,31 @@ function todayLine() {
   return `${compactNumber(archive)} stories archived · ${healthy}/${feeds} feeds live`;
 }
 
-const MOSAIC = [
-  'hero', 'small', 'small', 'wide', 'small', 'medium',
-  'small', 'small', 'wide', 'small', 'medium', 'small',
-];
-
-function mosaicOffset(seed) {
-  let hash = 0;
-  for (let i = 0; i < (seed || '').length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 997;
-  return hash % MOSAIC.length;
+function feedUrl(mode, offset, limit = 20) {
+  const params = new URLSearchParams({ mode, offset: String(offset), limit: String(limit) });
+  if (mode === 'longreads') params.set('days', '45');
+  return `/api/feed?${params}`;
 }
 
-function mosaicHtml(items, seed = '') {
-  const offset = mosaicOffset(seed);
-  return html`<div class="mosaic">${items.map((item, index) => mosaicCard(item, { size: MOSAIC[(index + offset) % MOSAIC.length] }))}</div>`;
+async function loadSection(id, timeoutMs = 3000) {
+  const task = (async () => {
+    if (id === 'brief') return get('/api/brief', 60, true);
+    if (id === 'top') return get('/api/feed?mode=top&limit=3&days=2', 45);
+    if (id === 'picks') return get('/api/discover', 120);
+    if (id === 'for-you') return get(feedUrl('for-you', 0), 20);
+    if (id === 'sports' || id === 'my-sports') return get('/api/sports', 25);
+    if (id === 'longreads') return get('/api/feed?mode=longreads&limit=8&days=45', 120);
+    if (id === 'saved') return get('/api/saved', 0, true);
+    if (id === 'research') return {};
+    if (id.startsWith('topic:')) return get(`/api/feed?topic=${encodeURIComponent(id.slice(6))}&mode=top&limit=8&days=14`, 60);
+    return {};
+  })();
+  if (!timeoutMs) return task;
+  return Promise.race([task, new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))]);
 }
 
 export async function homeView(root, ctx) {
-  const base = activeSections();
-  const followed = followedTopics();
-  const sections = [...base];
-  for (const slug of followed) {
-    const id = `topic:${slug}`;
-    if (!sections.includes(id)) sections.push(id);
-    if (sections.length > base.length + 3) break;
-  }
+  const sections = activeSections();
   const progress = dailyProgress();
   const streakInfo = streak();
   const levelInfo = levels();
@@ -97,7 +114,7 @@ export async function homeView(root, ctx) {
     <div class="today-bar">
       <div class="today-bar__main">
         <p class="today-bar__date">${new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</p>
-        <h1 class="today-bar__greeting">${greeting()}</h1>
+        <h1 class="today-bar__greeting">${greetingLine()}</h1>
         <p class="today-bar__meta">${todayLine()}</p>
       </div>
       <div class="today-bar__actions">
@@ -111,7 +128,7 @@ export async function homeView(root, ctx) {
 
     <button class="home-search" id="home-search" type="button">
       ${raw(icons.search)}
-      <span>Search 300+ sources, topics and your archive…</span>
+      <span>Search 330+ sources, topics and your archive…</span>
       <kbd class="kbd">⌘K</kbd>
     </button>
 
@@ -119,6 +136,8 @@ export async function homeView(root, ctx) {
       <div class="chip-row" id="quick-links">
         ${followedTopics().slice(0, 5).map((slug) => html`
           <a class="chip" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`)}
+        ${followedTopics().includes('motorsport') ? '' : html`
+          <a class="chip" href="/topic/motorsport" data-link>🏎️ F1 &amp; motorsport</a>`}
         <a class="chip" href="/discover" data-link>${raw(icons.compass)} All sections</a>
       </div>
       <div class="hstack" style="gap:.3rem">
@@ -130,14 +149,7 @@ export async function homeView(root, ctx) {
     </div>
 
     <div id="home-sections" class="stack">
-      ${sections.map((id) => {
-        const meta = sectionMeta(id);
-        return html`
-          <section class="home-section" data-id="${id}" aria-label="${meta.label}">
-            <div data-head></div>
-            <div data-body>${id === 'for-you' ? skeletonFeed(4) : html`<div class="skeleton skeleton--card" style="height:150px"></div>`}</div>
-          </section>`;
-      })}
+      ${skeletonFeed(5)}
     </div>
 
     <div class="section" style="text-align:center">
@@ -149,16 +161,242 @@ export async function homeView(root, ctx) {
   root.querySelector('#customize-sections').addEventListener('click', () => openCustomizer(root, ctx));
   root.querySelector('#add-section').addEventListener('click', () => openCustomizer(root, ctx));
   bindRefresh(root, sections);
-  bindQuickLinks(root);
 
-  // Fill every section in parallel; each paints as soon as its data arrives.
-  sections.forEach((id) => { fillSection(root, id); });
+  // Load everything first, then paint once. This stops the page from shifting
+  // under your finger while you scroll through sections.
+  const entries = await Promise.all(sections.map(async (id) => {
+    const slow = id === 'sports' || id === 'my-sports';
+    return [id, await loadSection(id, slow ? 600 : 3000).catch(() => null)];
+  }));
+  const data = new Map(entries);
+  const container = root.querySelector('#home-sections');
+  if (!container) return;
+  container.innerHTML = sections.map((id) => sectionMarkup(id, data.get(id))).filter(Boolean).join('');
+  bindSectionActions(root, sections, data);
+
+  // Sports is the slow one: a placeholder reserves its space and fills later,
+  // which only moves content below it, never above.
+  for (const id of ['sports', 'my-sports']) {
+    if (!sections.includes(id)) continue;
+    if (data.get(id)) continue;
+    fillSportsSection(root, id);
+  }
 }
 
-function bindQuickLinks(root) {
-  root.querySelectorAll('#quick-links a').forEach((link) => {
-    link.addEventListener('click', () => { /* router handles navigation */ });
+// ------------------------------------------------------------------ sections
+function sectionMarkup(id, data) {
+  const meta = sectionMeta(id);
+  if (id === 'brief') return briefSection(data);
+  if (id === 'top') return topSection(data);
+  if (id === 'picks') return picksSection(data);
+  if (id === 'for-you') return forYouSection(data, 'for-you');
+  if (id === 'sports') return sportsSection(data);
+  if (id === 'my-sports') return mySportsSection(data);
+  if (id === 'longreads') return longreadsSection(data);
+  if (id === 'saved') return savedSection(data);
+  if (id === 'research') return researchSection();
+  if (id.startsWith('topic:')) return topicSection(id.slice(6), data);
+  return html`<section class="home-section" data-id="${id}"><div data-head></div><div data-body></div></section>`;
+}
+
+function sectionWrap(id, head, body) {
+  return html`<section class="home-section" data-id="${id}"><div data-head>${raw(head || '')}</div><div data-body>${raw(body || '')}</div></section>`;
+}
+
+function briefSection(data) {
+  if (!data) return sectionWrap('brief', '', skeletonFeed(1));
+  const minutes = data.minutes || 2;
+  const count = (data.stories || []).length;
+  const progress = dailyProgress();
+  return sectionWrap('brief', '', html`
+    <div class="card card-pad-lg" style="background:var(--grad-soft);border-color:var(--line)">
+      <div class="between">
+        <div>
+          <p class="eyebrow">${localGreeting()}</p>
+          <h2 style="font-size:1.4rem;letter-spacing:-.03em;margin-top:.2rem">Your ${minutes}-minute brief</h2>
+          <p class="small muted" style="margin-top:.3rem">${count} stories picked for you, with the context you need before class.</p>
+        </div>
+        <div class="hstack">
+          <span class="badge badge--topic">${progress.read}/${progress.goal} today</span>
+          <a class="btn btn--primary" href="/brief" data-link>Open brief ${raw(icons.chevron)}</a>
+        </div>
+      </div>
+    </div>`);
+}
+
+function topSection(data) {
+  const items = (data?.items || []).slice(0, 3);
+  const head = sectionHead('Top Stories', html`<a href="/?stream=top" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'what the most outlets are covering' });
+  if (!items.length) return sectionWrap('top', head, emptyState({ icon: '📰', title: 'No top stories yet', text: 'The next refresh will fill this in.' }));
+  return sectionWrap('top', head, html`<div class="top-grid">${items.map((item) => topCard(item))}</div>`);
+}
+
+function picksSection(data) {
+  const items = (data?.editors_picks || []).slice(0, 4);
+  if (!items.length) return sectionWrap('picks', '', '');
+  return sectionWrap('picks',
+    sectionHead("Editor's picks", html`<a href="/discover" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'full text readable in Pulse' }),
+    rowsHtml(items, { seed: 'picks' }));
+}
+
+function forYouSection(data, mode, items, hasMore, offset) {
+  const list = items || data?.items || [];
+  const more = hasMore === undefined ? Boolean(data?.has_more) : hasMore;
+  const startOffset = offset === undefined ? list.length : offset;
+  const head = html`
+    <div class="section-head" style="margin-top:1.6rem">
+      <h2>For you</h2>
+      <div class="segmented" role="tablist" aria-label="Feed stream">
+        ${[['for-you', 'For you'], ['readable', '📖 Readable'], ['breaking', 'Breaking'], ['latest', 'Latest']].map(([id, label]) => html`
+          <button type="button" role="tab" aria-selected="${mode === id}" class="${mode === id ? 'is-on' : ''}" data-mode="${id}">${label}</button>`)}
+      </div>
+    </div>`;
+  if (!list.length) {
+    return sectionWrap('for-you', head, emptyState({
+      icon: '📡', title: 'Nothing in this stream yet',
+      text: 'Try another tab, or search the whole archive.',
+      action: '<button class="btn btn--primary" data-open-search>Search news</button>',
+    }));
+  }
+  const body = html`
+    <div id="for-you-list">${rowsHtml(list, { lead: true, seed: mode })}</div>
+    <div class="feed-more">
+      ${more ? html`<button class="btn btn--ghost" data-load-more="${startOffset}">Load more stories</button>` : html`<p class="tiny faint">You're caught up. The archive keeps growing — search it any time.</p>`}
+    </div>`;
+  return sectionWrap('for-you', head, body);
+}
+
+function topicSection(slug, data) {
+  const meta = state.topicMap.get(slug);
+  if (!meta) return '';
+  const items = (data?.items || []).slice(0, 8);
+  const head = sectionHead(`${meta.icon} ${meta.label}`, html`<a href="/topic/${slug}" data-link>See all ${raw(icons.chevron)}</a>`);
+  if (!items.length) return sectionWrap(`topic:${slug}`, head, html`<div class="card card-pad"><p class="small muted">No fresh ${meta.label} stories yet — <a class="link" href="/topic/${slug}" data-link>browse the topic</a>.</p></div>`);
+  return sectionWrap(`topic:${slug}`, head, rowsHtml(items, { lead: false, seed: slug }));
+}
+
+function longreadsSection(data) {
+  const items = (data?.items || []).slice(0, 8);
+  const head = sectionHead('Long reads', html`<a href="/?stream=longreads" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'worth the time' });
+  if (!items.length) return sectionWrap('longreads', head, html`<div class="card card-pad"><p class="small muted">Long reads appear once full text is extracted.</p></div>`);
+  return sectionWrap('longreads', head, rowsHtml(items, { seed: 'longreads' }));
+}
+
+function savedSection(data) {
+  const items = (data?.items || []).slice(0, 6);
+  const head = sectionHead('Saved for later', html`<a href="/saved" data-link>Library ${raw(icons.chevron)}</a>`);
+  if (!items.length) return sectionWrap('saved', head, html`<div class="card card-pad"><p class="small muted">Nothing saved yet. Tap the bookmark on any story to keep it for revision or a citation.</p></div>`);
+  return sectionWrap('saved', head, rowsHtml(items, { lead: false, seed: 'saved' }));
+}
+
+function researchSection() {
+  return sectionWrap('research', '', html`
+    <div class="card card-pad-lg" style="border-color:var(--line)">
+      <div class="between">
+        <div>
+          <p class="eyebrow">For essays & projects</p>
+          <h2 style="font-size:1.15rem;margin-top:.2rem">Research desk</h2>
+          <p class="small muted" style="margin-top:.3rem">Turn saved stories into a bibliography in MLA, APA, Chicago or Harvard.</p>
+        </div>
+        <a class="btn btn--primary" href="/research" data-link>Open research ${raw(icons.chevron)}</a>
+      </div>
+    </div>`);
+}
+
+function sportsSection(data) {
+  const events = (data?.events || []).slice(0, 8);
+  const head = sectionHead(
+    `🏆 Live & upcoming ${data?.live_count ? html`<span class="badge badge--live">${data.live_count} live</span>` : ''}`,
+    html`<a href="/sports" data-link>All scores ${raw(icons.chevron)}</a>`,
+  );
+  if (!events.length) return sectionWrap('sports', head, html`<div class="card card-pad"><p class="small muted">No games scheduled right now. <a class="link" href="/sports" data-link>Open scores</a></p></div>`);
+  return sectionWrap('sports', head, html`<div class="score-strip">${events.map((game) => scoreMini(game))}</div>`);
+}
+
+function mySportsSection(data) {
+  const pinnedLeagues = new Set(prefs().pinned_sports || []);
+  const teamIds = new Set((prefs().pinned_teams || []).map((team) => String(team.id)));
+  if (!pinnedLeagues.size && !teamIds.size) return '';
+  const games = (data?.events || []).filter((game) => pinnedLeagues.has(game.league)
+    || game.competitors.some((team) => teamIds.has(String(team.id)))).slice(0, 5);
+  const head = sectionHead('★ My sports', html`<a href="/sports" data-link>Open scores ${raw(icons.chevron)}</a>`,
+    { sub: (prefs().pinned_teams || []).map((team) => team.abbr || team.name).slice(0, 4).join(' · ') || `${pinnedLeagues.size} leagues` });
+  if (!games.length) return sectionWrap('my-sports', head, html`<div class="card card-pad"><p class="small muted">No games for your pinned teams today.</p></div>`);
+  return sectionWrap('my-sports', head, html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`);
+}
+
+async function fillSportsSection(root, id) {
+  const shell = root.querySelector(`.home-section[data-id="${id}"]`);
+  if (!shell) return;
+  const body = shell.querySelector('[data-body]');
+  if (body) body.innerHTML = html`<div class="sports-placeholder"><div class="skeleton skeleton--line" style="width:45%"></div><div class="skeleton" style="height:112px;margin-top:.5rem"></div></div>`;
+  const data = await loadSection(id, 0).catch(() => null);
+  if (!data) return;
+  const markup = id === 'sports' ? sportsSection(data) : mySportsSection(data);
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = markup;
+  const replacement = wrapper.firstElementChild;
+  const current = root.querySelector(`.home-section[data-id="${id}"]`);
+  if (replacement && current) current.replaceWith(replacement);
+}
+
+// -------------------------------------------------------------------- actions
+function bindSectionActions(root, sections, data) {
+  root.querySelectorAll('[data-open-search]').forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', () => openPalette());
   });
+  root.querySelectorAll('[data-mode]').forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', () => loadStream(root, button.dataset.mode, 0));
+  });
+  root.querySelectorAll('[data-load-more]').forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', async () => {
+      const offset = Number(button.dataset.loadMore);
+      button.disabled = true;
+      button.textContent = 'Loading…';
+      await loadStream(root, 'for-you', offset, { append: true });
+    });
+  });
+  void sections;
+  void data;
+}
+
+async function loadStream(root, mode, offset, { append = false } = {}) {
+  const shell = root.querySelector('.home-section[data-id="for-you"]');
+  if (!shell) return;
+  const body = shell.querySelector('[data-body]');
+  if (!append) body.innerHTML = skeletonFeed(3);
+  try {
+    const next = await get(feedUrl(mode, offset), 20);
+    if (!append) {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = forYouSection(null, mode, next.items, next.has_more, offset + next.items.length);
+      shell.replaceWith(wrapper.firstElementChild);
+      bindSectionActions(root, [], new Map());
+      return;
+    }
+    const list = body.querySelector('#for-you-list');
+    if (list && next.items?.length) {
+      const start = list.querySelectorAll('.mcard').length;
+      list.insertAdjacentHTML('beforeend', rowsHtml(next.items, { seed: `more-${start}` }).join(''));
+    }
+    const more = body.querySelector('[data-load-more]');
+    if (next.has_more) {
+      if (more) more.dataset.loadMore = String(offset + (next.items?.length || 0));
+      else body.querySelector('.feed-more')?.insertAdjacentHTML('afterbegin', html`<button class="btn btn--ghost" data-load-more="${offset + (next.items?.length || 0)}">Load more stories</button>`);
+    } else if (more) {
+      more.outerHTML = html`<p class="tiny faint">You're caught up. The archive keeps growing — search it any time.</p>`;
+    }
+    bindSectionActions(root, [], new Map());
+  } catch (err) {
+    if (!append) toast(err.message, { type: 'bad' });
+    else toast('Could not load more', { type: 'bad' });
+  }
 }
 
 function bindRefresh(root, sections) {
@@ -175,7 +413,7 @@ function bindRefresh(root, sections) {
         const status = await get('/api/ingest/status', 0, true);
         if (!status.running) break;
       }
-      sections.forEach((id) => fillSection(root, id));
+      await homeView(root, {});
       toast('Up to date', { type: 'good' });
     } catch (err) {
       toast(err.message, { type: 'bad' });
@@ -184,258 +422,7 @@ function bindRefresh(root, sections) {
       button.classList.remove('spin');
     }
   });
-}
-
-function sectionShell(root, id) {
-  return root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
-}
-
-async function fillSection(root, id) {
-  const shell = sectionShell(root, id);
-  if (!shell) return;
-  const head = shell.querySelector('[data-head]');
-  const body = shell.querySelector('[data-body]');
-  if (!body) return;
-  try {
-    if (id === 'brief') return renderBrief(shell, head, body);
-    if (id === 'top') return renderTop(head, body);
-    if (id === 'picks') return renderPicks(head, body);
-    if (id === 'for-you') return renderForYou(root, shell, head, body);
-    if (id === 'sports') return renderSports(head, body);
-    if (id === 'my-sports') return renderMySports(head, body);
-    if (id === 'longreads') return renderLongreads(head, body);
-    if (id === 'saved') return renderSaved(head, body);
-    if (id === 'research') return renderResearch(head, body);
-    if (id.startsWith('topic:')) return renderTopic(head, body, id.slice(6));
-  } catch (err) {
-    body.innerHTML = html`<div class="card card-pad"><p class="small muted">${err.message}</p></div>`;
-  }
-}
-
-async function renderBrief(shell, head, body) {
-  head.innerHTML = '';
-  const data = await get('/api/brief', 60, true);
-  const minutes = data.minutes || 2;
-  const count = (data.stories || []).length;
-  const progress = dailyProgress();
-  body.innerHTML = html`
-    <div class="card card-pad-lg" style="background:var(--grad-soft);border-color:var(--line)">
-      <div class="between">
-        <div>
-          <p class="eyebrow">${localGreeting()}</p>
-          <h2 style="font-size:1.4rem;letter-spacing:-.03em;margin-top:.2rem">Your ${minutes}-minute brief</h2>
-          <p class="small muted" style="margin-top:.3rem">${count} stories picked for you, with the context you need before class.</p>
-        </div>
-        <div class="hstack">
-          <span class="badge badge--topic">${progress.read}/${progress.goal} today</span>
-          <a class="btn btn--primary" href="/brief" data-link>Open brief ${raw(icons.chevron)}</a>
-        </div>
-      </div>
-    </div>`;
-}
-
-async function renderTop(head, body) {
-  const data = await get('/api/feed?mode=top&limit=3&days=2', 45);
-  const items = (data.items || []).slice(0, 3);
-  head.innerHTML = sectionHead('Top Stories', html`<a href="/?stream=top" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'what the most outlets are covering' });
-  if (!items.length) {
-    body.innerHTML = emptyState({ icon: '📰', title: 'No top stories yet', text: 'The next refresh will fill this in.' });
-    return;
-  }
-  body.innerHTML = html`<div class="top-grid">${items.map((item) => topCard(item))}</div>`;
-}
-
-function feedUrl(mode, offset, limit = 20) {
-  const params = new URLSearchParams({ mode, offset: String(offset), limit: String(limit) });
-  if (mode === 'longreads') params.set('days', '30');
-  return `/api/feed?${params}`;
-}
-
-async function renderForYou(root, shell, head, body, mode = 'for-you', offset = 0, append = false) {
-  head.innerHTML = html`
-    <div class="section-head" style="margin-top:1.6rem">
-      <h2>For you</h2>
-      <div class="segmented" role="tablist" aria-label="Feed stream">
-        ${[['for-you', 'For you'], ['readable', '📖 Readable here'], ['breaking', 'Breaking'], ['latest', 'Latest']].map(([id, label]) => html`
-          <button type="button" role="tab" aria-selected="${mode === id}" class="${mode === id ? 'is-on' : ''}" data-mode="${id}">${label}</button>`)}
-      </div>
-    </div>`;
-  head.querySelectorAll('[data-mode]').forEach((button) => {
-    button.addEventListener('click', () => {
-      renderForYou(root, shell, head, body, button.dataset.mode, 0, false);
-    });
-  });
-  if (!append) body.innerHTML = skeletonFeed(4);
-  const data = await get(feedUrl(mode, offset), 20);
-  const items = data.items || [];
-  if (!items.length) {
-    body.innerHTML = emptyState({
-      icon: '📡',
-      title: 'Nothing in this stream yet',
-      text: 'Try another tab, or search the whole archive.',
-      action: '<button class="btn btn--primary" data-open-search>Search news</button>',
-    });
-    body.querySelector('[data-open-search]')?.addEventListener('click', () => openPalette());
-    return;
-  }
-  if (!append) {
-    body.innerHTML = html`
-      <div id="for-you-list">${mosaicHtml(items, mode)}</div>
-      <div id="for-you-sentinel" style="height:1px"></div>`;
-  } else {
-    const list = body.querySelector('#for-you-list');
-    if (list) {
-      const offset = mosaicOffset(mode);
-      const start = list.querySelectorAll('.mcard').length;
-      list.insertAdjacentHTML('beforeend', items.map((item, index) => mosaicCard(item, {
-        size: MOSAIC[(start + index + offset) % MOSAIC.length],
-      })).join(''));
-    }
-  }
-  if (data.has_more) attachSentinel(root, shell, body, mode, offset + items.length);
-  else if (!append) {
-    body.querySelector('#for-you-list')?.insertAdjacentHTML('afterend',
-      html`<p class="tiny faint" style="text-align:center;padding:1rem 0">You're caught up. The archive keeps growing — search it any time.</p>`);
-  }
-}
-
-let forYouObserver = null;
-function attachSentinel(root, shell, body, mode, nextOffset) {
-  const sentinel = body.querySelector('#for-you-sentinel');
-  if (!sentinel) return;
-  if (forYouObserver) forYouObserver.disconnect();
-  forYouObserver = new IntersectionObserver((entries) => {
-    if (!entries.some((entry) => entry.isIntersecting)) return;
-    forYouObserver?.disconnect();
-    forYouObserver = null;
-    renderForYou(root, shell, shell.querySelector('[data-head]'), body, mode, nextOffset, true).catch(() => {});
-  }, { rootMargin: '600px 0px' });
-  forYouObserver.observe(sentinel);
-}
-
-async function renderMySports(head, body) {
-  const pinnedLeagues = prefs().pinned_sports || [];
-  const pinnedTeams = prefs().pinned_teams || [];
-  if (!pinnedLeagues.length && !pinnedTeams.length) {
-    head.innerHTML = '';
-    body.innerHTML = '';
-    return;
-  }
-  const teamIds = new Set(pinnedTeams.map((team) => String(team.id)));
-  const leagueSlugs = new Set(pinnedLeagues);
-  const data = await get('/api/sports', 25);
-  const games = (data.events || []).filter((game) => leagueSlugs.has(game.league)
-    || game.competitors.some((team) => teamIds.has(String(team.id)))).slice(0, 5);
-  head.innerHTML = sectionHead(
-    '★ My sports',
-    html`<a href="/sports" data-link>Open scores ${raw(icons.chevron)}</a>`,
-    { sub: pinnedTeams.map((team) => team.abbr || team.name).slice(0, 4).join(' · ') || `${leagueSlugs.size} leagues` },
-  );
-  if (!games.length) {
-    body.innerHTML = html`
-      <div class="card card-pad">
-        <p class="small muted">No games for your pinned teams today.</p>
-        <a class="btn btn--sm btn--ghost" style="margin-top:.5rem" href="/sports" data-link>Manage pins</a>
-      </div>`;
-    return;
-  }
-  body.innerHTML = html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`;
-}
-
-async function renderSports(head, body) {
-  const data = await get('/api/sports', 20);
-  const events = (data.events || []).slice(0, 8);
-  head.innerHTML = sectionHead(
-    `🏆 Live & upcoming ${data.live_count ? html`<span class="badge badge--live">${data.live_count} live</span>` : ''}`,
-    html`<a href="/sports" data-link>All scores ${raw(icons.chevron)}</a>`,
-  );
-  if (!events.length) {
-    body.innerHTML = html`<div class="card card-pad"><p class="small muted">No games scheduled right now. <a class="link" href="/sports" data-link>Open scores</a></p></div>`;
-    return;
-  }
-  body.innerHTML = html`<div class="score-strip">${events.map((game) => scoreMini(game))}</div>`;
-  if (data.partial) {
-    setTimeout(() => {
-      const node = document.querySelector('.home-section[data-id="sports"]');
-      if (node) fillSection(document.getElementById('view'), 'sports');
-    }, 4000);
-  }
-}
-
-async function renderPicks(head, body) {
-  const data = await get('/api/discover', 120);
-  const items = (data.editors_picks || []).slice(0, 3);
-  head.innerHTML = sectionHead("Editor's picks", html`<a href="/discover" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'full text readable in Pulse' });
-  if (!items.length) {
-    head.innerHTML = '';
-    body.innerHTML = '';
-    return;
-  }
-  body.innerHTML = html`<div class="topic-grid">${items.map((item) => mosaicCard(item, { size: 'medium' }))}</div>`;
-}
-
-async function renderTopic(head, body, slug) {
-  const meta = state.topicMap.get(slug);
-  if (!meta) {
-    head.innerHTML = '';
-    body.innerHTML = '';
-    return;
-  }
-  const data = await get(`/api/feed?topic=${encodeURIComponent(slug)}&mode=top&limit=8&days=14`, 60);
-  const items = data.items || [];
-  head.innerHTML = sectionHead(
-    `${meta.icon} ${meta.label}`,
-    html`<a href="/topic/${slug}" data-link>See all ${raw(icons.chevron)}</a>`,
-  );
-  if (!items.length) {
-    body.innerHTML = html`<div class="card card-pad"><p class="small muted">No fresh ${meta.label} stories yet — <a class="link" href="/topic/${slug}" data-link>browse the topic</a>.</p></div>`;
-    return;
-  }
-  const offset = mosaicOffset(slug);
-  body.innerHTML = html`<div class="topic-grid">${items.slice(0, 6).map((item, index) => mosaicCard(item, {
-    size: index === 0 && offset % 2 === 0 ? 'medium' : 'medium',
-  }))}</div>`;
-}
-
-async function renderLongreads(head, body) {
-  const data = await get('/api/feed?mode=longreads&limit=6&days=45', 120);
-  const items = data.items || [];
-  head.innerHTML = sectionHead('Long reads', html`<a href="/discover" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'worth the time' });
-  if (!items.length) {
-    body.innerHTML = html`<div class="card card-pad"><p class="small muted">Long reads appear once full text is extracted. <a class="link" href="/?stream=longreads" data-link>Try the stream</a>.</p></div>`;
-    return;
-  }
-  body.innerHTML = html`<div class="hscroll">${items.map((item) => hCard(item))}</div>`;
-}
-
-async function renderSaved(head, body) {
-  const data = await get('/api/saved', 0, true);
-  const items = (data.items || []).slice(0, 8);
-  head.innerHTML = sectionHead('Saved for later', html`<a href="/saved" data-link>Library ${raw(icons.chevron)}</a>`);
-  if (!items.length) {
-    body.innerHTML = html`
-      <div class="card card-pad">
-        <p class="small muted">Nothing saved yet. Tap the bookmark on any story to keep it for revision or a citation.</p>
-        <a class="btn btn--sm btn--ghost" style="margin-top:.6rem" href="/saved" data-link>Open library</a>
-      </div>`;
-    return;
-  }
-  body.innerHTML = html`<div class="hscroll">${items.map((item) => hCard(item))}</div>`;
-}
-
-async function renderResearch(head, body) {
-  head.innerHTML = '';
-  body.innerHTML = html`
-    <div class="card card-pad-lg" style="border-color:var(--line)">
-      <div class="between">
-        <div>
-          <p class="eyebrow">For essays & projects</p>
-          <h2 style="font-size:1.15rem;margin-top:.2rem">Research desk</h2>
-          <p class="small muted" style="margin-top:.3rem">Turn saved stories into a bibliography in MLA, APA, Chicago or Harvard — plus a quote collector for your notes.</p>
-        </div>
-        <a class="btn btn--primary" href="/research" data-link>Open research ${raw(icons.chevron)}</a>
-      </div>
-    </div>`;
+  void sections;
 }
 
 // ---------------------------------------------------------------- customizer

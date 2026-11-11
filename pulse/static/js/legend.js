@@ -1,5 +1,5 @@
 // Key for every symbol in the app. Opened from the sidebar and shortcuts.
-import { html, raw, modal } from './ui.js?v=1.4.0';
+import { html, raw, modal } from './ui.js';
 
 const GROUPS = [
   {

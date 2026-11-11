@@ -269,7 +269,7 @@ class Handler(BaseHTTPRequestHandler):
         compressible = suffix in (".html", ".css", ".js", ".mjs", ".json", ".svg", ".webmanifest", ".txt")
         extra = {
             "ETag": etag,
-            "Cache-Control": "no-cache" if spa or suffix == ".html" else "public, max-age=3600",
+            "Cache-Control": "no-cache",  # always revalidate app code; ETag makes it a cheap 304
         }
         if compressible and "gzip" in (self.headers.get("Accept-Encoding") or ""):
             data = gzip.compress(data, 6)

@@ -1,10 +1,10 @@
-import { get, post, del } from '../api.js?v=1.4.0';
-import { state, record, emit, savePrefs, prefs, toggleSave } from '../store.js?v=1.4.0';
+import { get, post, del } from '../api.js';
+import { state, record, emit, savePrefs, prefs, toggleSave } from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog,
   errorState, toastProgress, setLoading,
-} from '../ui.js?v=1.4.0';
-import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js?v=1.4.0';
+} from '../ui.js';
+import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js';
 
 const FONTS = [
   { id: 'serif', label: 'Serif' },
@@ -92,6 +92,7 @@ function articleMarkup(a, p) {
         <button class="btn" data-act="cite">${raw(icons.quote)} Cite</button>
         <button class="btn" data-act="quiz">${raw(icons.bolt)} Quiz</button>
         <button class="btn" data-act="notes">${raw(icons.note)} Notes</button>
+        <button class="btn" data-act="listen" aria-pressed="false" title="Read this story aloud">${raw(icons.sound)} Listen</button>
         <span class="spacer"></span>
         <button class="btn" data-act="focus" title="Distraction-free reading">${raw(icons.eye)} Focus</button>
         <button class="btn" data-act="font" title="Reading font">${raw(icons.text)}</button>
@@ -281,6 +282,78 @@ function renderNotes(root, article, notes = null) {
   });
 }
 
+function speechChunks(article) {
+  const parts = [article.title, article.summary || ''];
+  for (const block of article.blocks || []) {
+    if (['p', 'li', 'blockquote', 'h2', 'h3', 'h4'].includes(block.type) && block.text) parts.push(block.text);
+  }
+  const text = parts.filter(Boolean).join('. ')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return [];
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const chunks = [];
+  let current = '';
+  for (const sentence of sentences) {
+    if (current && (current + sentence).length > 230) { chunks.push(current.trim()); current = sentence; }
+    else current += sentence;
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+function onListen(button, article) {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    toast('This browser cannot read stories aloud.', { type: 'bad' });
+    return;
+  }
+  const mode = button.dataset.mode || 'idle';
+  const setMode = (next, label) => {
+    button.dataset.mode = next;
+    button.setAttribute('aria-pressed', next === 'playing' ? 'true' : 'false');
+    button.innerHTML = html`${raw(next === 'playing' ? icons.pause : icons.sound)} ${label}`;
+  };
+  if (mode === 'playing') {
+    synth.pause();
+    setMode('paused', 'Resume');
+    return;
+  }
+  if (mode === 'paused') {
+    synth.resume();
+    setMode('playing', 'Pause');
+    return;
+  }
+  const chunks = speechChunks(article);
+  if (!chunks.length) { toast('There is not enough text to read aloud yet.'); return; }
+  synth.cancel();
+  let index = 0;
+  let stopped = false;
+  const finish = () => {
+    if (stopped) return;
+    stopped = true;
+    setMode('idle', 'Listen');
+  };
+  const speakNext = () => {
+    if (stopped) return;
+    if (index >= chunks.length) { finish(); toast('Finished reading'); return; }
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    utterance.rate = Math.min(2, Math.max(0.6, Number(prefs().listen_rate) || 1.02));
+    utterance.pitch = 1;
+    utterance.lang = 'en-US';
+    utterance.onend = () => { index += 1; speakNext(); };
+    utterance.onerror = (event) => {
+      if (event.error === 'interrupted' || event.error === 'canceled') { finish(); return; }
+      finish();
+      toast('Read aloud stopped.', { type: 'bad' });
+    };
+    synth.speak(utterance);
+  };
+  setMode('playing', 'Pause');
+  speakNext();
+}
+
 function bindArticle(root, article) {
   const prose = root.querySelector('#prose');
 
@@ -292,6 +365,7 @@ function bindArticle(root, article) {
       if (act === 'cite') return onCite(article);
       if (act === 'quiz') return onQuiz(article, root);
       if (act === 'notes') return onAddNote(article, root);
+      if (act === 'listen') return onListen(button, article);
       if (act === 'focus') return toggleFocus();
       if (act === 'font') return cycleFont();
     });

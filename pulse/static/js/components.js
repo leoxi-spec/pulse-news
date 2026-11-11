@@ -1,6 +1,6 @@
-import { html, raw, esc, timeAgo, absDate, compactNumber, icons, emptyState, proxyImg } from './ui.js?v=1.4.0';
+import { html, raw, esc, timeAgo, absDate, compactNumber, icons, emptyState, proxyImg } from './ui.js';
 export { emptyState };
-import { topicLabel, topicIcon as topicEmoji } from './store.js?v=1.4.0';
+import { topicLabel, topicIcon as topicEmoji } from './store.js';
 
 export function hashHue(text) {
   let hash = 0;
@@ -119,25 +119,77 @@ export function isFreshBreaking(item) {
   const stamp = item.published_at || item.first_seen_at;
   if (!stamp) return false;
   const age = Date.now() - new Date(stamp).getTime();
-  return age >= 0 && age < 2 * 60 * 60 * 1000;
+  return age >= 0 && age < 90 * 60 * 1000;
+}
+
+export function seededRandom(seed) {
+  let h = 1779033703 ^ String(seed || '').length;
+  for (let i = 0; i < String(seed || '').length; i += 1) {
+    h = Math.imul(h ^ String(seed).charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
+
+export function newsRows(items, { lead = false, seed = '' } = {}) {
+  const rng = seededRandom(seed);
+  const rows = [];
+  let index = 0;
+  if (lead && items.length >= 5) {
+    rows.push(items.slice(0, 1));
+    index = 1;
+  }
+  while (index < items.length) {
+    const remaining = items.length - index;
+    const roll = rng();
+    let size = roll < 0.42 ? 4 : roll < 0.76 ? 3 : 2;
+    if (remaining <= 4) {
+      rows.push(items.slice(index));
+      break;
+    }
+    if (remaining - size === 1) size -= 1;
+    rows.push(items.slice(index, index + size));
+    index += size;
+  }
+  return rows;
+}
+
+export function rowsHtml(items, { lead = false, seed = '' } = {}) {
+  return newsRows(items, { lead, seed }).map((row) => {
+    const size = row.length === 1 ? 'lead' : row.length === 2 ? 'medium' : 'small';
+    return html`<div class="news-row row-${row.length}">${row.map((item) => mosaicCard(item, { size }))}</div>`;
+  });
 }
 
 export function mosaicCard(item, { size = 'small' } = {}) {
-  const showSummary = size === 'hero' || size === 'wide';
+  const showSummary = size === 'lead';
   const hasImage = Boolean(item.image);
   return html`
     <article class="mcard mcard--${size} ${hasImage ? '' : 'mcard--noimg'}">
       ${hasImage ? html`
         <a class="mcard__media" href="/article/${item.id}" data-link aria-label="${item.title}">
+          <span class="media-fallback" aria-hidden="true">
+            <b>${topicEmoji(item.topic) || '📰'}</b>
+            <i>${item.source?.name || ''}</i>
+          </span>
           <img class="mcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">
-          ${isFreshBreaking(item) ? html`<span class="badge badge--breaking mcard__flag">Breaking</span>` : ''}
+          ${isFreshBreaking(item) && !hasImage ? '' : isFreshBreaking(item) ? html`<span class="badge badge--breaking mcard__flag">Breaking</span>` : ''}
         </a>` : ''}
+      ${hasImage ? '' : html`
+        <div class="mcard__noimg-banner" aria-hidden="true">
+          <span>${topicEmoji(item.topic) || '📰'}</span>
+          <b>${item.topic_label || item.source?.name || ''}</b>
+        </div>`}
       <div class="mcard__body">
         <div class="mcard__kicker">
           ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${topicEmoji(item.topic) || '📰'}</span>`}
           <span>${item.source?.name || ''}</span>
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
-          ${isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
+          ${!hasImage && isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
         </div>
         <h3 class="mcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
         ${showSummary && item.preview ? html`<p class="mcard__summary">${item.preview}</p>` : ''}
@@ -157,7 +209,11 @@ export function topCard(item) {
   return html`
     <article class="top-card ${item.image ? '' : 'top-card--noimg'}">
       ${item.image ? html`
-        <a href="/article/${item.id}" data-link aria-label="${item.title}">
+        <a href="/article/${item.id}" data-link aria-label="${item.title}" class="top-card__media">
+          <span class="media-fallback" aria-hidden="true">
+            <b>${topicEmoji(item.topic) || '📰'}</b>
+            <i>${item.source?.name || ''}</i>
+          </span>
           <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
         </a>` : html`
         <a class="top-card__banner" href="/article/${item.id}" data-link aria-label="${item.title}">
