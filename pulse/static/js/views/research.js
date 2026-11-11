@@ -1,6 +1,6 @@
-import { get, post } from '../api.js';
-import { html, raw, icons, toast, modal, copyText, errorState, emptyState, absDate } from '../ui.js';
-import { sectionHead } from '../components.js';
+import { get, post } from '../api.js?v=1.4.0';
+import { html, raw, icons, toast, modal, copyText, errorState, emptyState, absDate } from '../ui.js?v=1.4.0';
+import { sectionHead } from '../components.js?v=1.4.0';
 
 const STYLE_LABELS = { mla: 'MLA 9', apa: 'APA 7', chicago: 'Chicago', harvard: 'Harvard', bibtex: 'BibTeX', plain: 'Plain' };
 

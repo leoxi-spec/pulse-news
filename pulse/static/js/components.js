@@ -1,6 +1,6 @@
-import { html, raw, esc, timeAgo, absDate, compactNumber, icons, emptyState, proxyImg } from './ui.js';
+import { html, raw, esc, timeAgo, absDate, compactNumber, icons, emptyState, proxyImg } from './ui.js?v=1.4.0';
 export { emptyState };
-import { topicLabel, topicIcon as topicEmoji } from './store.js';
+import { topicLabel, topicIcon as topicEmoji } from './store.js?v=1.4.0';
 
 export function hashHue(text) {
   let hash = 0;

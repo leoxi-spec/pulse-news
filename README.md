@@ -1,7 +1,7 @@
 # Pulse
 
 **News that keeps up with you.** A production-ready, self-hosted news app built for
-students and teens: 331 publications from 51 countries, a permanent searchable
+students and teens: 336 publications from 51 countries, a permanent searchable
 archive, live sports scores, optional AI overviews, study tools, and a feed that
 actually learns what you read.
 
@@ -36,7 +36,7 @@ classes who still wants to understand what's happening. That means:
 ### Reading
 | | |
 |---|---|
-| **330+ sources** | 331 publications, 452 feeds, 51 countries, 19 topics. Wires, national dailies, local metros, specialists, student and teen outlets. |
+| **335+ sources** | 336 publications, 458 feeds, 51 countries, 20 topics — including a dedicated **Motorsport** section (F1, MotoGP, IndyCar) with five specialist outlets. |
 | **Story clustering** | Ten outlets covering one event become one card with a "9 outlets covering" badge and a compare-coverage view. |
 | **Clear read labels** | Every card states **📖 Read here** (full text inside Pulse), **👁️ Preview** (summary + overview, opens at the publisher) or **🔒 Subscription**. Articles open with a banner saying the same thing. A *Readable here* stream filters to in-app text only. |
 | **Symbol key** | Sidebar → **Key** (or press `?`) explains every icon, badge and score marker. |

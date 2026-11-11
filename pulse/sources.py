@@ -24,6 +24,7 @@ TOPICS: tuple[tuple[str, str, str], ...] = (
     ("health", "Health", "🩺"),
     ("climate", "Climate", "🌱"),
     ("sports", "Sports", "🏆"),
+    ("motorsport", "Motorsport", "🏎️"),
     ("culture", "Culture", "🎭"),
     ("entertainment", "Entertainment", "🎬"),
     ("music", "Music", "🎧"),
@@ -328,8 +329,8 @@ bleacherreport|Bleacher Report|bleacherreport.com|US|United States|center|0|teen
 theathletic|The Athletic|theathletic.com|US|United States|center|1|general|sports|Deep sports reporting, subscription based.
 espncricinfo|ESPNcricinfo|espncricinfo.com|IN|Global|center|0|specialist|sports|The home of cricket.
 skysports|Sky Sports|skysports.com|GB|United Kingdom|center|0|general|sports|UK sports news and live coverage.
-motorsport|Motorsport.com|motorsport.com|US|Global|center|0|specialist|sports|F1, MotoGP and racing news.
-autosport|Autosport|autosport.com|GB|Global|center|1|specialist|sports|Motor racing journalism since 1950.
+motorsport|Motorsport.com|motorsport.com|US|Global|center|0|specialist|motorsport,sports|F1, MotoGP and racing news.
+autosport|Autosport|autosport.com|GB|Global|center|1|specialist|motorsport,sports|Motor racing journalism since 1950.
 cyclingnews|Cyclingnews|cyclingnews.com|GB|Global|center|0|specialist|sports|Pro cycling news and results.
 golfdigest|Golf Digest|golfdigest.com|US|Global|center|0|specialist|sports|Golf news, instruction and gear.
 mmafighting|MMA Fighting|mmafighting.com|US|Global|center|0|specialist|sports|MMA and UFC coverage.
@@ -396,6 +397,11 @@ foreignaffairs|Foreign Affairs|foreignaffairs.com|US|Global|center|1|student|pol
 cjr|Columbia Journalism Review|cjr.org|US|Global|center-left|0|student|education,opinion,culture|Media criticism and industry news.
 niemanlab|Nieman Lab|niemanlab.org|US|Global|center-left|0|student|education,tech,opinion|The future of journalism.
 globalvoices|Global Voices|globalvoices.org|INT|Global|center|0|student|world,culture|Citizen media from around the world.
+the-race|The Race|the-race.com|GB|Global|center|0|general|motorsport,sports|Independent motorsport journalism, strong on F1 and endurance racing.
+racefans|RaceFans|racefans.net|GB|Global|center|0|general|motorsport,sports|Independent F1 coverage and analysis since 2005.
+planetf1|PlanetF1|planetf1.com|GB|Global|center|0|general|motorsport,sports|F1 news, rumours and race analysis.
+motorsportweek|Motorsport Week|motorsportweek.com|GB|Global|center|0|general|motorsport,sports|Single-seater and endurance racing news.
+formulascout|Formula Scout|formulascout.com|GB|Global|center|0|student|motorsport,sports|Junior single-seater ladder: F2, F3, F4 and beyond.
 theconversation|The Conversation|theconversation.com|AU|Global|center|0|student|science,health,politics,education,climate,tech,culture|Academics writing for the public, with disclosure.
 dazed|Dazed|dazeddigital.com|GB|United Kingdom|center-left|0|teen|culture,music,entertainment|Youth culture, fashion and identity.
 them|Them|them.us|US|United States|left|0|teen|culture,politics,health|LGBTQ+ news and culture.
@@ -441,7 +447,7 @@ stanfordnews|Stanford News|news.stanford.edu|US|Global|center|0|student|science,
 harvardgazette|Harvard Gazette|news.harvard.edu|US|Global|center|0|student|science,health,education|Harvard research and campus news.
 bigthink|Big Think|bigthink.com|US|Global|center|0|student|science,opinion,culture|Big ideas from scientists and thinkers.
 psyche|Psyche|psyche.co|GB|Global|center|0|student|science,culture|Psychology and philosophy for everyday life.
-formula1|Formula 1|formula1.com|GB|Global|center|0|general|sports|Official F1 news and race reports.
+formula1|Formula 1|formula1.com|GB|Global|center|0|general|motorsport,sports|Official F1 news and race reports.
 """
 
 # ---------------------------------------------------------------------------
@@ -791,8 +797,9 @@ theathletic|sports|https://theathletic.com/feed/
 espncricinfo|sports|https://www.espncricinfo.com/rss/content/story/feeds/0.xml
 skysports|sports|https://www.skysports.com/rss/12040
 skysports|sports|https://www.skysports.com/rss/12433
-motorsport|sports|https://www.motorsport.com/rss/all/news/
-autosport|sports|https://www.autosport.com/rss/all/news
+motorsport|motorsport|https://www.motorsport.com/rss/all/news/
+motorsport|motorsport|https://www.motorsport.com/rss/f1/news/
+autosport|motorsport|https://www.autosport.com/rss/all/news
 cyclingnews|sports|https://www.cyclingnews.com/feeds/all
 golfdigest|sports|https://www.golfdigest.com/feed/rss
 mmafighting|sports|https://www.mmafighting.com/rss/current
@@ -859,6 +866,11 @@ foreignaffairs|world|https://www.foreignaffairs.com/rss.xml
 cjr|education|https://www.cjr.org/feed
 niemanlab|education|https://www.niemanlab.org/feed/
 globalvoices|world|https://globalvoices.org/feed/
+the-race|motorsport|https://www.the-race.com/feed/
+racefans|motorsport|https://www.racefans.net/feed/
+planetf1|motorsport|https://www.planetf1.com/rss
+motorsportweek|motorsport|https://www.motorsportweek.com/feed/
+formulascout|motorsport|https://formulascout.com/feed/
 theconversation|science|https://theconversation.com/us/articles.atom
 theconversation|science|https://theconversation.com/uk/articles.atom
 theconversation|science|https://theconversation.com/au/articles.atom
@@ -907,7 +919,7 @@ stanfordnews|science|https://news.stanford.edu/feed/
 harvardgazette|science|https://news.harvard.edu/gazette/feed/
 bigthink|science|https://bigthink.com/feed/
 psyche|science|https://psyche.co/feed.rss
-formula1|sports|https://www.formula1.com/en/latest/all.xml
+formula1|motorsport|https://www.formula1.com/en/latest/all.xml
 """
 
 

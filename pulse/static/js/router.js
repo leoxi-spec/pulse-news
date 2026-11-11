@@ -1,5 +1,5 @@
-import { errorState } from './ui.js';
-import { emptyState } from './components.js';
+import { errorState } from './ui.js?v=1.4.0';
+import { emptyState } from './components.js?v=1.4.0';
 
 const routes = [];
 const scrollMemory = new Map();

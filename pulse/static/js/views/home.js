@@ -1,19 +1,20 @@
-import { get, post } from '../api.js';
-import { navigate } from '../router.js';
+import { get, post } from '../api.js?v=1.4.0';
+import { navigate } from '../router.js?v=1.4.0';
 import {
   state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel,
-} from '../store.js';
-import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
+} from '../store.js?v=1.4.0';
+import { html, raw, icons, toast, compactNumber, modal } from '../ui.js?v=1.4.0';
 import {
   storyCard, topCard, hCard, mosaicCard, scoreMini, sectionHead, emptyState, skeletonFeed,
-} from '../components.js';
-import { open as openPalette, mountHomeSearch } from '../palette.js';
+} from '../components.js?v=1.4.0';
+import { open as openPalette, mountHomeSearch } from '../palette.js?v=1.4.0';
 
-const DEFAULT_SECTIONS = ['brief', 'top', 'for-you', 'my-sports', 'topic:tech', 'topic:world', 'longreads'];
+const DEFAULT_SECTIONS = ['brief', 'top', 'for-you', 'picks', 'my-sports', 'topic:tech', 'topic:world', 'topic:motorsport', 'longreads'];
 
 const BASE_SECTIONS = [
   { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
   { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
+  { id: 'picks', label: "Editor's picks", hint: 'Full-text stories worth the time' },
   { id: 'for-you', label: 'For you', hint: 'Your main personalised feed' },
   { id: 'sports', label: 'Live scores', hint: 'A scoreboard strip' },
   { id: 'my-sports', label: 'My sports', hint: 'Your pinned teams and leagues' },
@@ -198,6 +199,7 @@ async function fillSection(root, id) {
   try {
     if (id === 'brief') return renderBrief(shell, head, body);
     if (id === 'top') return renderTop(head, body);
+    if (id === 'picks') return renderPicks(head, body);
     if (id === 'for-you') return renderForYou(root, shell, head, body);
     if (id === 'sports') return renderSports(head, body);
     if (id === 'my-sports') return renderMySports(head, body);
@@ -358,6 +360,18 @@ async function renderSports(head, body) {
       if (node) fillSection(document.getElementById('view'), 'sports');
     }, 4000);
   }
+}
+
+async function renderPicks(head, body) {
+  const data = await get('/api/discover', 120);
+  const items = (data.editors_picks || []).slice(0, 3);
+  head.innerHTML = sectionHead("Editor's picks", html`<a href="/discover" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'full text readable in Pulse' });
+  if (!items.length) {
+    head.innerHTML = '';
+    body.innerHTML = '';
+    return;
+  }
+  body.innerHTML = html`<div class="topic-grid">${items.map((item) => mosaicCard(item, { size: 'medium' }))}</div>`;
 }
 
 async function renderTopic(head, body, slug) {

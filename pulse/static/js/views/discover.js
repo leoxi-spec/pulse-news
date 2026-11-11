@@ -1,8 +1,8 @@
-import { get } from '../api.js';
-import { state, record } from '../store.js';
-import { navigate } from '../router.js';
-import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo, absDate } from '../ui.js';
-import { heroCard, storyCard, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot } from '../components.js';
+import { get } from '../api.js?v=1.4.0';
+import { state, record } from '../store.js?v=1.4.0';
+import { navigate } from '../router.js?v=1.4.0';
+import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo, absDate } from '../ui.js?v=1.4.0';
+import { heroCard, storyCard, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot } from '../components.js?v=1.4.0';
 
 export async function discoverView(root) {
   root.classList.add('view--wide');

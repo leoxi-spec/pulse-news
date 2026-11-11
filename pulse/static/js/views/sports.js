@@ -1,7 +1,7 @@
-import { get } from '../api.js';
-import { state, prefs, savePrefs } from '../store.js';
-import { html, raw, icons, toast, errorState, emptyState, timeAgo, absDate, proxyImg, modal } from '../ui.js';
-import { sectionHead } from '../components.js';
+import { get } from '../api.js?v=1.4.0';
+import { state, prefs, savePrefs } from '../store.js?v=1.4.0';
+import { html, raw, icons, toast, errorState, emptyState, timeAgo, absDate, proxyImg, modal } from '../ui.js?v=1.4.0';
+import { sectionHead } from '../components.js?v=1.4.0';
 
 let refreshTimer = null;
 let currentFilter = 'all';
@@ -83,6 +83,7 @@ export async function sportsView(root, ctx) {
   renderPinnedBar(root);
   await loadScores(root, true);
   loadSportsNews(root);
+  loadMotorsportNews(root);
   refreshTimer = setInterval(() => {
     if (!document.getElementById('games-body') || document.hidden) return;
     loadScores(root, true, { quiet: true });
@@ -384,6 +385,31 @@ function openPinManager(root) {
   }
   void box;
   void sectionHead;
+}
+
+async function loadMotorsportNews(root) {
+  const slot = root.querySelector('#sports-news');
+  if (!slot) return;
+  try {
+    const data = await get('/api/feed?topic=motorsport&mode=latest&limit=6&days=14', 90);
+    if (!data.items?.length) return;
+    const block = document.createElement('div');
+    block.className = 'section';
+    block.innerHTML = html`
+      <div class="section-head"><h2>🏎️ Formula 1 & motorsport</h2>
+        <a href="/topic/motorsport" data-link>All motorsport ${raw(icons.chevron)}</a></div>
+      <div class="topic-grid">
+        ${data.items.slice(0, 3).map((item) => html`
+          <a class="card" href="/article/${item.id}" data-link style="display:block;overflow:hidden">
+            ${item.image ? html`<img src="${item.image}" alt="" loading="lazy" style="width:100%;height:140px;object-fit:cover">` : ''}
+            <div style="padding:.7rem .8rem">
+              <div class="tiny muted">${item.source.name} · ${item.published_relative}</div>
+              <div style="font-weight:700;font-size:.9rem;line-height:1.3;margin-top:.25rem">${item.title}</div>
+            </div>
+          </a>`)}
+      </div>`;
+    slot.prepend(block);
+  } catch { /* optional */ }
 }
 
 async function loadSportsNews(root) {

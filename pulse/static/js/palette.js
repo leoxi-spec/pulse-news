@@ -1,8 +1,8 @@
 // Command palette: search news, jump to topics/sources, run quick actions.
-import { get } from './api.js';
-import { html, raw, icons, debounce, toast } from './ui.js';
-import { navigate } from './router.js';
-import { state, topicLabel } from './store.js';
+import { get } from './api.js?v=1.4.0';
+import { html, raw, icons, debounce, toast } from './ui.js?v=1.4.0';
+import { navigate } from './router.js?v=1.4.0';
+import { state, topicLabel } from './store.js?v=1.4.0';
 
 const ACTIONS = [
   { id: 'home', label: 'Home feed', hint: 'Your personalised front page', icon: 'home', path: '/' },

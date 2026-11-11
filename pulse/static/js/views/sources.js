@@ -1,7 +1,7 @@
-import { get, post } from '../api.js';
-import { state, sourceOf, topicLabel, record } from '../store.js';
-import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo } from '../ui.js';
-import { sectionHead, storyCard, sourceDot, skeletonFeed } from '../components.js';
+import { get, post } from '../api.js?v=1.4.0';
+import { state, sourceOf, topicLabel, record } from '../store.js?v=1.4.0';
+import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo } from '../ui.js?v=1.4.0';
+import { sectionHead, storyCard, sourceDot, skeletonFeed } from '../components.js?v=1.4.0';
 
 const LEAN_LABEL = {
   left: 'Left', 'center-left': 'Center-left', center: 'Center',

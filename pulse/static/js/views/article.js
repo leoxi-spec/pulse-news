@@ -1,10 +1,10 @@
-import { get, post, del } from '../api.js';
-import { state, record, emit, savePrefs, prefs, toggleSave } from '../store.js';
+import { get, post, del } from '../api.js?v=1.4.0';
+import { state, record, emit, savePrefs, prefs, toggleSave } from '../store.js?v=1.4.0';
 import {
   html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog,
   errorState, toastProgress, setLoading,
-} from '../ui.js';
-import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js';
+} from '../ui.js?v=1.4.0';
+import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js?v=1.4.0';
 
 const FONTS = [
   { id: 'serif', label: 'Serif' },

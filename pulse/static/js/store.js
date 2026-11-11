@@ -1,4 +1,4 @@
-import { get, patch, post, del, invalidate } from './api.js';
+import { get, patch, post, del, invalidate } from './api.js?v=1.4.0';
 
 export const state = {
   boot: null,
