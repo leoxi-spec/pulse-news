@@ -879,9 +879,10 @@ export async function onboardingView(root, ctx) {
     try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* ignore */ }
   };
 
+  const selectedTopicCount = () => Object.values(draft.topics).filter((v) => Number(v) > 0).length;
   const renderStep = () => {
     const key = ONBOARD_STEPS[step];
-    const selectedTopics = Object.values(draft.topics).filter((v) => Number(v) > 0).length;
+    const selectedTopics = selectedTopicCount();
     root.innerHTML = html`
       <div class="onboarding">
         <div class="onboarding__top">
@@ -917,7 +918,7 @@ export async function onboardingView(root, ctx) {
     root.querySelector('#skip-welcome')?.addEventListener('click', skipAll);
     root.querySelector('#cancel-edit')?.addEventListener('click', () => navigate('/profile'));
     root.querySelector('#next').addEventListener('click', async () => {
-      if (key === 'topics' && selectedTopics < 3 && !editing) {
+      if (key === 'topics' && selectedTopicCount() < 3 && !editing) {
         toast('Pick at least 3 topics so the feed has something to work with', { type: 'bad' });
         return;
       }

@@ -418,6 +418,21 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.click(".modal [data-close]")
     time.sleep(0.3)
 
+    # The card we happened to open may be a preview-only story; use a
+    # full-text story so the quiz test is about the quiz, not the feed order.
+    readable = api(base, "/api/feed?mode=readable&limit=20", profile=profile_id)["items"]
+    quiz_item = None
+    for candidate in readable:
+        try:
+            if api(base, f"/api/articles/{candidate['id']}/quiz", profile=profile_id).get("questions"):
+                quiz_item = candidate
+                break
+        except Exception:
+            continue
+    if quiz_item:
+        checker.goto(f"/article/{quiz_item['id']}")
+        checker.wait_for("Boolean(document.querySelector('#prose'))", 15, "readable article")
+        time.sleep(0.5)
     checker.click('[data-act="quiz"]')
     if checker.wait_for("document.querySelectorAll('.quiz__opt').length >= 3", 20, "quiz"):
         checker.ok(True, "quiz questions render")
@@ -592,7 +607,21 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
         checker.ok(False, "new profile is sent to onboarding", checker.cdp.js("location.pathname"))
     checker.ok(checker.count("#skip-setup") >= 1, "skip setup button is present")
     checker.shot("11-onboarding")
-    checker.click("#skip-welcome")
+
+    # Regression: picking three topics must advance the survey. The check used
+    # to read a count captured before the clicks, so it always said "pick 3".
+    checker.click("#next")                     # welcome -> grade
+    time.sleep(0.35)
+    checker.click("#next")                     # grade -> topics
+    checker.wait_for("document.querySelectorAll('[data-topic]').length >= 3", 8, "topic picker")
+    checker.cdp.js("[...document.querySelectorAll('[data-topic]')].slice(0, 3).forEach((button) => button.click())")
+    time.sleep(0.3)
+    checker.click("#next")
+    time.sleep(0.6)
+    step_label = checker.cdp.js("document.querySelector('.onboarding__dots')?.getAttribute('aria-label')") or ''
+    checker.ok("Step 4" in step_label, "selecting three topics advances the survey", step_label)
+    checker.shot("11b-topics")
+    checker.click("#skip-setup")
     if checker.wait_for("location.pathname === '/'", 10, "skip navigates home"):
         checker.ok(True, "skip setup goes straight to the feed")
     else:
