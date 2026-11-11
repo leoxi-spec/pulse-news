@@ -1,7 +1,7 @@
 import { get, post, patch, del } from '../api.js';
 import {
   state, prefs, savePrefs, saveSurvey, record, setProfile, profileInitials,
-  levels, streak, dailyProgress, topicLabel, followedTopics,
+  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES,
 } from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
@@ -9,6 +9,7 @@ import {
 } from '../ui.js';
 import { storyCard, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js';
 import { navigate } from '../router.js';
+import { openLegend } from '../legend.js';
 
 // ---------------------------------------------------------------- search
 export async function searchView(root, ctx) {
@@ -99,6 +100,14 @@ function renderSearchHome(root) {
             </a>`)}
         </div>
       </div>` : ''}`;
+}
+
+function localGreeting() {
+  const hour = new Date().getHours();
+  const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  const name = (state.profile?.name || '').trim();
+  const who = name && name !== 'Student' ? `, ${name.split(' ')[0]}` : '';
+  return `Good ${part}${who}`;
 }
 
 function monthLabel(value) {
@@ -213,7 +222,7 @@ export async function briefView(root) {
       <div class="card card-pad-lg" style="background:var(--grad-soft);border-color:var(--line)">
         <div class="between">
           <div>
-            <p class="eyebrow">${data.greeting || 'Today'}</p>
+            <p class="eyebrow">${localGreeting()}</p>
             <h2 style="font-size:1.3rem;letter-spacing:-.02em;margin-top:.2rem">${data.stories.length} stories · ${data.minutes} min</h2>
           </div>
           <button class="btn btn--primary" id="complete-brief">${raw(icons.check)} I'm briefed</button>
@@ -258,8 +267,9 @@ export async function studyView(root) {
     <div class="section">
       ${sectionHead('Citation helper')}
       <div class="card card-pad-lg">
-        <p class="small muted">Open any story and tap <b>Cite</b> for a ready-made MLA 9, APA 7, Chicago, Harvard or BibTeX reference — with the publisher's date and your access date filled in.</p>
+        <p class="small muted">Open any story and tap <b>Cite</b> for a ready-made MLA 9, APA 7, Chicago, Harvard or BibTeX reference — with the publisher's date and your access date filled in. The research desk does the same for every saved story at once.</p>
         <div class="hstack" style="margin-top:.7rem">
+          <a class="btn btn--sm btn--primary" href="/research" data-link>Open research desk</a>
           <a class="btn btn--sm btn--ghost" href="/saved" data-link>My saved stories</a>
           <a class="btn btn--sm btn--ghost" href="/search?q=&sort=newest" data-link>Recent stories</a>
         </div>
@@ -484,11 +494,14 @@ export async function profileView(root, ctx) {
 
       <h3 class="small muted" style="margin:.6rem 0 .4rem">Appearance</h3>
       <div class="settings-group">
-        <div class="settings-row">
-          <div><div class="settings-row__label">Theme</div><div class="settings-row__hint">System follows your device.</div></div>
-          <div class="segmented">
-            ${[['system', 'Auto'], ['dark', 'Dark'], ['light', 'Light'], ['sepia', 'Sepia']].map(([id, label]) => html`
-              <button data-pref="theme" data-value="${id}" class="${p.theme === id ? 'is-on' : ''}">${label}</button>`)}
+        <div class="settings-row" style="display:block">
+          <div style="margin-bottom:.6rem"><div class="settings-row__label">Theme</div><div class="settings-row__hint">Ten palettes. Auto follows your device; Mono is pure grayscale; Rose and Ocean are light.</div></div>
+          <div class="theme-grid">
+            ${THEMES.map((theme) => html`
+              <button class="theme-swatch ${p.theme === theme.id ? 'is-on' : ''}" data-pref="theme" data-value="${theme.id}" aria-pressed="${p.theme === theme.id}">
+                <span class="theme-swatch__preview" style="background:${theme.bg};--swatch-text:${theme.text};--swatch-grad:${theme.grad}"></span>
+                <span class="theme-swatch__label">${theme.label}</span>
+              </button>`)}
           </div>
         </div>
         <div class="settings-row">
@@ -570,6 +583,10 @@ export async function profileView(root, ctx) {
           Pulse ${boot.app?.version || ''} · ${compactNumber(boot.stats?.articles)} articles · ${boot.catalog?.sources} sources · ${boot.feed_health?.healthy}/${boot.feed_health?.total} feeds healthy<br>
           Server time ${absDate(boot.app?.server_time)}. Scores by ESPN. Headlines belong to their publishers.
         </p>
+        <div class="hstack" style="margin-top:.7rem">
+          <button class="btn btn--sm btn--ghost" id="open-legend">Key to symbols</button>
+          <a class="btn btn--sm btn--ghost" href="/research" data-link>Research desk</a>
+        </div>
       </div>
     </div>`;
 
@@ -638,6 +655,7 @@ function bindProfile(root, p, today, profile) {
     void close;
   });
   root.querySelector('#edit-interests')?.addEventListener('click', () => navigate('/onboarding?edit=1'));
+  root.querySelector('#open-legend')?.addEventListener('click', () => openLegend());
   root.querySelector('#export')?.addEventListener('click', async () => {
     try {
       const data = await get('/api/profile/export', 0, true);
@@ -706,14 +724,15 @@ export async function onboardingView(root, ctx) {
         <div class="onboarding__foot">
           <button class="btn btn--ghost" id="back" ${step === 0 && !editing ? 'disabled' : ''}>Back</button>
           <div class="hstack">
-            ${key === 'sources' ? html`<button class="btn btn--ghost" id="skip">Skip for now</button>` : ''}
+            ${key === 'sources' ? html`<button class="btn btn--ghost" id="skip">Skip this step</button>` : ''}
+            ${!editing && step < ONBOARD_STEPS.length - 1 ? html`<button class="btn btn--ghost" id="skip-setup" title="Start with a general feed — you can personalise later">Skip setup</button>` : ''}
             <button class="btn btn--primary" id="next">${step === ONBOARD_STEPS.length - 1 ? 'Finish and build my feed' : 'Continue'}</button>
           </div>
         </div>
       </div>`;
 
     const body = root.querySelector('#step-body');
-    body.innerHTML = stepMarkup(key, draft, boot, selectedTopics);
+    body.innerHTML = stepMarkup(key, draft, boot, selectedTopics, editing);
     bindStep(key, body, draft, persist);
 
     root.querySelector('#back').addEventListener('click', () => {
@@ -722,6 +741,9 @@ export async function onboardingView(root, ctx) {
       renderStep();
     });
     root.querySelector('#skip')?.addEventListener('click', () => { step += 1; renderStep(); });
+    const skipAll = () => finish({ skipped: true });
+    root.querySelector('#skip-setup')?.addEventListener('click', skipAll);
+    root.querySelector('#skip-welcome')?.addEventListener('click', skipAll);
     root.querySelector('#cancel-edit')?.addEventListener('click', () => navigate('/profile'));
     root.querySelector('#next').addEventListener('click', async () => {
       if (key === 'topics' && selectedTopics < 3 && !editing) {
@@ -741,40 +763,45 @@ export async function onboardingView(root, ctx) {
     });
   };
 
-  const finish = async () => {
-    const button = root.querySelector('#next');
-    button.disabled = true;
-    button.textContent = 'Building your feed…';
+  const finish = async ({ skipped = false } = {}) => {
+    const buttons = root.querySelectorAll('button');
+    buttons.forEach((button) => { button.disabled = true; });
+    const primary = root.querySelector('#next');
+    if (primary) primary.textContent = 'Building your feed…';
+    // Sensible starting weights when someone skips: a broad front page rather
+    // than an empty one. The ranker refines this from what they read.
+    const fallbackTopics = { world: 2, tech: 2, sports: 2, science: 1, culture: 1 };
+    const topics = Object.keys(draft.topics).length ? draft.topics : fallbackTopics;
+    const survey = {
+      topics,
+      sources: draft.sources,
+      keywords: draft.keywords,
+      grade: draft.grade,
+      goals: draft.goals,
+      reading_length: draft.reading_length || 'medium',
+      region: draft.region,
+      daily_goal: prefs().daily_goal || 5,
+      experience: 'some',
+      completed_at: new Date().toISOString(),
+      skipped,
+    };
     try {
-      await saveSurvey(
-        {
-          topics: draft.topics,
-          sources: draft.sources,
-          keywords: draft.keywords,
-          grade: draft.grade,
-          goals: draft.goals,
-          reading_length: draft.reading_length,
-          region: draft.region,
-          daily_goal: prefs().daily_goal || 5,
-          completed_at: new Date().toISOString(),
-        },
-        { onboarded: true, name: draft.name || 'Student' },
-      );
-      await savePrefs({ reading_length: draft.reading_length });
+      await saveSurvey(survey, { onboarded: true, name: draft.name || 'Student' });
+      await savePrefs({ reading_length: survey.reading_length });
       try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-      toast('Your feed is ready', { type: 'good' });
-      navigate('/');
+      toast(skipped ? 'Starting with a general feed — personalise any time in Profile' : 'Your feed is ready', { type: 'good' });
+      navigate('/', { replace: true });
     } catch (err) {
       toast(err.message, { type: 'bad' });
-      button.disabled = false;
-      button.textContent = 'Finish and build my feed';
+      buttons.forEach((button) => { button.disabled = false; });
+      if (primary) primary.textContent = 'Finish and build my feed';
     }
   };
 
   renderStep();
 }
 
-function stepMarkup(key, draft, boot, selectedTopics) {
+function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
   if (key === 'welcome') {
     return html`
       <h1>News that keeps up<br>with you.</h1>
@@ -788,6 +815,7 @@ function stepMarkup(key, draft, boot, selectedTopics) {
           <div class="card card-pad"><div style="font-size:1.3rem">🏆</div><b class="small">Live scores</b><p class="tiny muted">NBA, NFL, football and more.</p></div>
         </div>
         <p class="tiny faint" style="margin-top:1rem">Everything stays on your device. No ads, no tracking, no account required.</p>
+        ${!editing ? html`<p class="small muted" style="margin-top:.9rem">In a hurry? <button class="link" id="skip-welcome" style="background:none;border:0;font:inherit">Skip the survey</button> and start with a general feed — you can personalise it any time from Profile.</p>` : ''}
       </div>`;
   }
   if (key === 'grade') {

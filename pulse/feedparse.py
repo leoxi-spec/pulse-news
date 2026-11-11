@@ -240,6 +240,7 @@ def _parse_item(entry: ET.Element, feed_url: str, kind: str) -> FeedItem | None:
     author = re.sub(r"\s+", " ", author).strip()
     if author.lower().startswith("by "):
         author = author[3:].strip()
+    author = htmltext.clean_author(author) or ""
 
     published = _text(_first(entry, "pubdate", "published", "date", "issued", "created", "datepublished"))
     updated = _text(_first(entry, "updated", "modified", "lastmod", "datemodified"))

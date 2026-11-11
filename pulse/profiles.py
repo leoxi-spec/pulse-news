@@ -52,13 +52,14 @@ DEFAULT_SURVEY: dict = {
     "daily_goal": 5,
     "experience": "some",
     "completed_at": None,
+    "skipped": False,
 }
 
 GRADES = ("middle", "9", "10", "11", "12", "uni", "other")
 GOALS = ("exam prep", "current events class", "writing & debate", "college apps",
          "general knowledge", "science & tech", "sports", "culture")
 READING_LENGTHS = ("short", "medium", "long")
-THEMES = ("system", "light", "dark", "sepia")
+THEMES = ("system", "light", "dark", "sepia", "midnight", "forest", "sunset", "mono", "rose", "ocean")
 FONTS = ("sans", "serif", "dyslexic")
 
 _XP = {
@@ -194,6 +195,7 @@ def sanitise_survey(survey: dict) -> dict:
     except (TypeError, ValueError):
         clean["daily_goal"] = 5
     clean["experience"] = str(survey.get("experience") or "some")[:20]
+    clean["skipped"] = bool(survey.get("skipped", False))
     if survey.get("completed_at"):
         clean["completed_at"] = str(survey["completed_at"])[:40]
     return clean

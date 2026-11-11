@@ -51,6 +51,24 @@ export function sourceOf(id) {
   return state.sourceMap.get(id) || null;
 }
 
+const THEME_COLORS = {
+  dark: '#0a0c11', light: '#f6f7fb', sepia: '#f4ecd8', midnight: '#060a14',
+  forest: '#08110c', sunset: '#140a0b', mono: '#0c0c0d', rose: '#fff6f8', ocean: '#f2f8fc',
+};
+
+export const THEMES = [
+  { id: 'system', label: 'Auto', bg: 'linear-gradient(135deg,#0a0c11 50%,#f6f7fb 50%)', text: '#ffffff', grad: 'linear-gradient(120deg,#7c5cff,#ff4d8d)' },
+  { id: 'dark', label: 'Dark', bg: '#0a0c11', text: '#eef1f6', grad: 'linear-gradient(120deg,#7c5cff,#ff4d8d)' },
+  { id: 'light', label: 'Light', bg: '#f6f7fb', text: '#10131a', grad: 'linear-gradient(120deg,#7c5cff,#ff4d8d)' },
+  { id: 'sepia', label: 'Sepia', bg: '#f4ecd8', text: '#2c2418', grad: 'linear-gradient(120deg,#b45309,#d97706)' },
+  { id: 'midnight', label: 'Midnight', bg: '#060a14', text: '#eaf2ff', grad: 'linear-gradient(120deg,#4d8dff,#7c5cff)' },
+  { id: 'forest', label: 'Forest', bg: '#08110c', text: '#e9f7ee', grad: 'linear-gradient(120deg,#22c55e,#a3e635)' },
+  { id: 'sunset', label: 'Sunset', bg: '#140a0b', text: '#fff1ec', grad: 'linear-gradient(120deg,#ff7a59,#ffd166)' },
+  { id: 'mono', label: 'Mono', bg: '#0c0c0d', text: '#f4f4f5', grad: 'linear-gradient(120deg,#f4f4f5,#a1a1aa)' },
+  { id: 'rose', label: 'Rose', bg: '#fff6f8', text: '#2a1219', grad: 'linear-gradient(120deg,#e11d74,#f97316)' },
+  { id: 'ocean', label: 'Ocean', bg: '#f2f8fc', text: '#0b2233', grad: 'linear-gradient(120deg,#0284c7,#06b6d4)' },
+];
+
 const TEXT_SCALES = [0.92, 1, 1.08, 1.18, 1.3];
 const MEDIA = window.matchMedia('(prefers-color-scheme: light)');
 
@@ -63,7 +81,7 @@ export function applyPrefs(p) {
   const theme = resolveTheme(p.theme);
   document.documentElement.dataset.theme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'light' ? '#f6f7fb' : theme === 'sepia' ? '#f4ecd8' : '#0a0c11');
+  if (meta) meta.setAttribute('content', THEME_COLORS[theme] || '#0a0c11');
   document.body.classList.toggle('font-serif', p.font === 'serif');
   document.body.classList.toggle('font-dyslexic', p.font === 'dyslexic');
   document.body.classList.toggle('contrast-high', Boolean(p.high_contrast));

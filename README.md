@@ -38,7 +38,12 @@ classes who still wants to understand what's happening. That means:
 |---|---|
 | **300+ sources** | 298 publications, 421 feeds, 45 countries, 19 topics. Wires, national dailies, specialists, student and teen outlets. |
 | **Story clustering** | Ten outlets covering one event become one card with a "9 outlets covering" badge and a compare-coverage view. |
-| **Previews** | Every card carries the publisher's summary plus an extractive overview built from the article's own sentences. |
+| **Clear read labels** | Every card states **📖 Read here** (full text inside Pulse), **👁️ Preview** (summary + overview, opens at the publisher) or **🔒 Subscription**. Articles open with a banner saying the same thing. A *Readable here* stream filters to in-app text only. |
+| **Symbol key** | Sidebar → **Key** (or press `?`) explains every icon, badge and score marker. |
+| **Search everywhere** | A search bar on the home page plus a command palette (`⌘K` or `/`) with headlines, topics, sources and quick actions as you type. |
+| **Front-page sections** | Apple News-style **Top Stories** grid plus configurable rows: brief, For you, scores, any topic, long reads, saved, research. Reorder or hide them in *Customize*. |
+| **10 themes** | Auto, Dark, Light, Sepia, Midnight, Forest, Sunset, Mono, Rose, Ocean. |
+| **Research desk** | Turn every saved story into a bibliography in MLA, APA, Chicago, Harvard or BibTeX; add books/websites by hand; export `.txt`/`.bib`; quote collector from your notes. |
 | **Reader** | Full text when the publisher allows it, paywall/preview handling when not, focus mode, adjustable type (sans/serif/dyslexia-friendly), highlight & note. |
 | **Permanent archive** | Articles are never deleted. Full-text search covers everything ever ingested, with filters (`source:bbc`, `topic:tech`, `after:2025-01-01`, `-trump`). |
 | **Honest dates** | Publisher timestamp, normalised UTC, plus a confidence marker. Future-dated items are clamped and labelled "First seen". |
@@ -256,6 +261,8 @@ GET    /api/articles/:id/overview     AI or extractive overview
 GET    /api/articles/:id/quiz         quiz (AI or rules-based)
 GET    /api/articles/:id/explain      plain-language rewrite + jargon
 GET    /api/articles/:id/citations    MLA/APA/Chicago/Harvard/BibTeX
+GET    /api/research/bibliography     bibliography from saved stories
+POST   /api/research/cite             cite a manually entered source
 POST   /api/articles/:id/save         save to a collection
 POST   /api/articles/:id/notes        highlight/note
 GET    /api/search?q=&topic=&source=&since=&sort=
@@ -280,11 +287,18 @@ server serves a small token login page before anything else. If `PULSE_ACCESS_TO
 ## Testing
 
 ```bash
-python3 -m unittest discover -s tests -v     # 106 tests, no network required
+python3 -m unittest discover -s tests -v     # 113 tests, no network required
 python3 tools/verify_catalog.py              # catalogue integrity
 python3 tools/verify_catalog.py --live       # fetch every feed (slow)
 python3 tools/check_js.py                    # syntax-check the ES modules
+python3 tools/browser_check.py               # headless Chrome end-to-end run
 ```
+
+`tools/browser_check.py` launches headless Chrome, drives the real UI through the
+DevTools protocol (no third-party packages) and checks home sections, read labels,
+the command palette, the symbol key, the customizer, saving, citations, quizzes,
+search, scores, brief, study, research, theme switching, the survey-skip path,
+mobile layout and the offline shell, while failing on any console error.
 
 The suite covers date parsing (including publisher clock skew), HTML extraction
 and boilerplate stripping, feed parsing across four formats, topic and story

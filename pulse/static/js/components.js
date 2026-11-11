@@ -1,6 +1,6 @@
 import { html, raw, esc, timeAgo, absDate, compactNumber, icons, emptyState, proxyImg } from './ui.js';
 export { emptyState };
-import { topicLabel, topicIcon } from './store.js';
+import { topicLabel, topicIcon as topicEmoji } from './store.js';
 
 export function hashHue(text) {
   let hash = 0;
@@ -28,6 +28,24 @@ export function reasonChips(item, max = 2) {
   return html`<span class="hstack" style="gap:.3rem">${reasons.map((r) => html`<span class="reason">${r}</span>`)}</span>`;
 }
 
+export function accessInfo(item) {
+  if (item.paywalled) {
+    return { kind: 'locked', icon: '🔒', label: 'Subscription', title: 'The publisher requires a subscription for the full text' };
+  }
+  const full = item.has_full_text || item.content_state === 'extracted' || Number(item.word_count || 0) >= 240;
+  if (full) {
+    return { kind: 'full', icon: '📖', label: 'Read here', title: 'Full article text is readable inside Pulse' };
+  }
+  return { kind: 'preview', icon: '👁️', label: 'Preview', title: 'Preview only — the full story opens at the publisher' };
+}
+
+export function accessPill(item, { compact = false } = {}) {
+  const info = accessInfo(item);
+  return html`<span class="access-pill access-pill--${info.kind}" title="${info.title}">
+    <span aria-hidden="true">${info.icon}</span>${compact ? '' : html`<span>${info.label}</span>`}
+  </span>`;
+}
+
 export function storyKicker(item) {
   const source = item.source || {};
   return html`
@@ -38,7 +56,6 @@ export function storyKicker(item) {
       <span class="tiny muted" title="${absDate(item.published_at || item.first_seen_at)}">${item.published_relative || timeAgo(item.published_at || item.first_seen_at)}</span>
       ${item.date_label === 'First seen' ? html`<span class="tiny faint">(first seen)</span>` : ''}
       ${item.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
-      ${item.source?.paywall ? html`<span class="tiny faint" title="Subscription required at the source">🔒</span>` : ''}
     </div>`;
 }
 
@@ -55,6 +72,8 @@ export function storyCard(item, { compact = false } = {}) {
           <h3 class="story-card__title">${item.title}</h3>
           ${item.preview ? html`<p class="story-card__summary">${item.preview}</p>` : ''}
           <div class="story-card__foot">
+            ${accessPill(item)}
+            <span class="tiny faint">·</span>
             <span class="tiny muted">${item.reading_minutes} min read</span>
             <span class="tiny faint">·</span>
             <span class="tiny muted">${item.topic_label || topicLabel(item.topic)}</span>
@@ -88,7 +107,53 @@ export function heroCard(item, { label = 'Top story' } = {}) {
           <span title="${absDate(item.published_at || item.first_seen_at)}">${item.published_relative || timeAgo(item.published_at || item.first_seen_at)}</span>
           <span aria-hidden="true">·</span>
           <span>${item.reading_minutes} min read</span>
+          ${accessPill(item)}
           ${item.reasons?.length ? html`<span class="badge badge--glass">${item.reasons[0]}</span>` : ''}
+        </div>
+      </div>
+    </article>`;
+}
+
+export function topCard(item) {
+  return html`
+    <article class="top-card">
+      <a href="/article/${item.id}" data-link aria-label="${item.title}">
+        ${item.image
+          ? html`<img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">`
+          : html`<div class="top-card__img media-placeholder" aria-hidden="true"><span>${topicEmoji(item.topic) || '📰'}</span></div>`}
+      </a>
+      <div class="top-card__body">
+        <div class="top-card__source">
+          <span>${item.source?.name || ''}</span>
+          ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
+        </div>
+        <h3 class="top-card__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+        <div class="top-card__meta">
+          ${accessPill(item)}
+          <span class="faint">·</span>
+          <span>${item.published_relative}</span>
+          <span class="faint">·</span>
+          <span>${item.reading_minutes} min</span>
+        </div>
+      </div>
+    </article>`;
+}
+
+export function hCard(item) {
+  return html`
+    <article class="hcard">
+      <a href="/article/${item.id}" data-link aria-label="${item.title}">
+        ${item.image
+          ? html`<img class="hcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">`
+          : html`<div class="hcard__img media-placeholder" aria-hidden="true"><span>${topicEmoji(item.topic) || '📰'}</span></div>`}
+      </a>
+      <div class="hcard__body">
+        <h3 class="hcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+        <div class="hcard__meta">
+          ${accessPill(item)}
+          <span>${item.source?.name || ''}</span>
+          <span class="faint">·</span>
+          <span>${item.published_relative}</span>
         </div>
       </div>
     </article>`;
@@ -98,7 +163,7 @@ export function sectionHead(title, action = '', { sub = '' } = {}) {
   return html`
     <div class="section-head">
       <h2>${title}${sub ? html` <span class="small muted" style="font-weight:400">${sub}</span>` : ''}</h2>
-      ${action}
+      ${raw(action)}
     </div>`;
 }
 

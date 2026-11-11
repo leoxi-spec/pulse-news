@@ -43,6 +43,7 @@ def load_candidates(
     source: str | None = None,
     breaking_only: bool = False,
     mode: str = "for-you",
+    readable_only: bool = False,
 ) -> list:
     params: list = [iso(now() - timedelta(days=days))]
     sql = _CANDIDATE_SQL
@@ -57,6 +58,8 @@ def load_candidates(
         params.append(iso(now() - timedelta(hours=24)))
     if mode == "longreads":
         sql += " AND a.word_count >= 700 AND a.content_state = 'extracted'"
+    if readable_only:
+        sql += " AND (a.content_state = 'extracted' OR a.word_count >= 240)"
     sql += " ORDER BY COALESCE(a.published_at, a.first_seen_at) DESC LIMIT ?"
     params.append(limit)
     return db.query(sql, params)
@@ -144,7 +147,7 @@ def card(row, *, model: rank.ProfileModel | None = None, saved_ids: set[int] | N
         "preview": _preview_of(summary),
         "url": row["url"],
         "image": proxied_image(row["image_url"]),
-        "author": row["author"],
+        "author": htmltext.clean_author(row["author"]),
         "source": {
             "id": row["source_id"],
             "name": row["source_name"],
@@ -239,6 +242,9 @@ def feed_page(
     elif mode == "longreads":
         rows = load_candidates(days=14, limit=400, topic=topic, source=source, mode="longreads")
         ranked = rank.rank(rows, model, limit=len(rows) or 1)
+    elif mode == "readable":
+        rows = load_candidates(days=days, limit=600, topic=topic, source=source, readable_only=True)
+        ranked = rank.rank(rows, model, limit=len(rows) or 1)
     else:  # for-you and topic/source views use personalisation
         rows = load_candidates(days=days, limit=900, topic=topic, source=source)
         ranked = rank.rank(rows, model, limit=len(rows) or 1)
@@ -313,6 +319,10 @@ def article_detail(article_id: int, profile: dict) -> dict | None:
     if not blocks and row["content_text"] and int(row["word_count"] or 0) >= 250:
         blocks = [{"type": "p", "text": para} for para in row["content_text"].split("\n\n") if para.strip()]
 
+    blocks = [
+        block for block in blocks
+        if not (len(block.get("text", "")) < 160 and "preferred source" in block.get("text", "").lower())
+    ]
     payload.update(
         {
             "blocks": blocks[:120],

@@ -203,7 +203,7 @@ def _parse_json(text: str) -> dict:
 
 # ------------------------------------------------------------------ extractive
 def extractive_overview(article: dict) -> dict:
-    text = article.get("content_text") or article.get("summary") or ""
+    text = htmltext.strip_boilerplate(article.get("content_text") or article.get("summary") or "")
     summary = htmltext.summarize(text, 3, 520) or (article.get("summary") or "")
     summary_tokens = set(htmltext._tokenise(summary))
     points = [
@@ -351,7 +351,7 @@ def explain(article: dict) -> dict:
 # ----------------------------------------------------------------------- quiz
 def quiz(article: dict, *, count: int = 4) -> dict:
     """Build a comprehension quiz. AI questions when available, else cloze."""
-    text = article.get("content_text") or article.get("summary") or ""
+    text = htmltext.strip_boilerplate(article.get("content_text") or article.get("summary") or "")
     local = _local_quiz(article, text, count=count)
     if not settings.ai_enabled or len(text.split()) < 60:
         return local
@@ -421,7 +421,9 @@ def _local_quiz(article: dict, text: str, *, count: int = 4) -> dict:
 
     sentences = [
         s.strip() for s in htmltext.sentences(text)
-        if 55 <= len(s) <= 300 and not re.match(r"^\s*\d{1,2}[.)]\s", s.strip())
+        if 55 <= len(s) <= 300
+        and not re.match(r"^\s*\d{1,2}[.)]\s", s.strip())
+        and "preferred source" not in s.lower()
     ]
     pool = sentences or [s for s in htmltext.sentences(text) if len(s) > 30]
     rng = random.Random(hash(article.get("id")) & 0xFFFF)

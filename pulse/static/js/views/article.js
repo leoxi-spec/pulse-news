@@ -4,7 +4,7 @@ import {
   html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog,
   errorState, toastProgress, setLoading,
 } from '../ui.js';
-import { sourceDot, leanBar, emptyState } from '../components.js';
+import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js';
 
 const FONTS = [
   { id: 'serif', label: 'Serif' },
@@ -68,8 +68,6 @@ function articleMarkup(a, p) {
         <span class="badge badge--topic">${a.topic_label}</span>
         ${a.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
         ${a.story?.source_count > 1 ? html`<span class="badge badge--topic">${a.story.source_count} outlets covering</span>` : ''}
-        ${a.paywalled ? html`<span class="badge badge--topic">Paywalled at source</span>` : ''}
-        ${!hasBody && !a.paywalled ? html`<span class="badge badge--topic">Preview only</span>` : ''}
       </div>
 
       <h1 class="article__title">${a.title}</h1>
@@ -85,6 +83,8 @@ function articleMarkup(a, p) {
         <span>${a.reading_minutes} min read</span>
         ${a.date_confidence === 'day' || a.date_confidence === 'inferred' ? html`<span class="faint" title="The publisher only provided a date, so the time of day is unknown">· date-only</span>` : ''}
       </div>
+
+      ${renderAccessBanner(a)}
 
       <div class="article__actions" role="toolbar" aria-label="Story actions">
         ${renderSaveButton(a)}
@@ -134,6 +134,32 @@ function articleMarkup(a, p) {
       <div id="quiz-slot"></div>
       <div id="related-slot">${renderRelated(a)}</div>
     </article>`;
+}
+
+function renderAccessBanner(a) {
+  const access = accessInfo(a);
+  if (access.kind === 'full') {
+    return html`
+      <div class="reader-banner reader-banner--full">
+        <span class="reader-banner__icon" aria-hidden="true">${access.icon}</span>
+        <div><b>Full story available here</b><span>You can read the complete article inside Pulse — no need to leave the app.</span></div>
+        ${a.read_url ? html`<a class="btn btn--sm btn--ghost" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Original ${raw(icons.external)}</a>` : ''}
+      </div>`;
+  }
+  if (access.kind === 'locked') {
+    return html`
+      <div class="reader-banner reader-banner--locked">
+        <span class="reader-banner__icon" aria-hidden="true">${access.icon}</span>
+        <div><b>Subscription required at ${a.source.name}</b><span>This is the publisher's preview. Pulse shows you the overview, coverage and full metadata, then links to the source.</span></div>
+        <a class="btn btn--sm btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at source ${raw(icons.external)}</a>
+      </div>`;
+  }
+  return html`
+    <div class="reader-banner reader-banner--preview">
+      <span class="reader-banner__icon" aria-hidden="true">${access.icon}</span>
+      <div><b>Preview only</b><span>Pulse has the summary and overview. The full article is at ${a.source.name}.</span></div>
+      <a class="btn btn--sm btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at source ${raw(icons.external)}</a>
+    </div>`;
 }
 
 function renderSaveButton(a) {

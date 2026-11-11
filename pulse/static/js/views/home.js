@@ -1,20 +1,52 @@
 import { get, post } from '../api.js';
 import { navigate } from '../router.js';
 import {
-  state, record, emit, dailyProgress, streak, levels, followedTopics, topicLabel,
+  state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel,
 } from '../store.js';
-import { html, raw, mount, icons, toast, timeAgo, compactNumber, errorState, setLoading } from '../ui.js';
+import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
 import {
-  heroCard, storyCard, scoreMini, sectionHead, emptyState, skeletonFeed, topicTile,
+  storyCard, topCard, hCard, scoreMini, sectionHead, emptyState, skeletonFeed,
 } from '../components.js';
+import { open as openPalette, mountHomeSearch } from '../palette.js';
 
-const STREAMS = [
-  { id: 'for-you', label: 'For you' },
-  { id: 'top', label: 'Top' },
-  { id: 'breaking', label: 'Breaking' },
-  { id: 'latest', label: 'Latest' },
-  { id: 'longreads', label: 'Long reads' },
+const DEFAULT_SECTIONS = ['brief', 'top', 'for-you', 'sports', 'topic:tech', 'topic:world', 'longreads'];
+
+const BASE_SECTIONS = [
+  { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
+  { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
+  { id: 'for-you', label: 'For you', hint: 'Your main personalised feed' },
+  { id: 'sports', label: 'Live scores', hint: 'A scoreboard strip' },
+  { id: 'longreads', label: 'Long reads', hint: 'Fewer, deeper pieces' },
+  { id: 'saved', label: 'Saved for later', hint: 'A shortcut to your library' },
+  { id: 'research', label: 'Research desk', hint: 'Citations and bibliography' },
 ];
+
+function allSections() {
+  const topics = (state.boot?.topics || []).map((topic) => ({
+    id: `topic:${topic.slug}`,
+    label: `${topic.icon} ${topic.label}`,
+    hint: 'A topic row',
+  }));
+  return [...BASE_SECTIONS, ...topics];
+}
+
+function sectionMeta(id) {
+  return allSections().find((section) => section.id === id) || { id, label: id, hint: '' };
+}
+
+function activeSections() {
+  const saved = Array.isArray(prefs().home_sections) ? prefs().home_sections : [];
+  const valid = saved.filter((id) => allSections().some((section) => section.id === id));
+  return valid.length ? valid : DEFAULT_SECTIONS;
+}
+
+function localGreeting() {
+  const hour = new Date().getHours();
+  const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  const name = (state.profile?.name || '').trim();
+  const who = name && name !== 'Student' ? `, ${name.split(' ')[0]}` : '';
+  return `Good ${part}${who}`;
+}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -32,14 +64,12 @@ function todayLine() {
 }
 
 export async function homeView(root, ctx) {
-  const stream = STREAMS.some((s) => s.id === ctx.query.stream) ? ctx.query.stream : 'for-you';
-  const profile = state.profile || {};
+  const sections = activeSections();
   const progress = dailyProgress();
   const streakInfo = streak();
   const levelInfo = levels();
 
   root.innerHTML = html`
-    <div id="breaking-slot"></div>
     <div class="greeting">
       <div>
         <h1>${greeting()}</h1>
@@ -57,46 +87,59 @@ export async function homeView(root, ctx) {
       </div>
     </div>
 
-    <div id="hero-slot">${raw('<div class="skeleton" style="height:340px;border-radius:22px;margin-bottom:1rem"></div>')}</div>
+    <button class="home-search" id="home-search" type="button">
+      ${raw(icons.search)}
+      <span>Search 300+ sources, topics and your archive…</span>
+      <kbd class="kbd">⌘K</kbd>
+    </button>
 
-    <div class="between" style="margin:1.2rem 0 .8rem;gap:1rem">
-      <div class="segmented" role="tablist" aria-label="Feed streams">
-        ${STREAMS.map((s) => html`<button type="button" role="tab" aria-selected="${s.id === stream}" class="${s.id === stream ? 'is-on' : ''}" data-stream="${s.id}">${s.label}</button>`)}
+    <div class="between" style="margin:.2rem 0 .2rem">
+      <div class="chip-row" id="quick-links">
+        ${followedTopics().slice(0, 5).map((slug) => html`
+          <a class="chip" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`)}
+        <a class="chip" href="/discover" data-link>${raw(icons.compass)} All sections</a>
       </div>
-      <div class="hstack" style="gap:.5rem">
-        <span class="tiny muted" id="feed-meta"></span>
+      <div class="hstack" style="gap:.3rem">
+        <button class="btn btn--sm btn--ghost" id="customize-sections" title="Choose which sections appear">
+          ${raw(icons.filter)} Customize
+        </button>
         <button class="icon-btn" id="feed-refresh" title="Refresh feeds now" aria-label="Refresh feeds now">${raw(icons.refresh)}</button>
       </div>
     </div>
 
-    <div class="chip-row" id="topic-chips"></div>
+    <div id="home-sections" class="stack">
+      ${sections.map((id) => {
+        const meta = sectionMeta(id);
+        return html`
+          <section class="home-section" data-id="${id}" aria-label="${meta.label}">
+            <div data-head></div>
+            <div data-body>${id === 'for-you' ? skeletonFeed(4) : html`<div class="skeleton skeleton--card" style="height:150px"></div>`}</div>
+          </section>`;
+      })}
+    </div>
 
-    <div id="feed-slot">${skeletonFeed(5)}</div>
-    <div id="sports-slot"></div>
-    <div id="sentinel" style="height:1px"></div>
-  `;
+    <div class="section" style="text-align:center">
+      <button class="btn btn--ghost" id="add-section">${raw(icons.filter)} Add or reorder sections</button>
+    </div>`;
 
-  renderTopics(root, stream);
-  bindStreams(root, stream);
-  bindRefresh(root, stream);
+  mountHomeSearch(root.querySelector('#home-search'));
+  root.querySelector('#home-search').addEventListener('click', () => openPalette());
+  root.querySelector('#customize-sections').addEventListener('click', () => openCustomizer(root, ctx));
+  root.querySelector('#add-section').addEventListener('click', () => openCustomizer(root, ctx));
+  bindRefresh(root, sections);
+  bindQuickLinks(root);
 
-  // Breaking strip and sports strip in parallel with the feed.
-  loadBreaking(root);
-  loadSports(root);
-  loadFeed(root, { stream, offset: 0, append: false });
+  // Fill every section in parallel; each paints as soon as its data arrives.
+  sections.forEach((id) => { fillSection(root, id); });
 }
 
-function renderTopics(root, stream) {
-  const chips = followedTopics().concat(['world', 'tech', 'sports', 'culture', 'science']);
-  const unique = [...new Set(chips)];
-  const slot = root.querySelector('#topic-chips');
-  slot.innerHTML = html`
-    <a class="chip ${stream === 'for-you' ? '' : ''}" href="/discover" data-link>${raw(icons.compass)} Explore all</a>
-    ${unique.map((slug) => html`<a class="chip" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`)}
-  `;
+function bindQuickLinks(root) {
+  root.querySelectorAll('#quick-links a').forEach((link) => {
+    link.addEventListener('click', () => { /* router handles navigation */ });
+  });
 }
 
-function bindRefresh(root, stream) {
+function bindRefresh(root, sections) {
   const button = root.querySelector('#feed-refresh');
   if (!button) return;
   button.addEventListener('click', async () => {
@@ -110,7 +153,7 @@ function bindRefresh(root, stream) {
         const status = await get('/api/ingest/status', 0, true);
         if (!status.running) break;
       }
-      await loadFeed(root, { stream, offset: 0, append: false });
+      sections.forEach((id) => fillSection(root, id));
       toast('Up to date', { type: 'good' });
     } catch (err) {
       toast(err.message, { type: 'bad' });
@@ -121,127 +164,268 @@ function bindRefresh(root, stream) {
   });
 }
 
-function bindStreams(root, stream) {
-  root.querySelectorAll('[data-stream]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const next = button.dataset.stream;
-      if (next === stream) return;
-      const url = next === 'for-you' ? '/' : `/?stream=${next}`;
-      navigate(url);
-    });
-  });
+function sectionShell(root, id) {
+  return root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
 }
 
-async function loadBreaking(root) {
+async function fillSection(root, id) {
+  const shell = sectionShell(root, id);
+  if (!shell) return;
+  const head = shell.querySelector('[data-head]');
+  const body = shell.querySelector('[data-body]');
+  if (!body) return;
   try {
-    const data = await get('/api/feed?mode=breaking&limit=5', 45);
-    const seen = new Set();
-    const items = (data.items || []).filter((item) => {
-      if (!item.breaking) return false;
-      const key = item.story?.id || item.id;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    const slot = root.querySelector('#breaking-slot');
-    if (!slot) return;
-    if (!items.length) { slot.innerHTML = ''; return; }
-    slot.innerHTML = html`
-      <div class="breaking-strip">
-        <span class="breaking-strip__label"><span class="breaking-strip__dot"></span> Breaking</span>
-        <div class="breaking-strip__items">
-          ${items.slice(0, 5).map((item) => html`<a class="breaking-strip__item" href="/article/${item.id}" data-link>${item.title}</a>`)}
-        </div>
-      </div>`;
-  } catch { /* strip is optional */ }
-}
-
-async function loadSports(root) {
-  try {
-    const data = await get('/api/sports', 20);
-    const slot = root.querySelector('#sports-slot');
-    if (!slot) return;
-    const events = (data.events || []).slice(0, 8);
-    if (!events.length) { slot.innerHTML = ''; return; }
-    const live = events.filter((e) => e.is_live).length;
-    slot.innerHTML = html`
-      <div class="section">
-        ${sectionHead(
-          `🏆 Live & upcoming <span class="badge ${live ? 'badge--live' : 'badge--topic'}">${live ? `${live} live` : 'scores'}</span>`,
-          html`<a href="/sports" data-link>All scores ${raw(icons.chevron)}</a>`,
-        )}
-        <div class="score-strip">${events.map((game) => scoreMini(game))}</div>
-      </div>`;
-  } catch { /* scores are optional */ }
-}
-
-function feedUrl(stream, offset, limit = 24) {
-  const mode = stream === 'longreads' ? 'longreads' : stream;
-  return `/api/feed?mode=${encodeURIComponent(mode)}&offset=${offset}&limit=${limit}${mode === 'longreads' ? '&days=30' : ''}`;
-}
-
-let observer = null;
-
-async function loadFeed(root, { stream, offset, append }) {
-  const slot = root.querySelector('#feed-slot');
-  if (!slot) return;
-  if (observer) { observer.disconnect(); observer = null; }
-  if (!append) slot.innerHTML = skeletonFeed(5);
-  try {
-    const data = await get(feedUrl(stream, offset), 20);
-    const items = data.items || [];
-    if (!items.length) {
-      slot.innerHTML = emptyState({
-        icon: '📡',
-        title: 'Nothing here yet',
-        text: 'The archive fills up as feeds are fetched. Try another stream or search the archive.',
-        action: '<a class="btn btn--primary" href="/discover" data-link>Explore</a>',
-      });
-      return;
-    }
-    if (!append) {
-      let heroIndex = items.findIndex((item, index) => index < 4 && item.image);
-      if (heroIndex < 0) heroIndex = 0;
-      const first = items[heroIndex];
-      const rest = items.filter((_, index) => index !== heroIndex);
-      root.querySelector('#hero-slot').innerHTML = heroCard(first, {
-        label: stream === 'breaking' ? 'Breaking' : stream === 'top' ? 'Top story' : 'For you',
-      });
-      slot.innerHTML = html`
-        ${rest.length ? html`<div class="feed__divider">More for you</div>` : ''}
-        <div class="feed" id="feed-list">${rest.map((item) => storyCard(item))}</div>`;
-      const meta = root.querySelector('#feed-meta');
-      if (meta) meta.textContent = `${Math.min(items.length, data.total)} of ${data.total} stories`;
-    } else {
-      const list = root.querySelector('#feed-list');
-      if (list) list.insertAdjacentHTML('beforeend', items.map((item) => storyCard(item)).join(''));
-      const meta = root.querySelector('#feed-meta');
-      if (meta) meta.textContent = `${Math.min(offset + items.length, data.total)} of ${data.total} stories`;
-    }
-    if (data.has_more) {
-      attachSentinel(root, stream, offset + items.length);
-    } else {
-      const list = root.querySelector('#feed-list');
-      if (list && !list.dataset.ended) {
-        list.dataset.ended = '1';
-        list.insertAdjacentHTML('afterend', html`<div class="empty" style="padding:1.6rem"><p class="small muted">You're all caught up. The archive keeps growing — search it any time.</p></div>`);
-      }
-    }
+    if (id === 'brief') return renderBrief(shell, head, body);
+    if (id === 'top') return renderTop(head, body);
+    if (id === 'for-you') return renderForYou(root, shell, head, body);
+    if (id === 'sports') return renderSports(head, body);
+    if (id === 'longreads') return renderLongreads(head, body);
+    if (id === 'saved') return renderSaved(head, body);
+    if (id === 'research') return renderResearch(head, body);
+    if (id.startsWith('topic:')) return renderTopic(head, body, id.slice(6));
   } catch (err) {
-    if (append) toast('Could not load more stories', { type: 'bad' });
-    else errorState(slot, err.message, () => loadFeed(root, { stream, offset, append: false }));
+    body.innerHTML = html`<div class="card card-pad"><p class="small muted">${err.message}</p></div>`;
   }
 }
 
-function attachSentinel(root, stream, nextOffset) {
-  const sentinel = root.querySelector('#sentinel');
+async function renderBrief(shell, head, body) {
+  head.innerHTML = '';
+  const data = await get('/api/brief', 60, true);
+  const minutes = data.minutes || 2;
+  const count = (data.stories || []).length;
+  const progress = dailyProgress();
+  body.innerHTML = html`
+    <div class="card card-pad-lg" style="background:var(--grad-soft);border-color:var(--line)">
+      <div class="between">
+        <div>
+          <p class="eyebrow">${localGreeting()}</p>
+          <h2 style="font-size:1.4rem;letter-spacing:-.03em;margin-top:.2rem">Your ${minutes}-minute brief</h2>
+          <p class="small muted" style="margin-top:.3rem">${count} stories picked for you, with the context you need before class.</p>
+        </div>
+        <div class="hstack">
+          <span class="badge badge--topic">${progress.read}/${progress.goal} today</span>
+          <a class="btn btn--primary" href="/brief" data-link>Open brief ${raw(icons.chevron)}</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function renderTop(head, body) {
+  const data = await get('/api/feed?mode=top&limit=3&days=2', 45);
+  const items = (data.items || []).slice(0, 3);
+  head.innerHTML = sectionHead('Top Stories', html`<a href="/?stream=top" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'what the most outlets are covering' });
+  if (!items.length) {
+    body.innerHTML = emptyState({ icon: '📰', title: 'No top stories yet', text: 'The next refresh will fill this in.' });
+    return;
+  }
+  body.innerHTML = html`<div class="top-grid">${items.map((item) => topCard(item))}</div>`;
+}
+
+function feedUrl(mode, offset, limit = 20) {
+  const params = new URLSearchParams({ mode, offset: String(offset), limit: String(limit) });
+  if (mode === 'longreads') params.set('days', '30');
+  return `/api/feed?${params}`;
+}
+
+async function renderForYou(root, shell, head, body, mode = 'for-you', offset = 0, append = false) {
+  head.innerHTML = html`
+    <div class="between" style="margin:1.4rem 0 .7rem">
+      <h2 style="font-size:1.12rem;letter-spacing:-.02em">For you</h2>
+      <div class="segmented" role="tablist" aria-label="Feed stream">
+        ${[['for-you', 'For you'], ['readable', '📖 Readable here'], ['breaking', 'Breaking'], ['latest', 'Latest']].map(([id, label]) => html`
+          <button type="button" role="tab" aria-selected="${mode === id}" class="${mode === id ? 'is-on' : ''}" data-mode="${id}">${label}</button>`)}
+      </div>
+    </div>`;
+  head.querySelectorAll('[data-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+      renderForYou(root, shell, head, body, button.dataset.mode, 0, false);
+    });
+  });
+  if (!append) body.innerHTML = skeletonFeed(4);
+  const data = await get(feedUrl(mode, offset), 20);
+  const items = data.items || [];
+  if (!items.length) {
+    body.innerHTML = emptyState({
+      icon: '📡',
+      title: 'Nothing in this stream yet',
+      text: 'Try another tab, or search the whole archive.',
+      action: '<button class="btn btn--primary" data-open-search>Search news</button>',
+    });
+    body.querySelector('[data-open-search]')?.addEventListener('click', () => openPalette());
+    return;
+  }
+  if (!append) {
+    body.innerHTML = html`
+      <div class="feed" id="for-you-list">${items.map((item) => storyCard(item))}</div>
+      <div id="for-you-sentinel" style="height:1px"></div>`;
+  } else {
+    body.querySelector('#for-you-list')?.insertAdjacentHTML('beforeend', items.map((item) => storyCard(item)).join(''));
+  }
+  if (data.has_more) attachSentinel(root, shell, body, mode, offset + items.length);
+  else if (!append) {
+    body.querySelector('#for-you-list')?.insertAdjacentHTML('afterend',
+      html`<p class="tiny faint" style="text-align:center;padding:1rem 0">You're caught up. The archive keeps growing — search it any time.</p>`);
+  }
+}
+
+let forYouObserver = null;
+function attachSentinel(root, shell, body, mode, nextOffset) {
+  const sentinel = body.querySelector('#for-you-sentinel');
   if (!sentinel) return;
-  observer = new IntersectionObserver((entries) => {
-    if (entries.some((entry) => entry.isIntersecting)) {
-      observer?.disconnect();
-      observer = null;
-      loadFeed(root, { stream, offset: nextOffset, append: true });
-    }
+  if (forYouObserver) forYouObserver.disconnect();
+  forYouObserver = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    forYouObserver?.disconnect();
+    forYouObserver = null;
+    renderForYou(root, shell, shell.querySelector('[data-head]'), body, mode, nextOffset, true).catch(() => {});
   }, { rootMargin: '600px 0px' });
-  observer.observe(sentinel);
+  forYouObserver.observe(sentinel);
+}
+
+async function renderSports(head, body) {
+  const data = await get('/api/sports', 20);
+  const events = (data.events || []).slice(0, 8);
+  head.innerHTML = sectionHead(
+    `🏆 Live & upcoming ${data.live_count ? html`<span class="badge badge--live">${data.live_count} live</span>` : ''}`,
+    html`<a href="/sports" data-link>All scores ${raw(icons.chevron)}</a>`,
+  );
+  if (!events.length) {
+    body.innerHTML = html`<div class="card card-pad"><p class="small muted">No games scheduled right now. <a class="link" href="/sports" data-link>Open scores</a></p></div>`;
+    return;
+  }
+  body.innerHTML = html`<div class="score-strip">${events.map((game) => scoreMini(game))}</div>`;
+}
+
+async function renderTopic(head, body, slug) {
+  const meta = state.topicMap.get(slug);
+  if (!meta) {
+    head.innerHTML = '';
+    body.innerHTML = '';
+    return;
+  }
+  const data = await get(`/api/feed?topic=${encodeURIComponent(slug)}&mode=top&limit=8&days=14`, 60);
+  const items = data.items || [];
+  head.innerHTML = sectionHead(
+    `${meta.icon} ${meta.label}`,
+    html`<a href="/topic/${slug}" data-link>See all ${raw(icons.chevron)}</a>`,
+  );
+  if (!items.length) {
+    body.innerHTML = html`<div class="card card-pad"><p class="small muted">No fresh ${meta.label} stories yet — <a class="link" href="/topic/${slug}" data-link>browse the topic</a>.</p></div>`;
+    return;
+  }
+  body.innerHTML = html`<div class="hscroll">${items.map((item) => hCard(item))}</div>`;
+}
+
+async function renderLongreads(head, body) {
+  const data = await get('/api/feed?mode=longreads&limit=6&days=45', 120);
+  const items = data.items || [];
+  head.innerHTML = sectionHead('Long reads', html`<a href="/discover" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'worth the time' });
+  if (!items.length) {
+    body.innerHTML = html`<div class="card card-pad"><p class="small muted">Long reads appear once full text is extracted. <a class="link" href="/?stream=longreads" data-link>Try the stream</a>.</p></div>`;
+    return;
+  }
+  body.innerHTML = html`<div class="hscroll">${items.map((item) => hCard(item))}</div>`;
+}
+
+async function renderSaved(head, body) {
+  const data = await get('/api/saved', 0, true);
+  const items = (data.items || []).slice(0, 8);
+  head.innerHTML = sectionHead('Saved for later', html`<a href="/saved" data-link>Library ${raw(icons.chevron)}</a>`);
+  if (!items.length) {
+    body.innerHTML = html`
+      <div class="card card-pad">
+        <p class="small muted">Nothing saved yet. Tap the bookmark on any story to keep it for revision or a citation.</p>
+        <a class="btn btn--sm btn--ghost" style="margin-top:.6rem" href="/saved" data-link>Open library</a>
+      </div>`;
+    return;
+  }
+  body.innerHTML = html`<div class="hscroll">${items.map((item) => hCard(item))}</div>`;
+}
+
+async function renderResearch(head, body) {
+  head.innerHTML = '';
+  body.innerHTML = html`
+    <div class="card card-pad-lg" style="border-color:var(--line)">
+      <div class="between">
+        <div>
+          <p class="eyebrow">For essays & projects</p>
+          <h2 style="font-size:1.15rem;margin-top:.2rem">Research desk</h2>
+          <p class="small muted" style="margin-top:.3rem">Turn saved stories into a bibliography in MLA, APA, Chicago or Harvard — plus a quote collector for your notes.</p>
+        </div>
+        <a class="btn btn--primary" href="/research" data-link>Open research ${raw(icons.chevron)}</a>
+      </div>
+    </div>`;
+}
+
+// ---------------------------------------------------------------- customizer
+function openCustomizer(root, ctx) {
+  const selected = activeSections();
+  let order = [...selected];
+  const all = allSections();
+  const body = document.createElement('div');
+  body.className = 'section-picker';
+  const box = modal({
+    title: 'Customize your front page',
+    wide: true,
+    body,
+    actions: [
+      { label: 'Reset', class: 'btn--ghost', onClick: () => { order = [...DEFAULT_SECTIONS]; paint(); return false; } },
+      { label: 'Cancel', class: 'btn--ghost' },
+      {
+        label: 'Save sections',
+        class: 'btn--primary',
+        onClick: async () => {
+          try {
+            await savePrefs({ home_sections: order });
+            toast('Front page updated', { type: 'good' });
+            homeView(root, ctx);
+          } catch (err) {
+            toast(err.message, { type: 'bad' });
+            return false;
+          }
+          return true;
+        },
+      },
+    ],
+  });
+  paint();
+
+  function paint() {
+    body.innerHTML = html`
+      <p class="small muted" style="margin-bottom:.7rem">Turn sections on or off and put them in the order you want. Topic rows use the topics you already follow.</p>
+      ${all.map((section) => {
+        const index = order.indexOf(section.id);
+        const on = index >= 0;
+        return html`
+          <div class="section-picker__row ${on ? '' : 'is-off'}">
+            <button class="switch ${on ? 'is-on' : ''}" data-toggle="${section.id}" aria-pressed="${on}" aria-label="Toggle ${section.label}"></button>
+            <span class="section-picker__name">${section.label}<span class="choice__sub">${section.hint}</span></span>
+            <span class="section-picker__handle">
+              <button data-up="${section.id}" aria-label="Move ${section.label} up" ${!on || index === 0 ? 'disabled' : ''}>↑</button>
+              <button data-down="${section.id}" aria-label="Move ${section.label} down" ${!on || index === order.length - 1 ? 'disabled' : ''}>↓</button>
+            </span>
+          </div>`;
+      })}`;
+    body.querySelectorAll('[data-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.toggle;
+        if (order.includes(id)) order = order.filter((item) => item !== id);
+        else order.push(id);
+        paint();
+      });
+    });
+    body.querySelectorAll('[data-up]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = order.indexOf(button.dataset.up);
+        if (index > 0) { [order[index - 1], order[index]] = [order[index], order[index - 1]]; paint(); }
+      });
+    });
+    body.querySelectorAll('[data-down]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = order.indexOf(button.dataset.down);
+        if (index >= 0 && index < order.length - 1) { [order[index + 1], order[index]] = [order[index], order[index + 1]]; paint(); }
+      });
+    });
+  }
+  void box;
 }

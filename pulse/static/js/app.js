@@ -8,6 +8,8 @@ import {
   toastProgress, absDate,
 } from './ui.js';
 import { scoreMini } from './components.js';
+import { bindShortcuts as bindPaletteShortcuts, open as openPalette } from './palette.js';
+import { openLegend } from './legend.js';
 import * as router from './router.js';
 import { homeView } from './views/home.js';
 import { articleView } from './views/article.js';
@@ -15,6 +17,7 @@ import { discoverView, topicView, storyView, archiveView } from './views/discove
 import { sourcesView, sourceView } from './views/sources.js';
 import { sportsView } from './views/sports.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
+import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
 
 const NAV = [
@@ -24,6 +27,7 @@ const NAV = [
   { href: '/brief', label: 'Brief', icon: 'bolt' },
   { href: '/saved', label: 'Saved', icon: 'bookmark', mobile: true },
   { href: '/study', label: 'Study', icon: 'book' },
+  { href: '/research', label: 'Research', icon: 'quote' },
   { href: '/sources', label: 'Sources', icon: 'filter' },
   { href: '/profile', label: 'Profile', icon: 'user', mobile: true },
 ];
@@ -46,6 +50,7 @@ function registerRoutes() {
   router.add('/saved', savedView);
   router.add('/brief', briefView);
   router.add('/study', studyView);
+  router.add('/research', researchView);
   router.add('/sports', sportsView);
   router.add('/sources', sourcesView);
   router.add('/source/:id', sourceView);
@@ -64,11 +69,16 @@ function renderNav() {
   const isActive = (href) => (href === '/' ? path === '/' : path.startsWith(href));
   const nav = document.getElementById('nav');
   if (nav) {
-    nav.innerHTML = NAV.map((item) => html`
-      <a class="nav__item ${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link>
-        ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
-        ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
-      </a>`).join('');
+    nav.innerHTML = html`
+      <button class="nav__item nav__search" id="nav-search" type="button">
+        ${raw(icons.search)}<span>Search</span><kbd class="kbd" style="margin-left:auto">⌘K</kbd>
+      </button>
+      ${NAV.map((item) => html`
+        <a class="nav__item ${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link>
+          ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
+          ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
+        </a>`)}
+    `;
   }
   const bottom = document.getElementById('bottom-nav');
   if (bottom) {
@@ -215,17 +225,14 @@ function bindShell() {
   document.addEventListener('keydown', (event) => {
     const target = event.target;
     const typing = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
-    if (event.key === '/' && !typing) {
-      event.preventDefault();
-      document.getElementById('search-mini-input')?.focus();
-    } else if (event.key === 'Escape') {
+    if (event.key === 'Escape') {
       setMenu(false);
       if (document.body.classList.contains('focus-mode')) {
         document.body.classList.remove('focus-mode');
         toast('Focus mode off');
       }
     } else if (!typing && event.key === '?') {
-      showShortcuts();
+      openLegend();
     } else if (!typing && event.key === 'g') {
       window.__pulseG = true;
       setTimeout(() => { window.__pulseG = false; }, 800);
@@ -241,6 +248,18 @@ function bindShell() {
   window.addEventListener('online', () => { state.online = true; toast('Back online', { type: 'good' }); });
   window.addEventListener('offline', () => { state.online = false; toast('You are offline — showing what is cached', { type: 'bad' }); });
   window.addEventListener('pulse:auth-required', showTokenModal);
+
+  // Sidebar search + key buttons survive every nav re-render.
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#nav-search')) {
+      event.preventDefault();
+      openPalette();
+    }
+    if (event.target.closest('#legend-btn')) {
+      event.preventDefault();
+      openLegend();
+    }
+  });
 }
 
 function showShortcuts() {
@@ -405,6 +424,7 @@ on('progress', (progress) => { toastProgress(progress); renderNav(); });
 
 async function boot() {
   bootPrefsFromStorage();
+  bindPaletteShortcuts();
   setupServiceWorker();
   setupImageFallbacks();
   setupInstall();

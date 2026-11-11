@@ -366,6 +366,10 @@ def _strip_boilerplate(blocks: list[Block], title: str) -> list[Block]:
             continue
         if len(text) < 160 and re.match(r"^\d{1,2}/\d{1,2}/\d{2,4}", text):
             continue
+        if len(text) < 160 and re.search(r"preferred source|\badd\s+\w+\s+as\s+a?\s*source\b", low):
+            continue
+        if len(text) < 160 and re.match(r"^(share|tweet|email|print|comments?|advertisement)\b", low):
+            continue
         if len(text) < 120 and text.endswith(("|", "•")) and text.count(" ") < 8:
             continue
         cleaned.append(block)
@@ -511,6 +515,23 @@ def is_fragment(sentence: str) -> bool:
     return False
 
 
+def strip_boilerplate(text: str) -> str:
+    """Remove bylines, widget junk and date stamps from stored article text."""
+    if not text:
+        return ""
+    cleaned = _WIDGET_JUNK.sub(" ", text)
+    cleaned = _DATE_STAMP.sub(" ", cleaned)
+    cleaned = _strip_byline(cleaned)
+    kept = []
+    for sentence in sentences(cleaned):
+        if len(sentence) < 320 and _AUTHOR_BIO.search(sentence) and sentence.count(".") <= 1:
+            continue
+        if "preferred source" in sentence.lower():
+            continue
+        kept.append(sentence)
+    return " ".join(kept).strip()
+
+
 def summarize(text: str, max_sentences: int = 3, max_chars: int = 700) -> str:
     """Extractive summary: keep the most central sentences, in order."""
     if not text:
@@ -612,6 +633,22 @@ def domain_of(url: str) -> str:
     except ValueError:
         return ""
     return host[4:] if host.startswith("www.") else host
+
+
+def clean_author(value: str | None) -> str | None:
+    """Feed bylines are often junk: URLs, handles, whole paragraphs."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    if re.search(r"https?://|www\.|@|\b\.(com|co|org|net|uk)\b", text, re.I):
+        return None
+    if len(text) > 80:
+        return None
+    letters = sum(1 for char in text if char.isalpha())
+    if letters / max(len(text), 1) < 0.6:
+        return None
+    text = re.sub(r"^(by|words by|written by|posted by)\s+", "", text, flags=re.I).strip()
+    return text[:120] or None
 
 
 def clean_title(title: str) -> str:

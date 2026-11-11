@@ -172,6 +172,26 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             return 200, result, {}
         if path == "/api/search/suggest" and method == "GET":
             return 200, search.suggestions(request.query.get("q", ""), limit=8), {}
+        if path == "/api/research/bibliography" and method == "GET":
+            style = (request.query.get("style") or "mla").lower()
+            include_notes = request.query.get("include_notes") == "1"
+            return 200, _bibliography(profile, style, include_notes), {}
+        if path == "/api/research/cite" and method == "POST":
+            payload = request.json()
+            title = str(payload.get("title") or "").strip()
+            if len(title) < 2:
+                raise ApiError(400, "A title is required")
+            article = {
+                "title": title[:300],
+                "author": str(payload.get("author") or "").strip()[:200] or None,
+                "source_name": str(payload.get("outlet") or payload.get("source_name") or "").strip()[:200] or None,
+                "url": str(payload.get("url") or "").strip()[:1200],
+                "published_at": str(payload.get("published_at") or "").strip()[:40] or None,
+            }
+            return 200, {
+                "citations": citations.all_citations(article),
+                "styles": citations.available_styles(),
+            }, {}
         if path == "/api/archive" and method == "GET":
             return 200, {
                 "months": search.archive_index(request.query.get("topic") or None, limit=36),
@@ -439,6 +459,85 @@ def _source_detail(source_id: str, profile: dict) -> dict:
         "feeds": [dict(row) for row in feeds],
         "articles": articles,
         "archive_count": int(count or 0),
+    }
+
+
+def _bibliography(profile: dict, style: str, include_notes: bool) -> dict:
+    """A student's saved sources, formatted as a bibliography."""
+    style = style if style in {item["id"] for item in citations.available_styles()} else "mla"
+    rows = db.query(
+        """
+        SELECT a.id, a.title, a.url, a.author, a.published_at, a.first_seen_at,
+               a.date_confidence, src.name AS source_name, s.collection, s.created_at AS saved_at
+        FROM saves s
+        JOIN articles a ON a.id = s.article_id
+        JOIN sources src ON src.id = a.source_id
+        WHERE s.profile_id = ?
+        ORDER BY COALESCE(NULLIF(a.author, ''), src.name) COLLATE NOCASE, a.title COLLATE NOCASE
+        """,
+        (profile["id"],),
+    )
+    entries = []
+    for row in rows:
+        article = {
+            "title": row["title"],
+            "author": row["author"],
+            "source_name": row["source_name"],
+            "url": row["url"],
+            "published_at": row["published_at"] or row["first_seen_at"],
+        }
+        entries.append(
+            {
+                "article_id": row["id"],
+                "title": row["title"],
+                "source": row["source_name"],
+                "author": row["author"],
+                "published_at": row["published_at"],
+                "url": row["url"],
+                "collection": row["collection"],
+                "citation": citations.format_citation(article, style),
+            }
+        )
+    notes = []
+    if include_notes:
+        note_rows = db.query(
+            """
+            SELECT n.id, n.quote, n.body, n.created_at, a.id AS article_id, a.title, a.url,
+                   a.author, a.published_at, a.first_seen_at, src.name AS source_name
+            FROM notes n
+            JOIN articles a ON a.id = n.article_id
+            JOIN sources src ON src.id = a.source_id
+            WHERE n.profile_id = ?
+            ORDER BY n.created_at DESC
+            """,
+            (profile["id"],),
+        )
+        for row in note_rows:
+            article = {
+                "title": row["title"], "author": row["author"], "source_name": row["source_name"],
+                "url": row["url"], "published_at": row["published_at"] or row["first_seen_at"],
+            }
+            notes.append(
+                {
+                    "id": row["id"],
+                    "quote": row["quote"],
+                    "body": row["body"],
+                    "created_at": row["created_at"],
+                    "article_id": row["article_id"],
+                    "title": row["title"],
+                    "citation": citations.format_citation(article, style),
+                }
+            )
+    combined = "\n\n".join(entry["citation"] for entry in entries)
+    return {
+        "style": style,
+        "styles": citations.available_styles(),
+        "count": len(entries),
+        "entries": entries,
+        "notes": notes,
+        "combined": combined,
+        "generated_at": iso(),
+        "note": "Ordered by author, then title. Check each entry against your school's citation guide before submitting.",
     }
 
 

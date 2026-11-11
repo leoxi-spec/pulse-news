@@ -16,7 +16,11 @@ def _author_parts(author: str | None) -> tuple[str, str, str]:
     """Best-effort split of a byline into (first, last, full)."""
     if not author:
         return "", "", ""
-    cleaned = re.sub(r"^(by|written by|words by)\s+", "", author.strip(), flags=re.I)
+    from .htmltext import clean_author
+
+    cleaned = clean_author(author) or ""
+    if not cleaned:
+        return "", "", ""
     cleaned = re.sub(r"\s+", " ", cleaned)
     if "," in cleaned:
         last, first = [part.strip() for part in cleaned.split(",", 1)]

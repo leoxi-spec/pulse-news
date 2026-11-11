@@ -326,12 +326,18 @@ def suggestions(raw_query: str, *, limit: int = 8) -> dict:
                 ORDER BY bm25(articles_fts, 6.0, 2.0, 0.6, 1.0)
                 LIMIT ?
                 """,
-                (f'"{cleaned}"*', limit),
+                (f'"{cleaned}"*', limit * 3),
             )
-            headlines = [
-                {"id": r["id"], "title": r["title"], "topic": r["primary_topic"], "source": r["source_name"]}
-                for r in rows
-            ]
+            headlines = []
+            seen_titles: set[str] = set()
+            for row in rows:
+                key = re.sub(r"\W+", " ", (row["title"] or "").lower()).strip()
+                if key in seen_titles:
+                    continue
+                seen_titles.add(key)
+                headlines.append(
+                    {"id": row["id"], "title": row["title"], "topic": row["primary_topic"], "source": row["source_name"]}
+                )
         except sqlite3.OperationalError:
             pass
     lowered = query.lower()

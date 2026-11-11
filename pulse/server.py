@@ -231,13 +231,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return 303
+        if ".." in path.split("/"):
+            self._send_json(403, {"error": "Forbidden"})
+            return 403
         if path in ("/", ""):
             return self._send_file(settings.static_dir / "index.html", spa=True)
-        # Client-side routes render the SPA shell.
-        spa_prefixes = ("/article/", "/story/", "/topic/", "/source/", "/search", "/saved",
-                        "/discover", "/sports", "/profile", "/brief", "/study", "/onboarding",
-                        "/settings", "/archive", "/sources", "/story", "/read/")
-        if any(path.startswith(prefix) for prefix in spa_prefixes):
+        # Client-side routes render the SPA shell. Anything without a file
+        # extension is treated as a route, so new pages never 404 on refresh.
+        if "." not in Path(path).name:
             return self._send_file(settings.static_dir / "index.html", spa=True)
         target = (settings.static_dir / path.lstrip("/")).resolve()
         try:
