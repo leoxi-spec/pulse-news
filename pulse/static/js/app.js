@@ -16,12 +16,14 @@ import { articleView } from './views/article.js';
 import { discoverView, topicView, storyView, archiveView } from './views/discover.js';
 import { sourcesView, sourceView } from './views/sources.js';
 import { sportsView } from './views/sports.js';
+import { reelsView } from './views/reels.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
 import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
+  { href: '/reels', label: 'Shorts', icon: 'play', mobile: true },
   { href: '/discover', label: 'Discover', icon: 'compass', mobile: true },
   { href: '/sports', label: 'Scores', icon: 'trophy' },
   { href: '/brief', label: 'Brief', icon: 'bolt' },
@@ -34,6 +36,7 @@ const NAV = [
 
 const BOTTOM = [
   { href: '/', label: 'Home', icon: 'home' },
+  { href: '/reels', label: 'Shorts', icon: 'play' },
   { href: '/discover', label: 'Explore', icon: 'compass' },
   { href: '/search', label: 'Search', icon: 'search' },
   { href: '/saved', label: 'Saved', icon: 'bookmark' },
@@ -42,6 +45,7 @@ const BOTTOM = [
 
 function registerRoutes() {
   router.add('/', homeView);
+  router.add('/reels', reelsView);
   router.add('/discover', discoverView);
   router.add('/topic/:slug', topicView);
   router.add('/story/:id', storyView);

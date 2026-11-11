@@ -48,6 +48,7 @@ export async function render(url = window.location.pathname + window.location.se
   window.__pulseRoute = context;
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   document.body.classList.toggle('onboarding-mode', path === '/onboarding');
+  document.body.classList.toggle('reels-mode', path === '/reels');
   document.title = 'Pulse — news that keeps up with you';
 
   // Move to the top *before* rendering. Doing it after the async handler used

@@ -140,6 +140,7 @@ export async function homeView(root, ctx) {
 
     <div class="between" style="margin:.2rem 0 .2rem">
       <div class="chip-row" id="quick-links">
+        <a class="chip chip--shorts" href="/reels" data-link>${raw(icons.play)} Shorts</a>
         ${followedTopics().slice(0, 5).map((slug) => html`
           <a class="chip" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`)}
         ${followedTopics().includes('motorsport') ? '' : html`

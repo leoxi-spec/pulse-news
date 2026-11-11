@@ -7,6 +7,7 @@ import { state, topicLabel } from './store.js';
 const ACTIONS = [
   { id: 'home', label: 'Home feed', hint: 'Your personalised front page', icon: 'home', path: '/' },
   { id: 'brief', label: 'Two-minute brief', hint: 'The day in five stories', icon: 'bolt', path: '/brief' },
+  { id: 'reels', label: 'Pulse Shorts', hint: 'Full-screen, one swipe per story', icon: 'play', path: '/reels' },
   { id: 'discover', label: 'Explore topics', hint: 'All sections and trending', icon: 'compass', path: '/discover' },
   { id: 'sports', label: 'Live scores', hint: 'NBA, NFL, football and more', icon: 'trophy', path: '/sports' },
   { id: 'study', label: 'Study mode', hint: 'Quiz, flashcards, jargon', icon: 'book', path: '/study' },
