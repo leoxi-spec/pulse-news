@@ -5,7 +5,7 @@ import {
 } from '../store.js';
 import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
 import {
-  storyCard, topCard, hCard, scoreMini, sectionHead, emptyState, skeletonFeed,
+  storyCard, topCard, hCard, mosaicCard, scoreMini, sectionHead, emptyState, skeletonFeed,
 } from '../components.js';
 import { open as openPalette, mountHomeSearch } from '../palette.js';
 
@@ -63,8 +63,31 @@ function todayLine() {
   return `${compactNumber(archive)} stories archived · ${healthy}/${feeds} feeds live`;
 }
 
+const MOSAIC = [
+  'hero', 'small', 'small', 'wide', 'small', 'medium',
+  'small', 'small', 'wide', 'small', 'medium', 'small',
+];
+
+function mosaicOffset(seed) {
+  let hash = 0;
+  for (let i = 0; i < (seed || '').length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 997;
+  return hash % MOSAIC.length;
+}
+
+function mosaicHtml(items, seed = '') {
+  const offset = mosaicOffset(seed);
+  return html`<div class="mosaic">${items.map((item, index) => mosaicCard(item, { size: MOSAIC[(index + offset) % MOSAIC.length] }))}</div>`;
+}
+
 export async function homeView(root, ctx) {
-  const sections = activeSections();
+  const base = activeSections();
+  const followed = followedTopics();
+  const sections = [...base];
+  for (const slug of followed) {
+    const id = `topic:${slug}`;
+    if (!sections.includes(id)) sections.push(id);
+    if (sections.length > base.length + 3) break;
+  }
   const progress = dailyProgress();
   const streakInfo = streak();
   const levelInfo = levels();
@@ -228,8 +251,8 @@ function feedUrl(mode, offset, limit = 20) {
 
 async function renderForYou(root, shell, head, body, mode = 'for-you', offset = 0, append = false) {
   head.innerHTML = html`
-    <div class="between" style="margin:1.4rem 0 .7rem">
-      <h2 style="font-size:1.12rem;letter-spacing:-.02em">For you</h2>
+    <div class="section-head" style="margin-top:1.6rem">
+      <h2>For you</h2>
       <div class="segmented" role="tablist" aria-label="Feed stream">
         ${[['for-you', 'For you'], ['readable', '📖 Readable here'], ['breaking', 'Breaking'], ['latest', 'Latest']].map(([id, label]) => html`
           <button type="button" role="tab" aria-selected="${mode === id}" class="${mode === id ? 'is-on' : ''}" data-mode="${id}">${label}</button>`)}
@@ -255,10 +278,17 @@ async function renderForYou(root, shell, head, body, mode = 'for-you', offset = 
   }
   if (!append) {
     body.innerHTML = html`
-      <div class="feed" id="for-you-list">${items.map((item) => storyCard(item))}</div>
+      <div id="for-you-list">${mosaicHtml(items, mode)}</div>
       <div id="for-you-sentinel" style="height:1px"></div>`;
   } else {
-    body.querySelector('#for-you-list')?.insertAdjacentHTML('beforeend', items.map((item) => storyCard(item)).join(''));
+    const list = body.querySelector('#for-you-list');
+    if (list) {
+      const offset = mosaicOffset(mode);
+      const start = list.querySelectorAll('.mcard').length;
+      list.insertAdjacentHTML('beforeend', items.map((item, index) => mosaicCard(item, {
+        size: MOSAIC[(start + index + offset) % MOSAIC.length],
+      })).join(''));
+    }
   }
   if (data.has_more) attachSentinel(root, shell, body, mode, offset + items.length);
   else if (!append) {
@@ -347,7 +377,10 @@ async function renderTopic(head, body, slug) {
     body.innerHTML = html`<div class="card card-pad"><p class="small muted">No fresh ${meta.label} stories yet — <a class="link" href="/topic/${slug}" data-link>browse the topic</a>.</p></div>`;
     return;
   }
-  body.innerHTML = html`<div class="hscroll">${items.map((item) => hCard(item))}</div>`;
+  const offset = mosaicOffset(slug);
+  body.innerHTML = html`<div class="topic-grid">${items.slice(0, 6).map((item, index) => mosaicCard(item, {
+    size: index === 0 && offset % 2 === 0 ? 'medium' : 'medium',
+  }))}</div>`;
 }
 
 async function renderLongreads(head, body) {

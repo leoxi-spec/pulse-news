@@ -12,7 +12,7 @@ from pathlib import Path
 
 APP_NAME = "Pulse"
 APP_TAGLINE = "News that keeps up with you"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -68,8 +68,8 @@ class Settings:
     article_timeout_seconds: int = _env_int("PULSE_ARTICLE_TIMEOUT", 20, 5, 90)
     max_articles_per_feed: int = _env_int("PULSE_MAX_PER_FEED", 40, 5, 200)
     extract_bodies: bool = _env_bool("PULSE_EXTRACT_BODIES", True)
-    extract_workers: int = _env_int("PULSE_EXTRACT_WORKERS", 4, 1, 16)
-    extract_per_cycle: int = _env_int("PULSE_EXTRACT_PER_CYCLE", 60, 0, 500)
+    extract_workers: int = _env_int("PULSE_EXTRACT_WORKERS", 8, 1, 16)
+    extract_per_cycle: int = _env_int("PULSE_EXTRACT_PER_CYCLE", 150, 0, 500)
     archive_full_text: bool = _env_bool("PULSE_ARCHIVE_FULLTEXT", True)
     # Some publishers (and ESPN's scoreboard API) reject obvious bot user
     # agents, so the default is a normal desktop browser string. Set

@@ -69,16 +69,11 @@ function renderNav() {
   const isActive = (href) => (href === '/' ? path === '/' : path.startsWith(href));
   const nav = document.getElementById('nav');
   if (nav) {
-    nav.innerHTML = html`
-      <button class="nav__item nav__search" id="nav-search" type="button">
-        ${raw(icons.search)}<span>Search</span><kbd class="kbd" style="margin-left:auto">⌘K</kbd>
-      </button>
-      ${NAV.map((item) => html`
-        <a class="nav__item ${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link title="${item.label}">
-          ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
-          ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
-        </a>`)}
-    `;
+    nav.innerHTML = NAV.map((item) => html`
+      <a class="${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link title="${item.label}">
+        ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
+        ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
+      </a>`);
   }
   const bottom = document.getElementById('bottom-nav');
   if (bottom) {
@@ -89,106 +84,6 @@ function renderNav() {
   }
   const avatar = document.getElementById('avatar');
   if (avatar) avatar.textContent = profileInitials();
-  const topics = document.getElementById('sidebar-topics');
-  if (topics) {
-    topics.innerHTML = followedTopics().slice(0, 7).map((slug) => html`
-      <a class="topic-mini__item" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`).join('');
-  }
-  const streakCard = document.getElementById('streak-card');
-  if (streakCard) {
-    const info = streak();
-    const today = dailyProgress();
-    const level = levels();
-    streakCard.innerHTML = html`
-      <div class="streak-card__top">
-        <div>
-          <div class="hstack" style="gap:.35rem"><span class="streak-card__flame">🔥</span><span class="streak-card__count">${info.count}</span></div>
-          <div class="streak-card__label">day streak · best ${info.best}</div>
-        </div>
-        <span class="badge badge--topic">Lv ${level.level}</span>
-      </div>
-      <div class="streak-card__goal">
-        <span><span>Today's goal</span><span>${today.read}/${today.goal}</span></span>
-        <div class="progress" style="margin-top:.3rem"><span style="width:${today.percent}%"></span></div>
-      </div>`;
-  }
-}
-
-function renderRail() {
-  const brief = document.getElementById('rail-brief');
-  if (brief) {
-    const today = dailyProgress();
-    brief.innerHTML = html`
-      <h3>⚡ Your 2-minute brief</h3>
-      <p class="small muted">Five stories, ranked for you, with the context you need before class.</p>
-      <div class="progress" style="margin:.7rem 0 .6rem"><span style="width:${today.percent}%"></span></div>
-      <div class="between">
-        <span class="tiny faint">${today.read} of ${today.goal} today</span>
-        <a class="btn btn--sm btn--primary" href="/brief" data-link>Open</a>
-      </div>`;
-  }
-  loadRailSports();
-  loadRailTrending();
-  const status = document.getElementById('rail-status');
-  if (status) {
-    const boot = state.boot || {};
-    status.innerHTML = html`
-      <p><b>${compactNumber(boot.stats?.articles)}</b> articles archived since ${boot.archive?.earliest ? absDate(boot.archive.earliest, false) : 'launch'}.</p>
-      <p style="margin-top:.4rem">${boot.feed_health?.healthy}/${boot.feed_health?.total} feeds healthy${boot.feed_health?.blocked ? ` · ${boot.feed_health.blocked} blocked on this network` : ''}.</p>
-      <p style="margin-top:.4rem">AI overviews: ${boot.ai?.enabled ? `on (${boot.ai.model})` : 'off'}</p>
-      <button class="btn btn--sm btn--ghost" id="rail-refresh" style="margin-top:.6rem">${raw(icons.refresh)} Refresh feeds</button>`;
-    status.querySelector('#rail-refresh')?.addEventListener('click', async (event) => {
-      event.target.disabled = true;
-      try {
-        await post('/api/ingest/refresh', {});
-        toast('Refreshing feeds in the background', { type: 'good' });
-      } catch (err) { toast(err.message, { type: 'bad' }); }
-      setTimeout(() => { event.target.disabled = false; }, 5000);
-    });
-  }
-}
-
-async function loadRailSports() {
-  const slot = document.getElementById('rail-sports');
-  if (!slot) return;
-  try {
-    const leagues = (prefs().sports_leagues || []).slice(0, 3).join(',');
-    const data = await get(`/api/sports${leagues ? `?leagues=${leagues}` : ''}`, 30);
-    state.liveCount = data.live_count || 0;
-    const events = (data.events || []).slice(0, 3);
-    if (!events.length) {
-      slot.innerHTML = html`<h3>🏆 Scores</h3><p class="tiny muted">No games scheduled right now.</p><a class="tiny link" href="/sports" data-link>All scores →</a>`;
-      return;
-    }
-    slot.innerHTML = html`
-      <h3>🏆 ${data.live_count ? html`<span class="badge badge--live">${data.live_count} live</span>` : 'Scores'}</h3>
-      <div class="stack-sm">${events.map((game) => scoreMini(game))}</div>
-      <a class="tiny link" href="/sports" data-link style="display:inline-block;margin-top:.5rem">All scores →</a>`;
-  } catch {
-    slot.innerHTML = '';
-  }
-}
-
-async function loadRailTrending() {
-  const slot = document.getElementById('rail-trending');
-  if (!slot) return;
-  try {
-    const data = await get('/api/discover', 120);
-    const items = (data.trending || []).slice(0, 4);
-    if (!items.length) { slot.innerHTML = ''; return; }
-    slot.innerHTML = html`
-      <h3>📈 Trending</h3>
-      <div class="row-list">
-        ${items.map((story, index) => html`
-          <div class="row">
-            <span class="row__rank">${index + 1}</span>
-            <div class="row__body">
-              <a class="row__title" style="font-size:.82rem" href="/article/${story.lead.id}" data-link>${story.title}</a>
-              <div class="row__meta"><span>${story.source_count} outlets</span></div>
-            </div>
-          </div>`)}
-      </div>`;
-  } catch { slot.innerHTML = ''; }
 }
 
 function bindShell() {
@@ -202,19 +97,6 @@ function bindShell() {
     input.blur();
   });
 
-  document.getElementById('sidebar-toggle')?.addEventListener('click', async () => {
-    try {
-      const next = !(prefs().sidebar_slim !== false);
-      await savePrefs({ sidebar_slim: next });
-      const button = document.getElementById('sidebar-toggle');
-      if (button) {
-        button.title = next ? 'Expand sidebar' : 'Collapse sidebar';
-        button.setAttribute('aria-label', button.title);
-      }
-      renderNav();
-    } catch (err) { toast(err.message, { type: 'bad' }); }
-  });
-
   document.getElementById('theme-btn')?.addEventListener('click', () => {
     const order = ['dark', 'light', 'sepia', 'system'];
     const next = order[(order.indexOf(prefs().theme || 'system') + 1) % order.length];
@@ -224,22 +106,10 @@ function bindShell() {
     }).catch((err) => toast(err.message, { type: 'bad' }));
   });
 
-  const menu = document.getElementById('menu-btn');
-  const sidebar = document.getElementById('sidebar');
-  const scrim = document.getElementById('scrim');
-  const setMenu = (open) => {
-    sidebar?.classList.toggle('is-open', open);
-    menu?.setAttribute('aria-expanded', String(open));
-    if (scrim) scrim.hidden = !open;
-  };
-  menu?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('is-open')));
-  scrim?.addEventListener('click', () => setMenu(false));
-
   document.addEventListener('keydown', (event) => {
     const target = event.target;
     const typing = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
     if (event.key === 'Escape') {
-      setMenu(false);
       if (document.body.classList.contains('focus-mode')) {
         document.body.classList.remove('focus-mode');
         toast('Focus mode off');
@@ -345,6 +215,20 @@ async function pollBreaking() {
   } catch { /* quiet */ }
 }
 
+async function pollLive() {
+  try {
+    const pinned = (prefs().pinned_sports || []).slice(0, 4);
+    const fallback = (prefs().sports_leagues || []).slice(0, 3);
+    const leagues = (pinned.length ? pinned : fallback).join(',');
+    const data = await get(`/api/sports${leagues ? `?leagues=${leagues}` : ''}`, 30);
+    const next = data.live_count || 0;
+    if (next !== state.liveCount) {
+      state.liveCount = next;
+      renderNav();
+    }
+  } catch { /* scores are optional */ }
+}
+
 async function pollIngest() {
   try {
     const data = await get('/api/ingest/status', 0, true);
@@ -356,7 +240,6 @@ async function pollIngest() {
     if (data.last_run && Date.now() - new Date(data.last_run.finished_at).getTime() < 15000) {
       const boot = await get('/api/bootstrap', 0, true);
       setBoot(boot);
-      renderRail();
       renderNav();
       toast('Feed refreshed', { type: 'good' });
     }
@@ -370,7 +253,7 @@ function setupImageFallbacks() {
     if (img.dataset.failed) return;
     img.dataset.failed = '1';
     img.classList.add('img-broken');
-    const holder = img.closest('.hero, .story-card__media, .article__hero, .row');
+    const holder = img.closest('.hero, .story-card__media, .article__hero, .row, .mcard, .top-card');
     holder?.classList.add('img-fallback');
   }, true);
 }
@@ -423,10 +306,9 @@ registerAction('toggle-save', async (button) => {
   button.title = saved ? 'Saved' : 'Save';
   toast(saved ? 'Saved to your library' : 'Removed from saved', { duration: 1600 });
   const rail = document.getElementById('rail-brief');
-  if (rail) renderRail();
 });
 
-on('profile', () => { renderNav(); renderRail(); });
+on('profile', () => { renderNav(); });
 on('save', ({ id, saved }) => {
   document.querySelectorAll(`[data-action="toggle-save"][data-id="${id}"]`).forEach((button) => {
     button.classList.toggle('is-on', saved);
@@ -463,7 +345,6 @@ async function boot() {
   document.body.dataset.ready = '1';
 
   renderNav();
-  renderRail();
   router.start();
 
   if (!data.profile?.onboarded && !location.pathname.startsWith('/onboarding')) {
@@ -471,8 +352,9 @@ async function boot() {
   }
 
   pollBreaking();
+  pollLive();
   setInterval(pollBreaking, 240000);
-  setInterval(() => { if (!document.hidden) loadRailSports(); }, 45000);
+  setInterval(pollLive, 120000);
   setInterval(pollIngest, 90000);
 
   // Warm the sports cache in the background so the rail is instant next time.

@@ -114,14 +114,56 @@ export function heroCard(item, { label = 'Top story' } = {}) {
     </article>`;
 }
 
+export function isFreshBreaking(item) {
+  if (!item.breaking) return false;
+  const stamp = item.published_at || item.first_seen_at;
+  if (!stamp) return false;
+  const age = Date.now() - new Date(stamp).getTime();
+  return age >= 0 && age < 2 * 60 * 60 * 1000;
+}
+
+export function mosaicCard(item, { size = 'small' } = {}) {
+  const showSummary = size === 'hero' || size === 'wide';
+  const hasImage = Boolean(item.image);
+  return html`
+    <article class="mcard mcard--${size} ${hasImage ? '' : 'mcard--noimg'}">
+      ${hasImage ? html`
+        <a class="mcard__media" href="/article/${item.id}" data-link aria-label="${item.title}">
+          <img class="mcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">
+          ${isFreshBreaking(item) ? html`<span class="badge badge--breaking mcard__flag">Breaking</span>` : ''}
+        </a>` : ''}
+      <div class="mcard__body">
+        <div class="mcard__kicker">
+          ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${topicEmoji(item.topic) || '📰'}</span>`}
+          <span>${item.source?.name || ''}</span>
+          ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
+          ${isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
+        </div>
+        <h3 class="mcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+        ${showSummary && item.preview ? html`<p class="mcard__summary">${item.preview}</p>` : ''}
+        <div class="mcard__meta">
+          ${accessPill(item)}
+          <span class="faint">·</span>
+          <span>${item.published_relative}</span>
+          <span class="faint">·</span>
+          <span>${item.reading_minutes} min</span>
+        </div>
+      </div>
+      ${saveButton(item)}
+    </article>`;
+}
+
 export function topCard(item) {
   return html`
-    <article class="top-card">
-      <a href="/article/${item.id}" data-link aria-label="${item.title}">
-        ${item.image
-          ? html`<img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">`
-          : html`<div class="top-card__img media-placeholder" aria-hidden="true"><span>${topicEmoji(item.topic) || '📰'}</span></div>`}
-      </a>
+    <article class="top-card ${item.image ? '' : 'top-card--noimg'}">
+      ${item.image ? html`
+        <a href="/article/${item.id}" data-link aria-label="${item.title}">
+          <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
+        </a>` : html`
+        <a class="top-card__banner" href="/article/${item.id}" data-link aria-label="${item.title}">
+          <span aria-hidden="true">${topicEmoji(item.topic) || '📰'}</span>
+          <b>${item.topic_label || ''}</b>
+        </a>`}
       <div class="top-card__body">
         <div class="top-card__source">
           <span>${item.source?.name || ''}</span>

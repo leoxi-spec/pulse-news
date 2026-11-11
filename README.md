@@ -1,7 +1,7 @@
 # Pulse
 
 **News that keeps up with you.** A production-ready, self-hosted news app built for
-students and teens: 298 publications from 45 countries, a permanent searchable
+students and teens: 331 publications from 51 countries, a permanent searchable
 archive, live sports scores, optional AI overviews, study tools, and a feed that
 actually learns what you read.
 
@@ -36,14 +36,14 @@ classes who still wants to understand what's happening. That means:
 ### Reading
 | | |
 |---|---|
-| **300+ sources** | 298 publications, 421 feeds, 45 countries, 19 topics. Wires, national dailies, specialists, student and teen outlets. |
+| **330+ sources** | 331 publications, 452 feeds, 51 countries, 19 topics. Wires, national dailies, local metros, specialists, student and teen outlets. |
 | **Story clustering** | Ten outlets covering one event become one card with a "9 outlets covering" badge and a compare-coverage view. |
 | **Clear read labels** | Every card states **📖 Read here** (full text inside Pulse), **👁️ Preview** (summary + overview, opens at the publisher) or **🔒 Subscription**. Articles open with a banner saying the same thing. A *Readable here* stream filters to in-app text only. |
 | **Symbol key** | Sidebar → **Key** (or press `?`) explains every icon, badge and score marker. |
 | **Search everywhere** | A search bar on the home page plus a command palette (`⌘K` or `/`) with headlines, topics, sources and quick actions as you type. |
 | **Front-page sections** | Apple News-style **Top Stories** grid plus configurable rows: brief, For you, scores, any topic, long reads, saved, research. Reorder or hide them in *Customize*. |
 | **15 themes** | Auto, Dark, Light, Sepia, Midnight, Forest, Sunset, Mono, Rose, Ocean, plus five calmer palettes: **Dusk, Sage, Sand, Mist, Clay**. |
-| **Room to read** | A slim icon rail replaces the old wide sidebar (expandable with one click), a personalised **Today** masthead, and a wider reading column. |
+| **Room to read** | No sidebars at all: a compact top bar, a personalised **Today** masthead, full-width sections and a mixed-size mosaic (1–3 stories per row, tall leads and compact briefs). |
 | **Sports pins** | Apple News-style **Pinned** bar: pin leagues and teams (★ on any team), filter with **My sports**, and see pinned games on the front page. Scores stream in progressively so the page never waits on 15 leagues. |
 | **Research desk** | Turn every saved story into a bibliography in MLA, APA, Chicago, Harvard or BibTeX; add books/websites by hand; export `.txt`/`.bib`; quote collector from your notes. |
 | **Reader** | Full text when the publisher allows it, paywall/preview handling when not, focus mode, adjustable type (sans/serif/dyslexia-friendly), highlight & note. |

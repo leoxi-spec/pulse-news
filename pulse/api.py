@@ -606,6 +606,10 @@ def _proxy_image(request: Request) -> tuple[int, bytes | dict, dict]:
         raise ApiError(415, "Unsupported image type")
     if len(result.body) > 4_000_000:
         raise ApiError(413, "Image too large")
+    # 1x1 tracking pixels and blank images render as empty boxes; treat them as
+    # missing so the card falls back to its banner.
+    if len(result.body) < 1200 and not content_type.endswith("svg+xml"):
+        raise ApiError(404, "Image is too small to display")
     try:
         cached.write_bytes(result.body)
         _write_sidecar(cache_dir, digest, content_type)

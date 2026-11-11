@@ -125,18 +125,15 @@ science|Science (AAAS)|science.org|US|Global|center|1|specialist|science,health,
 sciencedaily|ScienceDaily|sciencedaily.com|US|Global|center|0|student|science,health,space,climate,tech|Research press releases rewritten for general readers.
 phys|Phys.org|phys.org|US|Global|center|0|student|science,space,tech,climate|Physics, chemistry and technology research news.
 quanta|Quanta Magazine|quantamagazine.org|US|Global|center|0|student|science,space,tech|Deep, beautiful features on maths, physics and biology.
-scientificamerican|Scientific American|scientificamerican.com|US|United States|center-left|1|student|science,health,space,climate,tech|America's oldest science magazine.
 newscientist|New Scientist|newscientist.com|GB|United Kingdom|center|1|student|science,space,health,tech,climate|Weekly science and technology magazine.
 nautilus|Nautilus|nautil.us|US|Global|center|0|student|science,culture,space|Literary science writing about big ideas.
 aeon|Aeon|aeon.co|GB|Global|center-left|0|student|science,opinion,culture|Long-form essays on philosophy, science and society.
 smithsonian|Smithsonian Magazine|smithsonianmag.com|US|United States|center|0|student|culture,science,travel|History, science and culture from the Smithsonian.
 atlasobscura|Atlas Obscura|atlasobscura.com|US|Global|center|0|teen|travel,culture,food|Wonder-filled stories about the world's hidden places.
-natgeo|National Geographic|nationalgeographic.com|US|Global|center|0|teen|travel,science,climate,culture|Iconic photography and exploration journalism.
 spacecom|Space.com|space.com|US|Global|center|0|student|space,science|Spaceflight, astronomy and skywatching news.
 livescience|Live Science|livescience.com|US|Global|center|0|student|science,health,space|Everyday science explained well.
 universetoday|Universe Today|universetoday.com|CA|Global|center|0|student|space,science|Independent space and astronomy reporting.
 nasa|NASA|nasa.gov|US|United States|state|0|student|space,science,climate|Official mission and research updates.
-esa|European Space Agency|esa.int|INT|Europe|state|0|student|space,science|Europe's space programme newsroom.
 noaa|NOAA|noaa.gov|US|United States|state|0|student|climate,science,space|US oceans and atmosphere agency.
 worldbank|World Bank|worldbank.org|INT|Global|state|0|student|business,world,politics,climate|Development data, reports and project news.
 govuk|GOV.UK|gov.uk|GB|United Kingdom|state|0|specialist|politics,world,health,education,climate|Official UK government announcements.
@@ -379,7 +376,6 @@ seriouseats|Serious Eats|seriouseats.com|US|United States|center|0|teen|food|Tes
 bonappetit|Bon Appétit|bonappetit.com|US|United States|center|0|teen|food|Recipes and food culture.
 food52|Food52|food52.com|US|United States|center|0|teen|food|Home cooking community.
 thekitchn|The Kitchn|thekitchn.com|US|United States|center|0|teen|food|Kitchen tips and recipes.
-delish|Delish|delish.com|US|United States|center|0|teen|food|Fun, fast recipes.
 saveur|Saveur|saveur.com|US|Global|center|0|teen|food,travel|Culinary travel.
 epicurious|Epicurious|epicurious.com|US|United States|center|0|teen|food|Recipes and technique.
 cntraveler|Condé Nast Traveler|cntraveler.com|US|Global|center|0|teen|travel,culture|Luxury and destination travel.
@@ -407,8 +403,45 @@ refinery29|Refinery29|refinery29.com|US|United States|left|0|teen|culture,money,
 mashable|Mashable|mashable.com|US|United States|center|0|teen|tech,culture,entertainment|Digital culture and tech for the extremely online.
 buzzfeed|BuzzFeed|buzzfeed.com|US|United States|left|0|teen|culture,entertainment|Internet culture, quizzes and news.
 studyinternational|Study International|studyinternational.com|GB|Global|center|0|student|education,travel|Study-abroad and university news for international students.
-universityworldnews|University World News|universityworldnews.com|GB|Global|center|0|student|education,politics|Global higher-education journalism.
-timeshighereducation|Times Higher Education|timeshighereducation.com|GB|Global|center|1|student|education|University rankings, policy and academic life.
+seattletimes|The Seattle Times|seattletimes.com|US|United States|center|1|general|us,tech,business,climate|Pacific Northwest daily covering Amazon, Boeing and the outdoors.
+texastribune|The Texas Tribune|texastribune.org|US|United States|center|0|general|us,politics,education,climate|Non-profit Texas politics and policy newsroom.
+calmatters|CalMatters|calmatters.org|US|United States|center|0|general|us,politics,climate,education|Non-partisan California policy reporting.
+wbur|WBUR|wbur.org|US|United States|center|0|general|us,politics,education,health|Boston's public radio newsroom.
+factcheck|FactCheck.org|factcheck.org|US|United States|center|0|student|politics,us,health|Non-partisan fact-checking from the Annenberg Public Policy Center.
+nos|NOS|nos.nl|NL|Europe|center|0|general|world,politics,sports|Dutch public broadcaster's news service.
+nrc|NRC|nrc.nl|NL|Europe|center|1|general|world,politics,culture|Dutch daily of record.
+svt|SVT Nyheter|svt.se|SE|Europe|center|0|general|world,politics|Swedish public television news.
+yle|YLE News|yle.fi|FI|Europe|center|0|general|world,politics|Finland's public broadcaster.
+derstandard|Der Standard|derstandard.at|AT|Europe|center|1|general|world,politics,business|Austria's leading quality daily.
+lavanguardia|La Vanguardia|lavanguardia.com|ES|Europe|center|1|general|world,politics,culture|Barcelona-based Spanish daily.
+ilsole24ore|Il Sole 24 Ore|ilsole24ore.com|IT|Europe|center|1|general|business,world,politics|Italy's business and finance daily.
+kyivpost|Kyiv Post|kyivpost.com|UA|Europe|center|0|general|world,politics|Ukraine's English-language daily.
+mainichi|The Mainichi|mainichi.jp|JP|East Asia|center|0|general|world,politics|Japanese daily with an English edition.
+vietnamnews|Vietnam News|vietnamnews.vn|VN|Southeast Asia|state|0|general|world,business|Vietnam's state English daily.
+allafrica|AllAfrica|allafrica.com|INT|Africa|center|0|general|world,politics|Aggregated African news from 100+ outlets.
+africanarguments|African Arguments|africanarguments.org|GB|Africa|center|0|student|world,politics|Analysis on African politics and society.
+dailytrust|Daily Trust|dailytrust.com|NG|Africa|center|0|general|world,politics|Nigerian daily.
+businessdayng|BusinessDay|businessday.ng|NG|Africa|center|1|general|business,politics|Nigerian business daily.
+lanacion|La Nación|lanacion.com.ar|AR|Latin America|center|1|general|world,politics,business,sports|Argentina's paper of record.
+oglobo|O Globo|oglobo.globo.com|BR|Latin America|center|1|general|world,politics|Rio-based Brazilian daily.
+uol|UOL Notícias|noticias.uol.com.br|BR|Latin America|center|0|general|world,politics|Brazil's biggest news portal.
+semana|Semana|semana.com|CO|Latin America|center|0|general|world,politics|Colombian news magazine.
+elcomercio|El Comercio|elcomercio.pe|PE|Latin America|center|0|general|world,politics|Peru's paper of record.
+latercera|La Tercera|latercera.com|CL|Latin America|center|0|general|world,politics|Chilean daily.
+elfinanciero|El Financiero|elfinanciero.com.mx|MX|Latin America|center|0|general|business,politics|Mexican business daily.
+almonitor|Al-Monitor|al-monitor.com|US|Middle East|center|0|general|world,politics|Middle East analysis and reporting.
+ledevoir|Le Devoir|ledevoir.com|CA|Canada|center|1|general|world,politics,culture|Montreal's independent daily.
+lapresse|La Presse|lapresse.ca|CA|Canada|center|1|general|world,politics|French-language Canadian news.
+globalnews|Global News|globalnews.ca|CA|Canada|center|0|general|world,politics|Canadian network news.
+crikey|Crikey|crikey.com.au|AU|Oceania|center|1|general|politics,opinion|Australian independent political journalism.
+techmeme|Techmeme|techmeme.com|US|Global|center|0|general|tech,business|Tech news aggregator with context.
+sciencenews|Science News|sciencenews.org|US|Global|center|0|student|science,health,space|Independent science journalism since 1922.
+mitnews|MIT News|news.mit.edu|US|Global|center|0|student|tech,science,education|Research news from MIT.
+stanfordnews|Stanford News|news.stanford.edu|US|Global|center|0|student|science,tech,education|Research and campus news from Stanford.
+harvardgazette|Harvard Gazette|news.harvard.edu|US|Global|center|0|student|science,health,education|Harvard research and campus news.
+bigthink|Big Think|bigthink.com|US|Global|center|0|student|science,opinion,culture|Big ideas from scientists and thinkers.
+psyche|Psyche|psyche.co|GB|Global|center|0|student|science,culture|Psychology and philosophy for everyday life.
+formula1|Formula 1|formula1.com|GB|Global|center|0|general|sports|Official F1 news and race reports.
 """
 
 # ---------------------------------------------------------------------------
@@ -453,18 +486,15 @@ science|science|https://www.science.org/rss/news_current.xml
 sciencedaily|science|https://www.sciencedaily.com/rss/all.xml
 phys|science|https://phys.org/rss-feed/
 quanta|science|https://www.quantamagazine.org/feed/
-scientificamerican|science|https://www.scientificamerican.com/feed/
 newscientist|science|https://www.newscientist.com/feed/home/
 nautilus|science|https://nautil.us/feed/
 aeon|science|https://aeon.co/feed.rss
 smithsonian|culture|https://www.smithsonianmag.com/rss/latest_articles/
 atlasobscura|travel|https://www.atlasobscura.com/feeds/latest
-natgeo|science|https://www.nationalgeographic.com/feed
 spacecom|space|https://www.space.com/feeds/all
 livescience|science|https://www.livescience.com/feeds/all
 universetoday|space|https://www.universetoday.com/feed/
 nasa|space|https://www.nasa.gov/feed/
-esa|space|https://www.esa.int/rssfeed/Our_Activities/Space_News
 noaa|climate|https://www.noaa.gov/news/rss
 worldbank|business|https://www.worldbank.org/en/news/all?format=rss
 govuk|politics|https://www.gov.uk/search/news-and-communications.atom
@@ -475,7 +505,6 @@ nyt|us|https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
 nyt|business|https://rss.nytimes.com/services/xml/rss/nyt/Business.xml
 nyt|tech|https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml
 nyt|science|https://rss.nytimes.com/services/xml/rss/nyt/Science.xml
-nyt|sports|https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml
 nyt|entertainment|https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml
 nyt|health|https://rss.nytimes.com/services/xml/rss/nyt/Health.xml
 nyt|climate|https://rss.nytimes.com/services/xml/rss/nyt/Climate.xml
@@ -494,7 +523,6 @@ wapo|business|https://feeds.washingtonpost.com/rss/business
 wapo|tech|https://feeds.washingtonpost.com/rss/business/technology
 wapo|sports|https://feeds.washingtonpost.com/rss/sports
 wapo|entertainment|https://feeds.washingtonpost.com/rss/entertainment
-wapo|health|https://feeds.washingtonpost.com/rss/health
 wapo|climate|https://feeds.washingtonpost.com/rss/climate-environment
 wsj|world|https://feeds.a.dj.com/rss/RSSWorldNews.xml
 wsj|tech|https://feeds.a.dj.com/rss/RSSWSJD.xml
@@ -555,7 +583,7 @@ statnews|health|https://www.statnews.com/feed/
 kff|health|https://kffhealthnews.org/feed/
 harvardhealth|health|https://www.health.harvard.edu/blog/feed
 insidehighered|education|https://www.insidehighered.com/rss.xml
-edsurge|education|https://www.edsurge.com/rss
+edsurge|education|https://www.edsurge.com/feed
 hechinger|education|https://hechingerreport.org/feed/
 the74|education|https://www.the74million.org/feed/
 chalkbeat|education|https://www.chalkbeat.org/arc/outboundfeeds/rss/?outputType=xml
@@ -811,7 +839,6 @@ seriouseats|food|https://www.seriouseats.com/rss
 bonappetit|food|https://www.bonappetit.com/feed/rss
 food52|food|https://food52.com/blog.rss
 thekitchn|food|https://www.thekitchn.com/main.rss
-delish|food|https://www.delish.com/rss/
 saveur|food|https://www.saveur.com/feed/
 epicurious|food|https://www.epicurious.com/feed/rss
 cntraveler|travel|https://www.cntraveler.com/feed/rss
@@ -825,7 +852,7 @@ insideclimate|climate|https://insideclimatenews.org/feed/
 yaleclimate|climate|https://yaleclimateconnections.org/feed/
 climatehome|climate|https://www.climatechangenews.com/feed/
 pew|politics|https://www.pewresearch.org/feed/
-brookings|politics|https://www.brookings.edu/feed/
+brookings|politics|https://www.brookings.edu/feed/?post_type=article
 cfr|world|https://www.cfr.org/rss-feeds
 foreignpolicy|world|https://foreignpolicy.com/feed/
 foreignaffairs|world|https://www.foreignaffairs.com/rss.xml
@@ -842,8 +869,45 @@ refinery29|culture|https://www.refinery29.com/en-us/rss.xml
 mashable|tech|https://mashable.com/feeds/rss/all
 buzzfeed|culture|https://www.buzzfeed.com/feed.xml
 studyinternational|education|https://www.studyinternational.com/feed/
-universityworldnews|education|https://www.universityworldnews.com/backend/rss.php
-timeshighereducation|education|https://www.timeshighereducation.com/rss
+seattletimes|tech|https://www.seattletimes.com/feed/
+texastribune|politics|https://www.texastribune.org/feeds/main/
+calmatters|politics|https://calmatters.org/feed/
+wbur|us|https://www.wbur.org/feed
+factcheck|politics|https://www.factcheck.org/feed/
+nos|world|https://feeds.nos.nl/nosnieuwsalgemeen
+nrc|world|https://www.nrc.nl/rss/
+svt|world|https://www.svt.se/rss.xml
+yle|world|https://feeds.yle.fi/uutiset/v1/majorHeadlines/YLE_UUTISET.rss
+derstandard|world|https://www.derstandard.at/rss
+lavanguardia|world|https://www.lavanguardia.com/rss/home.xml
+ilsole24ore|business|https://www.ilsole24ore.com/rss/italia.xml
+kyivpost|world|https://www.kyivpost.com/feed
+mainichi|world|https://mainichi.jp/rss/etc/mainichi-flash.rss
+vietnamnews|world|https://vietnamnews.vn/rss/home.rss
+allafrica|world|https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf
+africanarguments|world|https://africanarguments.org/feed/
+dailytrust|world|https://dailytrust.com/feed/
+businessdayng|business|https://businessday.ng/feed/
+lanacion|world|https://www.lanacion.com.ar/arc/outboundfeeds/rss/?outputType=xml
+oglobo|world|https://oglobo.globo.com/rss/oglobo
+uol|world|https://rss.uol.com.br/feed/noticias.xml
+semana|world|https://www.semana.com/arc/outboundfeeds/rss/?outputType=xml
+elcomercio|world|https://elcomercio.pe/arc/outboundfeeds/rss/?outputType=xml
+latercera|world|https://www.latercera.com/arc/outboundfeeds/rss/?outputType=xml
+elfinanciero|business|https://www.elfinanciero.com.mx/rss/
+almonitor|world|https://www.al-monitor.com/rss
+ledevoir|world|https://www.ledevoir.com/rss/manchettes.xml
+lapresse|world|https://www.lapresse.ca/actualites/rss
+globalnews|world|https://globalnews.ca/feed/
+crikey|politics|https://www.crikey.com.au/feed/
+techmeme|tech|https://www.techmeme.com/feed.xml
+sciencenews|science|https://www.sciencenews.org/feed
+mitnews|science|https://news.mit.edu/rss/feed
+stanfordnews|science|https://news.stanford.edu/feed/
+harvardgazette|science|https://news.harvard.edu/gazette/feed/
+bigthink|science|https://bigthink.com/feed/
+psyche|science|https://psyche.co/feed.rss
+formula1|sports|https://www.formula1.com/en/latest/all.xml
 """
 
 
