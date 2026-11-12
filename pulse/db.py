@@ -26,7 +26,7 @@ from .timeutil import iso, now, parse_iso
 
 log = get_logger("db")
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS articles (
     author             TEXT,
     image_url          TEXT,
     images             TEXT,
+    video_url          TEXT,
+    video_id           TEXT,
+    video_kind         TEXT,
     published_at       TEXT,
     published_raw      TEXT,
     date_confidence    TEXT NOT NULL DEFAULT 'unknown',
@@ -297,6 +300,9 @@ class Database:
             columns = {row[1] for row in conn.execute("PRAGMA table_info(articles)")}
             if "images" not in columns:
                 conn.execute("ALTER TABLE articles ADD COLUMN images TEXT")
+            for column in ("video_url", "video_id", "video_kind"):
+                if column not in columns:
+                    conn.execute(f"ALTER TABLE articles ADD COLUMN {column} TEXT")
             conn.execute(
                 "INSERT INTO meta(key, value) VALUES('schema_version', ?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
@@ -445,6 +451,7 @@ class Database:
               (SELECT COUNT(*) FROM feeds WHERE enabled=1 AND last_success_at IS NOT NULL) AS feeds_ok,
               (SELECT COUNT(*) FROM feeds WHERE enabled=1 AND consecutive_failures >= 3) AS feeds_failing,
               (SELECT COUNT(*) FROM articles WHERE content_text IS NOT NULL AND length(content_text) > 400) AS full_text,
+              (SELECT COUNT(*) FROM articles WHERE video_kind IS NOT NULL) AS videos,
               (SELECT MIN(published_at) FROM articles WHERE published_at IS NOT NULL) AS earliest,
               (SELECT MAX(published_at) FROM articles WHERE published_at IS NOT NULL) AS latest,
               (SELECT MAX(first_seen_at) FROM articles) AS last_article

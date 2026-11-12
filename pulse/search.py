@@ -189,7 +189,7 @@ def search(
             else "COALESCE(a.published_at, a.first_seen_at) DESC"
         )
         sql = f"""
-            SELECT a.id, a.title, a.summary, a.source_id, a.url, a.image_url, a.author,
+            SELECT a.id, a.title, a.summary, a.source_id, a.url, a.image_url, a.video_url, a.video_id, a.video_kind, a.author,
                    a.published_at, a.first_seen_at, a.date_confidence, a.primary_topic,
                    a.reading_minutes, a.word_count, a.content_state, a.paywalled, a.is_breaking,
                    a.story_id, s.name AS source_name, s.domain, s.lean,
@@ -215,7 +215,7 @@ def search(
     else:
         order = "COALESCE(a.published_at, a.first_seen_at) DESC"
         sql = f"""
-            SELECT a.id, a.title, a.summary, a.source_id, a.url, a.image_url, a.author,
+            SELECT a.id, a.title, a.summary, a.source_id, a.url, a.image_url, a.video_url, a.video_id, a.video_kind, a.author,
                    a.published_at, a.first_seen_at, a.date_confidence, a.primary_topic,
                    a.reading_minutes, a.word_count, a.content_state, a.paywalled, a.is_breaking,
                    a.story_id, s.name AS source_name, s.domain, s.lean,
@@ -235,9 +235,12 @@ def search(
 
     has_more = len(rows) > limit
     rows = rows[:limit]
+    from .feed import video_payload
+
     results = []
     for row in rows:
         item = dict(row)
+        item["video"] = video_payload(row)
         snippet = (row["snippet_body"] or row["snippet_summary"] or "").strip()
         item["snippet"] = snippet or (row["summary"] or "")[:240]
         item["topic_label"] = TOPIC_LABELS.get(row["primary_topic"], row["primary_topic"].title())
@@ -290,7 +293,7 @@ def _fallback_search(parsed: ParsedQuery, clauses: str, params: list, sort: str,
         like_params.extend([f"%{term}%", f"%{term}%"])
     order = "COALESCE(a.published_at, a.first_seen_at) DESC" if sort != "relevance" else "a.title"
     sql = f"""
-        SELECT a.id, a.title, a.summary, a.source_id, a.url, a.image_url, a.author,
+        SELECT a.id, a.title, a.summary, a.source_id, a.url, a.image_url, a.video_url, a.video_id, a.video_kind, a.author,
                a.published_at, a.first_seen_at, a.date_confidence, a.primary_topic,
                a.reading_minutes, a.word_count, a.content_state, a.paywalled, a.is_breaking,
                a.story_id, s.name AS source_name, s.domain, s.lean,

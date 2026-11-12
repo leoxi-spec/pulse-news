@@ -211,6 +211,12 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             days = request.int_param("days", 3, minimum=1, maximum=365)
             payload = feed.feed_page(profile, mode=mode, topic=topic, source=source, offset=offset, limit=limit, days=days)
             return 200, payload, {}
+        if path == "/api/videos" and method == "GET":
+            topic = request.query.get("topic") or None
+            offset = request.int_param("offset", 0, minimum=0, maximum=5000)
+            limit = request.int_param("limit", 24, minimum=1, maximum=60)
+            days = request.int_param("days", 60, minimum=1, maximum=365)
+            return 200, feed.video_feed(profile, topic=topic, offset=offset, limit=limit, days=days), {}
         if path == "/api/discover" and method == "GET":
             return 200, feed.discover(profile), {}
         if path == "/api/brief" and method == "GET":
@@ -464,6 +470,7 @@ def _health() -> dict:
         "ok": True,
         "app": {"name": APP_NAME, "version": APP_VERSION, "time": iso()},
         "articles": stats.get("articles", 0),
+        "videos": stats.get("videos", 0),
         "sources": stats.get("sources", 0),
         "feeds_ok": stats.get("feeds_ok", 0),
         "last_ingest": stats.get("last_ingest"),

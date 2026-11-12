@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Pulse \u2014 student news",
+  "name": "Pulse — student news",
   "short_name": "Pulse",
-  "description": "A personalised news app for students and teens: 300+ sources, live scores, AI overviews, a permanent searchable archive, study tools and zero ads.",
+  "description": "A personalised news app for students and teens: 360+ sources, video from newsrooms and YouTube, live scores, AI overviews, a permanent searchable archive, study tools and zero ads.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -53,6 +53,17 @@
       "name": "Pulse Shorts",
       "short_name": "Shorts",
       "url": "/reels",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Watch video",
+      "short_name": "Watch",
+      "url": "/videos",
       "icons": [
         {
           "src": "/icons/icon-192.png",
@@ -125,6 +136,13 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "Reading with photo galleries"
+    },
+    {
+      "src": "/screenshots/watch-wide.png",
+      "sizes": "1440x1000",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Watch video from newsrooms and YouTube"
     },
     {
       "src": "/screenshots/sports-wide.png",

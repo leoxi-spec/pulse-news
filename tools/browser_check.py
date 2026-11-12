@@ -394,11 +394,17 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.shot("01-home")
 
     print("\n[2] Article reader actions")
-    checker.click(".mcard .mcard__title a")
+    # Video-only stories are valid cards but have no prose, so exercise the
+    # reader on a full-text story. The video player is checked separately.
+    readable = api(base, "/api/feed?mode=readable&limit=20", profile=profile_id)["items"]
+    if readable:
+        checker.goto(f"/article/{readable[0]['id']}")
+    else:
+        checker.click(".mcard .mcard__title a")
     checker.wait_for("Boolean(document.querySelector('.article__title'))", 15, "article view")
     checker.ok(checker.count(".article__title") == 1, "article title renders")
     checker.ok(checker.count('[data-act="listen"]') == 1, "read-aloud action renders")
-    checker.ok(checker.count("[data-reaction]") == 5, "emoji reactions render")
+    checker.ok(checker.count("[data-reaction]") == 5, "reaction chips render")
     checker.ok(len(checker.text("#story-facts")) > 3, "readability and tone facts render")
     checker.ok(checker.count("[data-ask-form]") == 1, "ask-this-article renders")
     checker.ok(checker.count('[data-act="text-larger"]') == 1, "article text size control renders")
@@ -409,6 +415,37 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.ok(checker.count(".reader-banner") == 1, "article shows a read-access banner")
     checker.ok(checker.count(".reader-banner--full, .reader-banner--preview, .reader-banner--locked") == 1, "banner explains whether it opens here")
     checker.shot("02-article")
+
+    print("\n[2b] Video")
+    videos = api(base, "/api/videos?limit=12", profile=profile_id)
+    youtube_item = next((item for item in videos.get("items", []) if item.get("video", {}).get("kind") == "youtube"), None)
+    if videos.get("items"):
+        checker.goto("/videos")
+        checker.wait_for("Boolean(document.querySelector('.video-lead'))", 15, "watch page")
+        checker.ok(checker.count(".video-card") >= 3, "video grid renders")
+        checker.ok(checker.count(".video-badge") >= 3, "video badges render")
+        checker.click("[data-play]")
+        if checker.wait_for("Boolean(document.querySelector('.modal iframe, .modal video'))", 12, "video modal"):
+            if checker.count(".modal iframe"):
+                embed_src = checker.cdp.js("document.querySelector('.modal iframe').src")
+                checker.ok("youtube-nocookie.com/embed/" in embed_src, "YouTube embed uses privacy domain")
+                checker.ok("origin=" in embed_src and "widget_referrer=" in embed_src, "YouTube embed includes origin parameters")
+            else:
+                checker.ok(checker.cdp.js("Boolean(document.querySelector('.modal video')?.src)"), "direct video player opens")
+            checker.ok(True, "video player opens")
+        else:
+            checker.ok(False, "video player opens")
+        checker.click(".modal [data-close]")
+        checker.shot("02b-watch")
+        if youtube_item:
+            checker.goto(f"/article/{youtube_item['id']}")
+            checker.wait_for("Boolean(document.querySelector('.article__video'))", 15, "article video")
+            checker.ok(checker.count(".article__video") == 1, "article shows the video player")
+            checker.click("[data-video-play]")
+            checker.ok(checker.wait_for("Boolean(document.querySelector('.article__video iframe'))", 12, "article video embed"), "article video embeds on play")
+            checker.shot("02c-article-video")
+    else:
+        checker.ok(False, "video stream has items", "no videos ingested")
 
     checker.click('[data-act="save"]')
     if checker.wait_for("document.querySelector('[data-act=\"save\"]')?.getAttribute('aria-pressed') === 'true'", 6, "save state"):

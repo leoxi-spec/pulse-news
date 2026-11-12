@@ -34,6 +34,9 @@ export function privacyView(root) {
     <section><h2>Cookies</h2>
       <p>Only essential cookies are used: a profile id, a session token if you sign in, and an access token only if the operator has protected this server with one. There are no advertising or analytics cookies.</p>
     </section>
+    <section><h2>Video</h2>
+      <p>Publisher clips play from the publisher's own player. YouTube videos use the privacy-enhanced <b>youtube-nocookie.com</b> domain and only load when you press play; after that, YouTube's own privacy policy applies. Pulse does not preload or track video playback.</p>
+    </section>
     <section><h2>Email accounts and age</h2>
       <p>Email accounts are not exposed in this build. If the operator enables them later, they are for readers aged 13 and over; under-13 readers use guest mode. Email addresses would be recorded but not verified because this self-hosted build has no mail server.</p>
     </section>

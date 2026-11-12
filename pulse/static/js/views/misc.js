@@ -7,7 +7,7 @@ import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
   errorState, emptyState, compactNumber, number, toastProgress, confetti,
 } from '../ui.js';
-import { storyCard, rowsHtml, newsRows, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot } from '../components.js';
+import { storyCard, rowsHtml, newsRows, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot, videoBadge } from '../components.js';
 import { navigate } from '../router.js';
 import { openLegend } from '../legend.js';
 import { openWidgetEditor, WIDGET_COUNT, DEFAULT_WIDGET_IDS } from '../daily.js';
@@ -172,6 +172,7 @@ async function runSearch(root, { q, topic, source, since, sort, offset, append }
               <span class="tiny faint">·</span>
               <span class="tiny muted">${item.published_relative || ''}${item.date_label === 'First seen' ? ' (first seen)' : ''}</span>
               ${item.paywalled ? html`<span class="badge badge--muted" title="Subscription">Paid</span>` : ''}
+              ${videoBadge(item, 'video-badge--inline')}
             </div>
             <h3 class="search-hit__title"><a href="/article/${item.id}" data-link>${raw(highlightQuery(item.title, q))}</a></h3>
             ${item.snippet ? html`<p class="search-hit__snippet">${raw(highlightQuery(item.snippet, q))}</p>` : ''}
@@ -1255,6 +1256,7 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
         <div class="welcome__metrics">
           <div><b>${boot.catalog?.sources || 336}</b><span>sources</span></div>
           <div><b>${(boot.topics || []).length || 20}</b><span>topics</span></div>
+          <div><b>${compactNumber(boot.stats?.videos || 0)}</b><span>videos</span></div>
           <div><b>0</b><span>ads</span></div>
         </div>
         <div class="welcome__card">

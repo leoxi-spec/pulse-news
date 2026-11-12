@@ -2,7 +2,7 @@ import { get } from '../api.js';
 import { state, record, saveSurvey, isFollowedTopic } from '../store.js';
 import { navigate } from '../router.js';
 import { html, raw, icons, toast, errorState, emptyState, compactNumber, timeAgo, absDate } from '../ui.js';
-import { heroCard, storyCard, rowsHtml, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot } from '../components.js';
+import { heroCard, storyCard, rowsHtml, sectionHead, topicTile, emptyState as empty, leanBar, skeletonFeed, sourceDot, videoCard } from '../components.js';
 
 export async function discoverView(root) {
   root.classList.add('view--wide');
@@ -12,6 +12,7 @@ export async function discoverView(root) {
     <div class="chip-row" style="margin:.5rem 0 .2rem">
       <a class="chip" href="/sources" data-link>All sources</a>
       <a class="chip" href="/archive" data-link>Archive</a>
+      <a class="chip" href="/videos" data-link>Watch video</a>
       <a class="chip" href="/research" data-link>Research desk</a>
     </div>
     <div id="discover-body">${skeletonFeed(4)}</div>`;
@@ -23,10 +24,17 @@ export async function discoverView(root) {
     errorState(root.querySelector('#discover-body'), err.message, () => discoverView(root));
     return;
   }
+  const videos = await get('/api/videos?limit=3', 30).catch(() => null);
   const body = root.querySelector('#discover-body');
   body.innerHTML = html`
     ${sectionHead('Topics', html`<a href="/sources" data-link>All sources ${raw(icons.chevron)}</a>`)}
     <div class="tile-grid">${data.topics.map(topicTile)}</div>
+
+    ${videos?.items?.length ? html`
+      <div class="section">
+        ${sectionHead('Watch', html`<a href="/videos" data-link>All videos ${raw(icons.chevron)}</a>`, { sub: 'newsroom clips and explainers' })}
+        <div class="video-strip">${videos.items.map((item) => videoCard(item))}</div>
+      </div>` : ''}
 
     ${data.trending?.length ? html`
       <div class="section">

@@ -36,7 +36,8 @@ classes who still wants to understand what's happening. That means:
 ### Reading
 | | |
 |---|---|
-| **335+ sources** | 336 publications, 458 feeds, 51 countries, 20 topics — including a dedicated **Motorsport** section (F1, MotoGP, IndyCar) with five specialist outlets. |
+| **365+ sources** | 366 publications, 488 feeds, 51 countries, 20 topics — including a dedicated **Motorsport** section (F1, MotoGP, IndyCar) with five specialist outlets. |
+| **Video, everywhere** | Publisher clips and 30 official YouTube newsroom, league, space and learning channels. A dedicated **Watch** page, video badges on cards, and a privacy-friendly player on every story. |
 | **Story clustering** | Ten outlets covering one event become one card with a "9 outlets covering" badge and a compare-coverage view. |
 | **Clear read labels** | Every card states **📖 Read here** (full text inside Pulse), **👁️ Preview** (summary + overview, opens at the publisher) or **🔒 Subscription**. Articles open with a banner saying the same thing. A *Readable here* stream filters to in-app text only. |
 | **Symbol key** | Sidebar → **Key** (or press `?`) explains every icon, badge and score marker. |
@@ -257,6 +258,7 @@ Everything the UI does is available as JSON:
 ```
 GET    /api/bootstrap                 catalogue, profile, AI/ingest status
 GET    /api/feed?mode=for-you|top|breaking|latest|longreads&topic=&offset=
+GET    /api/videos                    video-first stream (topic, offset, limit)
 GET    /api/discover                  topics, trending, editors' picks, sources
 GET    /api/articles/:id              full article + blocks + coverage + notes
 GET    /api/articles/:id/overview     AI or extractive overview

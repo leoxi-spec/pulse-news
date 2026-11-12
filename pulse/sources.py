@@ -448,6 +448,36 @@ harvardgazette|Harvard Gazette|news.harvard.edu|US|Global|center|0|student|scien
 bigthink|Big Think|bigthink.com|US|Global|center|0|student|science,opinion,culture|Big ideas from scientists and thinkers.
 psyche|Psyche|psyche.co|GB|Global|center|0|student|science,culture|Psychology and philosophy for everyday life.
 formula1|Formula 1|formula1.com|GB|Global|center|0|general|motorsport,sports|Official F1 news and race reports.
+yt-bbc|BBC News Video|youtube.com|GB|Global|center|0|general|world,politics,business,tech,science,health,culture|Official BBC News video reports.
+yt-reuters|Reuters Video|youtube.com|GB|Global|center|0|general|world,business,tech,politics|Reuters video news.
+yt-ap|AP Video|youtube.com|US|Global|center|0|general|world,us,politics|Associated Press video journalism.
+yt-cnn|CNN Video|youtube.com|US|Global|center-left|0|general|world,us,politics|CNN video reports and analysis.
+yt-abc|ABC News Video|youtube.com|US|Global|center|0|general|us,world,politics|ABC News video.
+yt-nbc|NBC News Video|youtube.com|US|Global|center|0|general|us,world,politics|NBC News video.
+yt-aljazeera|Al Jazeera Video|youtube.com|QA|Middle East|center|0|general|world,politics|Al Jazeera English video.
+yt-dw|DW News Video|youtube.com|DE|Europe|center|0|general|world,politics,business|DW News video from Germany.
+yt-sky|Sky News Video|youtube.com|GB|Global|center|0|general|world,politics,business|Sky News video.
+yt-pbs|PBS NewsHour Video|youtube.com|US|Global|center|0|general|us,world,politics,education|PBS NewsHour video.
+yt-nasa|NASA Video|youtube.com|US|Global|center|0|student|space,science,tech|NASA missions, launches and explainers.
+yt-natgeo|National Geographic Video|youtube.com|US|Global|center|0|general|science,climate,culture,travel|National Geographic video.
+yt-bbcearth|BBC Earth Video|youtube.com|GB|Global|center|0|general|science,climate|BBC Earth nature and climate video.
+yt-natgeokids|Nat Geo Kids Video|youtube.com|US|Global|center|0|teen|science,education,climate|Nat Geo Kids video for younger viewers.
+yt-f1|Formula 1 Video|youtube.com|GB|Global|center|0|general|motorsport,sports|Official Formula 1 video.
+yt-espnfc|ESPN FC Video|youtube.com|US|Global|center|0|general|sports|ESPN FC football video.
+yt-nba|NBA Video|youtube.com|US|Global|center|0|general|sports|NBA highlights and features.
+yt-nfl|NFL Video|youtube.com|US|Global|center|0|general|sports|NFL highlights and features.
+yt-mlb|MLB Video|youtube.com|US|Global|center|0|general|sports|MLB highlights and features.
+yt-nhl|NHL Video|youtube.com|US|Global|center|0|general|sports|NHL highlights and features.
+yt-olympics|Olympics Video|youtube.com|CH|Global|center|0|general|sports|Olympic sport and athlete video.
+yt-fifa|FIFA Video|youtube.com|CH|Global|center|0|general|sports|FIFA football video.
+yt-skysports|Sky Sports Video|youtube.com|GB|Global|center|0|general|sports|Sky Sports video.
+yt-ted|TED-Ed Video|youtube.com|US|Global|center|0|student|education,science,culture|TED-Ed animated lessons.
+yt-kurzgesagt|Kurzgesagt Video|youtube.com|DE|Global|center|0|student|science,space,education|Animated science explainers.
+yt-veritasium|Veritasium Video|youtube.com|US|Global|center|0|student|science,tech,education|Science and engineering video.
+yt-bloomberg|Bloomberg Video|youtube.com|US|Global|center|0|general|business,tech,politics|Bloomberg business video.
+yt-verge|The Verge Video|youtube.com|US|Global|center|0|teen|tech,culture|The Verge technology video.
+yt-wired|WIRED Video|youtube.com|US|Global|center|0|student|tech,science,culture|WIRED science and technology video.
+yt-vox|Vox Video|youtube.com|US|Global|center-left|0|student|world,politics,culture,education|Vox explanatory video.
 """
 
 # ---------------------------------------------------------------------------
@@ -920,6 +950,36 @@ harvardgazette|science|https://news.harvard.edu/gazette/feed/
 bigthink|science|https://bigthink.com/feed/
 psyche|science|https://psyche.co/feed.rss
 formula1|motorsport|https://www.formula1.com/en/latest/all.xml
+yt-bbc|world|https://www.youtube.com/feeds/videos.xml?channel_id=UC16niRr50-MSBwiO3YDb3RA
+yt-reuters|world|https://www.youtube.com/feeds/videos.xml?channel_id=UChqUTb7kYRX8-EiaN3XFrSQ
+yt-ap|world|https://www.youtube.com/feeds/videos.xml?channel_id=UC52X5wxOL_s5yw0dQk7NtgA
+yt-cnn|us|https://www.youtube.com/feeds/videos.xml?channel_id=UCupvZG-5ko_eiXAupbDfxWw
+yt-abc|us|https://www.youtube.com/feeds/videos.xml?channel_id=UCBi2mrWuNuyYy4gbM6fU18Q
+yt-nbc|us|https://www.youtube.com/feeds/videos.xml?channel_id=UCeY0bbntWzzVIaj2z3QigXg
+yt-aljazeera|world|https://www.youtube.com/feeds/videos.xml?channel_id=UCNye-wNBqNL5ZzHSJj3l8Bg
+yt-dw|world|https://www.youtube.com/feeds/videos.xml?channel_id=UCknLrEdhRCp1aegoMqRaCZg
+yt-sky|world|https://www.youtube.com/feeds/videos.xml?channel_id=UCoMdktPbSTixAyNGwb-UYkQ
+yt-pbs|us|https://www.youtube.com/feeds/videos.xml?channel_id=UC6ZFN9Tx6xh-skXCuRHCDpQ
+yt-nasa|space|https://www.youtube.com/feeds/videos.xml?channel_id=UCLA_DiR1FfKNvjuUpBHmylQ
+yt-natgeo|science|https://www.youtube.com/feeds/videos.xml?channel_id=UCpVm7bg6pXKo1Pr6k5kxG9A
+yt-bbcearth|climate|https://www.youtube.com/feeds/videos.xml?channel_id=UCwmZiChSryoWQCZMIQezgTg
+yt-natgeokids|education|https://www.youtube.com/feeds/videos.xml?channel_id=UCXVCgDuD_QCkI7gTKU7-tpg
+yt-f1|motorsport|https://www.youtube.com/feeds/videos.xml?channel_id=UCB_qr75-ydFVKSF9Dmo6izg
+yt-espnfc|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UC6c1z7bA__85CIWZ_jpCK-Q
+yt-nba|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCWJ2lWNubArHWmf3FIHbfcQ
+yt-nfl|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCDVYQ4Zhbm3S2dlz7P1GBDg
+yt-mlb|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCoLdERT4-TJ82PJOHSrsZLQ
+yt-nhl|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCqFMzb-4AUf6WAIbl132QKA
+yt-olympics|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCTl3QQTvqHFjurroKxexy2Q
+yt-fifa|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCpcTrCXblq78GZrTUTLWeBw
+yt-skysports|sports|https://www.youtube.com/feeds/videos.xml?channel_id=UCNAf1k0yIjyGu3k9BwAg3lg
+yt-ted|education|https://www.youtube.com/feeds/videos.xml?channel_id=UCsooa4yRKGN_zEE8iknghZA
+yt-kurzgesagt|science|https://www.youtube.com/feeds/videos.xml?channel_id=UCsXVk37bltHxD1rDPwtNM8Q
+yt-veritasium|science|https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA
+yt-bloomberg|business|https://www.youtube.com/feeds/videos.xml?channel_id=UCIALMKvObZNtJ6AmdCLP7Lg
+yt-verge|tech|https://www.youtube.com/feeds/videos.xml?channel_id=UCddiUEpeqJcYeBxX1IVBKvQ
+yt-wired|tech|https://www.youtube.com/feeds/videos.xml?channel_id=UCftwRNsjfRo08xYE31tkiyw
+yt-vox|world|https://www.youtube.com/feeds/videos.xml?channel_id=UC3XTzVzaHQEd30rQbuvCtTQ
 """
 
 

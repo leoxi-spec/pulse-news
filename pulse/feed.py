@@ -19,6 +19,7 @@ from .timeutil import absolute, freshness, iso, now, relative, start_of_day
 
 _CANDIDATE_SQL = """
 SELECT a.id, a.title, a.summary, a.url, a.canonical_url, a.image_url, a.images, a.author,
+       a.video_url, a.video_id, a.video_kind,
        a.published_at, a.published_raw, a.date_confidence, a.first_seen_at, a.last_seen_at,
        a.primary_topic, a.topics, a.reading_minutes, a.word_count, a.content_state,
        a.paywalled, a.is_breaking, a.story_id, a.source_weight,
@@ -148,6 +149,7 @@ def card(row, *, model: rank.ProfileModel | None = None, saved_ids: set[int] | N
         "preview": _preview_of(summary),
         "url": row["url"],
         "image": proxied_image(row["image_url"]),
+        "video": video_payload(row),
         "author": htmltext.clean_author(row["author"]),
         "source": {
             "id": row["source_id"],
@@ -234,6 +236,38 @@ def child_safe(row, age: int = 13) -> bool:
     return not _CHILD_BLOCK.search(text)
 
 
+def video_payload(row) -> dict | None:
+    try:
+        kind = row["video_kind"]
+        video_id = row["video_id"]
+        url = row["video_url"]
+    except (KeyError, IndexError):
+        return None
+    if not kind:
+        return None
+    if kind == "youtube" and video_id:
+        return {
+            "kind": "youtube",
+            "id": video_id,
+            "url": url or f"https://www.youtube.com/watch?v={video_id}",
+            "embed": f"https://www.youtube-nocookie.com/embed/{video_id}?rel=0",
+            "thumbnail": proxied_image(f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"),
+            "provider": "YouTube",
+        }
+    if kind == "vimeo" and video_id:
+        return {
+            "kind": "vimeo",
+            "id": video_id,
+            "url": url or f"https://vimeo.com/{video_id}",
+            "embed": f"https://player.vimeo.com/video/{video_id}",
+            "thumbnail": None,
+            "provider": "Vimeo",
+        }
+    if kind == "file" and url:
+        return {"kind": "file", "id": None, "url": url, "embed": None, "thumbnail": None, "provider": "Video"}
+    return None
+
+
 def proxied_image(url: str | None) -> str | None:
     if not url:
         return None
@@ -314,6 +348,80 @@ def feed_page(
         "next_offset": offset + limit if offset + limit < total else None,
         "generated_at": iso(),
         "archive_days": days,
+    }
+
+
+def video_feed(
+    profile: dict,
+    *,
+    topic: str | None = None,
+    offset: int = 0,
+    limit: int = 24,
+    days: int = 60,
+) -> dict:
+    """A video-first stream: publisher clips and YouTube newsroom uploads."""
+    since = iso(now() - timedelta(days=days))
+    where = [
+        "a.video_kind IS NOT NULL",
+        "a.video_url IS NOT NULL",
+        "COALESCE(a.published_at, a.first_seen_at) >= ?",
+    ]
+    params: list = [since]
+    if topic == "news":
+        where.append("a.primary_topic IN ('world', 'us', 'politics', 'business')")
+    elif topic == "science":
+        where.append("a.primary_topic IN ('science', 'space', 'climate', 'health')")
+    elif topic:
+        where.append("(a.primary_topic = ? OR a.topics LIKE ?)")
+        params.extend([topic, f'%"{topic}"%'])
+    clause = " AND ".join(where)
+    total_row = db.query_one(f"SELECT COUNT(*) AS n FROM articles a WHERE {clause}", tuple(params))
+    total = int(total_row["n"] if total_row else 0)
+    rows = db.query(
+        f"""
+        SELECT a.id, a.title, a.summary, a.url, a.canonical_url, a.image_url, a.images, a.author,
+               a.video_url, a.video_id, a.video_kind,
+               a.published_at, a.published_raw, a.date_confidence, a.first_seen_at, a.last_seen_at,
+               a.primary_topic, a.topics, a.reading_minutes, a.word_count, a.content_state,
+               a.paywalled, a.is_breaking, a.story_id, a.source_weight,
+               s.id AS source_id, s.name AS source_name, s.domain, s.lean,
+               s.paywall AS source_paywall, s.country AS source_country, s.region AS source_region,
+               COALESCE(st.source_count, 1) AS story_source_count,
+               COALESCE(st.heat, 0) AS story_heat,
+               COALESCE(st.article_count, 1) AS story_article_count,
+               COALESCE(st.breaking, 0) AS story_breaking,
+               st.title AS story_title
+        FROM articles a
+        JOIN sources s ON s.id = a.source_id
+        LEFT JOIN stories st ON st.id = a.story_id
+        WHERE {clause}
+        ORDER BY COALESCE(a.published_at, a.first_seen_at) DESC
+        LIMIT ? OFFSET ?
+        """,
+        tuple(params + [limit, offset]),
+    )
+    age = int((profile.get("survey") or {}).get("age") or 13)
+    if age <= 8:
+        allowed = {"science", "space", "culture", "sports", "motorsport", "tech", "health", "education"}
+        rows = [row for row in rows if row["primary_topic"] in allowed and child_safe(row, age)]
+    elif age <= 9:
+        rows = [row for row in rows if child_safe(row, age)]
+    items = []
+    seen: set = set()
+    for row in rows:
+        key = row["story_id"] or (row["title"] or "").strip().lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(card(row))
+    return {
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + limit < total,
+        "next_offset": offset + limit if offset + limit < total else None,
+        "generated_at": iso(),
     }
 
 

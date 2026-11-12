@@ -17,6 +17,7 @@ import { discoverView, topicView, storyView, archiveView } from './views/discove
 import { sourcesView, sourceView } from './views/sources.js';
 import { sportsView } from './views/sports.js';
 import { reelsView } from './views/reels.js';
+import { videosView } from './views/videos.js';
 import { accountView } from './views/account.js';
 import { privacyView, termsView } from './views/legal.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
@@ -27,6 +28,7 @@ import { applyAmbient } from './ambient.js';
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
   { href: '/reels', label: 'Shorts', icon: 'play', mobile: true },
+  { href: '/videos', label: 'Videos', icon: 'play' },
   { href: '/discover', label: 'Discover', icon: 'compass', mobile: true },
   { href: '/sports', label: 'Scores', icon: 'trophy' },
   { href: '/brief', label: 'Brief', icon: 'bolt' },
@@ -47,6 +49,7 @@ const BOTTOM = [
 function registerRoutes() {
   router.add('/', homeView);
   router.add('/reels', reelsView);
+  router.add('/videos', videosView);
   router.add('/discover', discoverView);
   router.add('/topic/:slug', topicView);
   router.add('/story/:id', storyView);
@@ -132,6 +135,7 @@ function bindShell() {
     } else if (!typing && window.__pulseG) {
       if (event.key === 'h') router.navigate('/');
       if (event.key === 'd') router.navigate('/discover');
+      if (event.key === 'v') router.navigate('/videos');
       if (event.key === 's') router.navigate('/search');
       if (event.key === 'b') router.navigate('/brief');
       window.__pulseG = false;

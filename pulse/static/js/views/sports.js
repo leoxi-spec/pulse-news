@@ -38,6 +38,7 @@ export async function sportsView(root, ctx) {
         <p class="page-sub" id="sports-meta">Live scores, pinned teams and leagues.</p>
       </div>
       <div class="hstack">
+        <a class="btn btn--sm btn--ghost" href="/videos?topic=sports" data-link>${raw(icons.play)} Watch highlights</a>
         <button class="btn btn--sm btn--ghost" id="pin-manager">${raw(icons.filter)} Pin sports</button>
         <button class="btn btn--sm btn--ghost" id="sports-refresh">${raw(icons.refresh)} Refresh</button>
       </div>

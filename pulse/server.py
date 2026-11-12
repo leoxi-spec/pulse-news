@@ -41,7 +41,8 @@ SAFE_HEADERS = {
 CSP = (
     "default-src 'self'; "
     "img-src 'self' data: blob:; "
-    "media-src 'self'; "
+    "media-src 'self' https: http: blob:; "
+    "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; "
     "style-src 'self' 'unsafe-inline'; "
     "script-src 'self'; "
     "connect-src 'self'; "

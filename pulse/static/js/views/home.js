@@ -3,18 +3,19 @@ import {
   state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel, topicIcon, ageBand,
 } from '../store.js';
 import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
-import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed } from '../components.js';
+import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed, videoCard } from '../components.js';
 import { open as openPalette, mountHomeSearch } from '../palette.js';
 import { dailySection, bindDaily, loadDaily } from '../daily.js';
 
 const DEFAULT_SECTIONS = [
-  'brief', 'daily', 'top', 'shorts', 'for-you', 'picks', 'my-sports',
+  'brief', 'daily', 'top', 'shorts', 'watch', 'for-you', 'picks', 'my-sports',
   'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
 ];
 
 const BASE_SECTIONS = [
   { id: 'brief', label: 'Your brief', hint: 'Five stories, two minutes' },
   { id: 'shorts', label: 'Pulse Shorts', hint: 'Full-screen swipeable news' },
+  { id: 'watch', label: 'Watch', hint: 'Video from newsrooms and creators' },
   { id: 'daily', label: 'Today', hint: 'Word, poll, quiz, debate and challenge' },
   { id: 'top', label: 'Top Stories', hint: 'What the most outlets are covering' },
   { id: 'for-you', label: 'For you', hint: 'The main personalised feed' },
@@ -65,14 +66,23 @@ function activeSections() {
       savePrefs({ home_sections: next, sections_v3: true });
       return next;
     }
+    if (!prefs().sections_v4) {
+      const next = [...valid];
+      if (!next.includes('watch')) {
+        const shorts = next.indexOf('shorts');
+        next.splice(shorts >= 0 ? shorts + 1 : 0, 0, 'watch');
+      }
+      savePrefs({ home_sections: next, sections_v4: true });
+      return next;
+    }
     if (!prefs().sections_v2) savePrefs({ sections_v2: true });
     return valid;
   }
   if (younger) {
-    return ['brief', 'daily', 'top', 'shorts', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
+    return ['brief', 'daily', 'top', 'shorts', 'watch', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
   }
   if (olderKid) {
-    return ['brief', 'daily', 'top', 'shorts', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
+    return ['brief', 'daily', 'top', 'shorts', 'watch', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
   }
   const withInterests = [...DEFAULT_SECTIONS];
   for (const slug of followedTopics()) {
@@ -115,6 +125,7 @@ async function loadSection(id, timeoutMs = 3000) {
   const task = (async () => {
     if (id === 'brief') return get(`/api/brief?size=${briefSize()}`, 60, true);
     if (id === 'shorts') return get('/api/feed?mode=top&limit=6&days=2', 45);
+    if (id === 'watch') return get('/api/videos?limit=6', 45);
     if (id === 'daily') return loadDaily();
     if (id === 'top') return get('/api/feed?mode=top&limit=3&days=2', 45);
     if (id === 'picks') return get('/api/discover', 120);
@@ -156,13 +167,14 @@ export async function homeView(root, ctx) {
 
     <button class="home-search" id="home-search" type="button">
       ${raw(icons.search)}
-      <span>Search 330+ sources, topics and your archive…</span>
+      <span>Search 370+ sources, topics and your archive…</span>
       <kbd class="kbd">⌘K</kbd>
     </button>
 
     <div class="between" style="margin:.2rem 0 .2rem">
       <div class="chip-row" id="quick-links">
         <a class="chip chip--shorts" href="/reels" data-link>${raw(icons.play)} Shorts</a>
+        <a class="chip" href="/videos" data-link>${raw(icons.play)} Watch</a>
         ${followedTopics().filter((slug) => !kidHidden?.has(slug)).slice(0, 5).map((slug) => html`
           <a class="chip" href="/topic/${slug}" data-link>${topicLabel(slug)}</a>`)}
         ${followedTopics().includes('motorsport') ? '' : html`
@@ -218,6 +230,7 @@ function sectionMarkup(id, data) {
   const meta = sectionMeta(id);
   if (id === 'brief') return briefSection(data);
   if (id === 'shorts') return shortsSection(data);
+  if (id === 'watch') return watchSection(data);
   if (id === 'daily') return dailySection(data);
   if (id === 'top') return topSection(data);
   if (id === 'picks') return picksSection(data);
@@ -254,6 +267,19 @@ function briefSection(data) {
         </div>
       </div>
     </div>`);
+}
+
+function watchSection(data) {
+  const items = data?.items || [];
+  const head = sectionHead('Watch', html`<a href="/videos" data-link>All videos ${raw(icons.chevron)}</a>`, { sub: 'newsroom clips, highlights and explainers' });
+  if (!items.length) {
+    return sectionWrap('watch', head, emptyState({
+      title: 'Video is warming up',
+      text: 'The next refresh will bring clips from newsrooms and creators.',
+      action: '<a class="btn btn--sm" href="/videos" data-link>Open Watch</a>',
+    }));
+  }
+  return sectionWrap('watch', head, html`<div class="video-strip">${items.map((item) => videoCard(item))}</div>`);
 }
 
 function topSection(data) {

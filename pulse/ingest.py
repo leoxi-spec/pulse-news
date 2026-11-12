@@ -16,6 +16,7 @@ import concurrent.futures
 import hashlib
 import json
 import random
+import re
 import threading
 import time
 import urllib.parse
@@ -362,6 +363,11 @@ class IngestService:
                 summary = htmltext.clean_summary(summary_html, limit=600)
                 primary, topic_list = topics.classify(title, summary, feed.topic, source.topics)
                 image = _safe_image(item.image or htmltext.first_image(summary_html))
+                video_kind, video_id, video_url = _safe_video(item.video_kind, item.video_id, item.video_url)
+                if video_kind == "youtube" and video_id and not image:
+                    image = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                if video_kind == "youtube":
+                    summary = _video_summary(summary)
                 guid = (item.guid or link)[:900]
                 signature = hashlib.sha1(" ".join(sorted(stories.tokens_for(title))).encode()).hexdigest()[:20]
                 # first_seen_at is when *we* saw it, never the publisher's date.
@@ -372,7 +378,8 @@ class IngestService:
                 paywalled = int(bool(item.is_paywalled or (source.paywall and words < 120)))
                 params = (
                     guid, source.id, feed_id, link, link, title[:500], summary or None,
-                    (item.author or None), image, iso(published) if published else None, raw_date,
+                    (item.author or None), image, video_url, video_id, video_kind,
+                    iso(published) if published else None, raw_date,
                     confidence, iso(published) if published else None, first_seen, seen_at,
                     primary, json.dumps(topic_list), "en", words, minutes,
                     content_text or None, None, "feed", paywalled, 0, signature, weight,
@@ -381,11 +388,11 @@ class IngestService:
                     """
                     INSERT INTO articles(
                         guid, source_id, feed_id, url, canonical_url, title, summary, author,
-                        image_url, published_at, published_raw, date_confidence, updated_at,
-                        first_seen_at, last_seen_at, primary_topic, topics, lang, word_count,
-                        reading_minutes, content_text, content_blocks, content_state, paywalled,
-                        is_breaking, simhash, source_weight
-                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        image_url, video_url, video_id, video_kind, published_at, published_raw,
+                        date_confidence, updated_at, first_seen_at, last_seen_at, primary_topic,
+                        topics, lang, word_count, reading_minutes, content_text, content_blocks,
+                        content_state, paywalled, is_breaking, simhash, source_weight
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT(source_id, guid) DO NOTHING
                     RETURNING id
                     """,
@@ -428,6 +435,9 @@ class IngestService:
                         UPDATE articles SET
                             summary = CASE WHEN (summary IS NULL OR length(summary) < 40) AND ? IS NOT NULL THEN ? ELSE summary END,
                             image_url = COALESCE(image_url, ?),
+                            video_url = COALESCE(video_url, ?),
+                            video_id = COALESCE(video_id, ?),
+                            video_kind = COALESCE(video_kind, ?),
                             author = COALESCE(author, ?),
                             published_at = COALESCE(published_at, ?),
                             date_confidence = CASE WHEN published_at IS NULL AND ? IS NOT NULL THEN ? ELSE date_confidence END,
@@ -435,8 +445,8 @@ class IngestService:
                         WHERE id = ?
                         """,
                         (
-                            summary or None, summary or None, image, item.author or None,
-                            iso(published) if published else None,
+                            summary or None, summary or None, image, video_url, video_id, video_kind,
+                            item.author or None, iso(published) if published else None,
                             iso(published) if published else None, confidence,
                             content_text or None, article_id,
                         ),
@@ -514,7 +524,9 @@ class IngestService:
             """
             SELECT a.id, a.url, a.source_id, a.published_at, a.first_seen_at
             FROM articles a LEFT JOIN stories s ON s.id = a.story_id
-            WHERE a.content_state='feed' AND a.paywalled=0
+            WHERE a.content_state IN ('feed', 'linkonly') AND a.paywalled=0
+              AND a.video_kind IS NULL
+              AND (a.content_state='feed' OR a.url LIKE '%/video/%' OR a.url LIKE '%/videos/%' OR a.url LIKE '%/watch/%')
               AND COALESCE(a.published_at, a.first_seen_at) >= ?
             ORDER BY COALESCE(s.heat, 0) DESC, COALESCE(a.published_at, a.first_seen_at) DESC
             LIMIT ?
@@ -557,6 +569,8 @@ class IngestService:
                 self._set_content_state(row["id"], "linkonly")
                 return False
             parsed = htmltext.extract_article(result.text, url)
+            if parsed.video_kind:
+                self._save_video(row["id"], parsed)
             if parsed.paywall and parsed.word_count < 200:
                 self._set_content_state(row["id"], "paywalled")
                 return False
@@ -576,6 +590,7 @@ class IngestService:
                     """
                     UPDATE articles SET content_blocks=?, content_text=?, word_count=?, reading_minutes=?,
                         content_state=?, image_url=COALESCE(image_url, ?), images=?, author=COALESCE(author, ?),
+                        video_url=COALESCE(video_url, ?), video_id=COALESCE(video_id, ?), video_kind=COALESCE(video_kind, ?),
                         published_at=COALESCE(published_at, ?),
                         date_confidence=CASE WHEN published_at IS NULL AND ? IS NOT NULL THEN ? ELSE date_confidence END,
                         summary=CASE WHEN (summary IS NULL OR length(summary) < 120) AND ? <> '' THEN ? ELSE summary END
@@ -585,6 +600,7 @@ class IngestService:
                         json.dumps(blocks), text, words, minutes, "extracted",
                         _safe_image(parsed.image), json.dumps(parsed.images[:24]),
                         parsed.author or None,
+                        parsed.video_url, parsed.video_id, parsed.video_kind,
                         iso(published) if published else None,
                         iso(published) if published else None, confidence,
                         htmltext.summarize(text, 2, 420), htmltext.summarize(text, 2, 420),
@@ -600,6 +616,30 @@ class IngestService:
             log.exception("extract crashed for %s", url)
             self._set_content_state(row["id"], "linkonly")
             return False
+
+    def _save_video(self, article_id: int, parsed: htmltext.ExtractedArticle) -> None:
+        """Store a clip even when the page has no readable article body."""
+        kind, video_id, video_url = _safe_video(parsed.video_kind, parsed.video_id, parsed.video_url)
+        if not kind:
+            return
+        image = _safe_image(parsed.image)
+        if kind == "youtube" and video_id and not image:
+            image = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+        try:
+            with db.writer() as conn:
+                conn.execute(
+                    """
+                    UPDATE articles SET
+                        video_url=COALESCE(video_url, ?),
+                        video_id=COALESCE(video_id, ?),
+                        video_kind=COALESCE(video_kind, ?),
+                        image_url=COALESCE(image_url, ?)
+                    WHERE id=?
+                    """,
+                    (video_url, video_id, kind, image, article_id),
+                )
+        except Exception:
+            log.exception("could not save video for article %s", article_id)
 
     def _set_content_state(self, article_id: int, state: str) -> None:
         try:
@@ -696,6 +736,40 @@ class IngestService:
             "feeds_total": len(FEEDS),
             "sources_total": len(SOURCES),
         }
+
+
+def _video_summary(text: str) -> str:
+    """Keep the news, drop the YouTube housekeeping."""
+    if not text:
+        return text
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    keep: list[str] = []
+    for sentence in sentences:
+        low = sentence.lower()
+        if any(marker in low for marker in (
+            "subscribe", "watch pbs", "watch the full", "watch more", "watch live",
+            "follow us", "listen to", "read more", "full episode", "sign up",
+            "download the", "get the latest", "watch our", "watch now",
+        )):
+            continue
+        keep.append(sentence.strip())
+        if len(" ".join(keep)) > 320:
+            break
+    return " ".join(keep)[:420].strip() or text[:420]
+
+
+def _safe_video(kind: str | None, video_id: str | None, url: str | None) -> tuple[str | None, str | None, str | None]:
+    if kind not in ("youtube", "vimeo", "file"):
+        return (None, None, None)
+    if kind in ("youtube", "vimeo"):
+        if not video_id or not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+            return (None, None, None)
+        if kind == "youtube":
+            return (kind, video_id, f"https://www.youtube.com/watch?v={video_id}")
+        return (kind, video_id, f"https://vimeo.com/{video_id}")
+    if not url or not url.startswith(("http://", "https://")):
+        return (None, None, None)
+    return (kind, None, url[:1500])
 
 
 def _safe_image(url: str | None) -> str | None:

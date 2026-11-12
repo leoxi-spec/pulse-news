@@ -59,6 +59,37 @@ export function storyKicker(item) {
     </div>`;
 }
 
+export function videoBadge(item, cls = '') {
+  if (!item?.video) return '';
+  return html`<span class="video-badge ${cls}">${raw(icons.play)}<span>Video</span></span>`;
+}
+
+export function videoCard(item) {
+  return html`
+    <article class="video-card" data-article-card="${item.id}">
+      <a class="video-card__media" href="/article/${item.id}" data-link aria-label="${item.title}">
+        ${item.image
+          ? html`<img src="${item.image}" alt="" loading="lazy" decoding="async">`
+          : html`<span class="video-card__fallback" aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>`}
+        <span class="video-card__play" aria-hidden="true">${raw(icons.play)}</span>
+        ${videoBadge(item, 'video-badge--solid')}
+      </a>
+      <div class="video-card__body">
+        <div class="video-card__kicker">
+          <span>${item.source?.name || ''}</span>
+          <span class="faint">·</span>
+          <span>${item.published_relative || ''}</span>
+        </div>
+        <h3 class="video-card__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+        <div class="video-card__meta">
+          <span>${item.topic_label || topicLabel(item.topic)}</span>
+          <span class="faint">·</span>
+          <span>${item.video?.provider || 'Video'}</span>
+        </div>
+      </div>
+    </article>`;
+}
+
 export function storyCard(item, { compact = false } = {}) {
   const hasImage = Boolean(item.image) && !compact;
   const outlets = item.story?.source_count > 1
@@ -81,7 +112,7 @@ export function storyCard(item, { compact = false } = {}) {
             ${reasonChips(item)}
           </div>
         </div>
-        ${hasImage ? html`<div class="story-card__media"><img class="story-card__img" src="${item.image}" alt="" loading="lazy" decoding="async" width="150" height="108"></div>` : ''}
+        ${hasImage ? html`<div class="story-card__media"><img class="story-card__img" src="${item.image}" alt="" loading="lazy" decoding="async" width="150" height="108">${videoBadge(item, 'video-badge--card')}</div>` : ''}
       </a>
       ${saveButton(item)}
     </article>`;
@@ -98,6 +129,7 @@ export function heroCard(item, { label = 'Top story' } = {}) {
           ${item.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : html`<span class="badge badge--glass">${label}</span>`}
           <span class="badge badge--glass">${item.topic_label || topicLabel(item.topic)}</span>
           ${item.story?.source_count > 2 ? html`<span class="badge badge--glass">${item.story.source_count} outlets covering</span>` : ''}
+          ${videoBadge(item, 'video-badge--glass')}
         </div>
         <h2 class="hero__title"><a href="/article/${item.id}" data-link>${item.title}</a></h2>
         ${item.preview ? html`<p class="hero__summary">${item.preview}</p>` : ''}
@@ -178,6 +210,7 @@ export function mosaicCard(item, { size = 'small' } = {}) {
           </span>
           <img class="mcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">
           ${item.image_count > 1 ? html`<span class="photo-count photo-count--card">${raw(icons.camera)} ${item.image_count}</span>` : ''}
+          ${videoBadge(item, 'video-badge--card')}
           ${isFreshBreaking(item) && !hasImage ? '' : isFreshBreaking(item) ? html`<span class="badge badge--breaking mcard__flag">Breaking</span>` : ''}
         </a>` : ''}
       ${hasImage ? '' : html`
@@ -191,6 +224,7 @@ export function mosaicCard(item, { size = 'small' } = {}) {
           <span>${item.source?.name || ''}</span>
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
           ${!hasImage && isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
+          ${!hasImage ? videoBadge(item, 'video-badge--inline') : ''}
         </div>
         <h3 class="mcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
         ${showSummary && item.preview ? html`<p class="mcard__summary">${item.preview}</p>` : ''}
@@ -217,6 +251,7 @@ export function topCard(item) {
           </span>
           <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
           ${item.image_count > 1 ? html`<span class="photo-count photo-count--card">${raw(icons.camera)} ${item.image_count}</span>` : ''}
+          ${videoBadge(item, 'video-badge--card')}
         </a>` : html`
         <a class="top-card__banner" href="/article/${item.id}" data-link aria-label="${item.title}">
           <span aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>

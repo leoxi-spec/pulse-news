@@ -42,6 +42,9 @@ class FeedItem:
     published_raw: str | None = None
     updated_raw: str | None = None
     image: str | None = None
+    video_kind: str | None = None
+    video_id: str | None = None
+    video_url: str | None = None
     categories: list[str] = field(default_factory=list)
     is_paywalled: bool = False
 
@@ -231,6 +234,12 @@ def _parse_item(entry: ET.Element, feed_url: str, kind: str) -> FeedItem | None:
             content_parts.append(_text(child))
         elif local == "abstract":
             summary_parts.append(_text(child))
+    # YouTube puts the description inside <media:group>, not as a direct child.
+    for child in entry.iter():
+        if _local(child.tag) == "description":
+            value = _text(child)
+            if value and value not in summary_parts:
+                summary_parts.append(value)
 
     author = _text(_first(entry, "author", "creator", "bylines"))
     if not author:
@@ -253,6 +262,7 @@ def _parse_item(entry: ET.Element, feed_url: str, kind: str) -> FeedItem | None:
                 categories.append(htmltext.text_of(value)[:60])
 
     image = _image_from_entry(entry)
+    video_kind, video_id, video_url = _video_from_entry(entry, link)
     content_html = "\n".join(part for part in content_parts if part)
     summary_html = "\n".join(part for part in summary_parts if part)
     if not image:
@@ -272,6 +282,9 @@ def _parse_item(entry: ET.Element, feed_url: str, kind: str) -> FeedItem | None:
         published_raw=published or None,
         updated_raw=updated or None,
         image=image,
+        video_kind=video_kind,
+        video_id=video_id,
+        video_url=video_url,
         categories=categories[:8],
         is_paywalled=paywalled,
     )
@@ -298,6 +311,46 @@ def _image_from_entry(entry: ET.Element) -> str | None:
     return None
 
 
+def _video_from_entry(entry: ET.Element, link: str = "") -> tuple[str | None, str | None, str | None]:
+    """Find the entry's own video, not a related-video link."""
+    candidates: list[str] = []
+    for child in entry.iter():
+        local = _local(child.tag)
+        if local in ("content", "thumbnail"):
+            url = child.get("url")
+            medium = (child.get("medium") or "").lower()
+            content_type = (child.get("type") or "").lower()
+            if url and (medium == "video" or content_type.startswith("video")):
+                candidates.append(url)
+        elif local == "enclosure":
+            url = child.get("url")
+            content_type = (child.get("type") or "").lower()
+            if url and content_type.startswith("video"):
+                candidates.append(url)
+        elif local == "link":
+            href = child.get("href") or ""
+            rel = (child.get("rel") or "").lower()
+            content_type = (child.get("type") or "").lower()
+            if href and (rel == "enclosure" or content_type.startswith("video")):
+                candidates.append(href)
+        elif local == "videoid":
+            value = _text(child).strip()
+            if len(value) == 11:
+                return ("youtube", value, f"https://www.youtube.com/watch?v={value}")
+
+    for value in candidates + [link]:
+        yt = htmltext.youtube_id(value)
+        if yt:
+            return ("youtube", yt, f"https://www.youtube.com/watch?v={yt}")
+        vm = htmltext.vimeo_id(value)
+        if vm:
+            return ("vimeo", vm, f"https://vimeo.com/{vm}")
+    for value in candidates:
+        if value.startswith("http") and re.search(r"\.(?:mp4|webm|m3u8|mov|m4v)(?:\?|$)", value, re.I):
+            return ("file", None, value)
+    return (None, None, None)
+
+
 def _regex_items(text: str) -> list[FeedItem]:
     items: list[FeedItem] = []
     for pattern in (_ITEM_RE, _ENTRY_RE):
@@ -322,6 +375,26 @@ def _regex_items(text: str) -> list[FeedItem]:
                 link = guid_text if guid_text.startswith("http") else ""
             body = fields.get("encoded") or fields.get("content") or fields.get("description") or fields.get("summary") or ""
             published = fields.get("pubdate") or fields.get("published") or fields.get("date") or fields.get("updated")
+            video_kind = video_id = video_url = None
+            for match in re.finditer(r'<(?:enclosure|content|link)\b[^>]*>', inner, re.I):
+                tag = match.group(0)
+                if not re.search(r'(?:type=["\']video/|medium=["\']video|rel=["\']enclosure)', tag, re.I):
+                    continue
+                url_match = re.search(r'(?:url|href)=["\']([^"\']+)["\']', tag, re.I)
+                if not url_match:
+                    continue
+                candidate = url_match.group(1)
+                yt = htmltext.youtube_id(candidate)
+                if yt:
+                    video_kind, video_id, video_url = "youtube", yt, f"https://www.youtube.com/watch?v={yt}"
+                    break
+                if re.search(r"\.(?:mp4|webm|m3u8|mov|m4v)(?:\?|$)", candidate, re.I):
+                    video_kind, video_url = "file", candidate
+                    break
+            if not video_kind:
+                yt = htmltext.youtube_id(link) or htmltext.youtube_id(body)
+                if yt:
+                    video_kind, video_id, video_url = "youtube", yt, f"https://www.youtube.com/watch?v={yt}"
             if not title and not link:
                 continue
             guid = htmltext.text_of(fields.get("guid", "")).strip() or link or title
@@ -334,6 +407,9 @@ def _regex_items(text: str) -> list[FeedItem]:
                     summary_html=fields.get("description", ""),
                     published_raw=published,
                     image=htmltext.first_image(body),
+                    video_kind=video_kind,
+                    video_id=video_id,
+                    video_url=video_url,
                 )
             )
     return items

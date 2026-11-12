@@ -111,6 +111,8 @@ function articleMarkup(a, p) {
       </div>
       <div class="reaction-bar" id="reaction-bar" aria-label="React to this story"></div>
 
+      ${renderVideo(a)}
+
       ${gallery.length ? html`
         <figure class="article__hero article__hero--photos">
           <button class="hero-photo" data-gallery-open="0" aria-label="Open photo 1 of ${gallery.length}">
@@ -164,6 +166,54 @@ function articleMarkup(a, p) {
       <div id="quiz-slot"></div>
       <div id="related-slot">${renderRelated(a)}</div>
     </article>`;
+}
+
+function renderVideo(a) {
+  const video = a.video;
+  if (!video) return '';
+  if (video.kind === 'file' && video.url) {
+    return html`
+      <figure class="article__video">
+        <video controls preload="metadata" poster="${a.image || ''}" src="${video.url}"></video>
+        <figcaption>Video from ${a.source?.name || 'the publisher'}</figcaption>
+      </figure>`;
+  }
+  if (!video.embed) return '';
+  const poster = a.image || video.thumbnail || '';
+  return html`
+    <figure class="article__video" data-video-embed="${video.embed}">
+      <button class="video-poster" type="button" data-video-play aria-label="Play video from ${video.provider || 'the publisher'}">
+        ${poster ? html`<img src="${poster}" alt="">` : ''}
+        <span class="video-poster__shade" aria-hidden="true"></span>
+        <span class="video-poster__play" aria-hidden="true">${raw(icons.play)}</span>
+        <span class="video-poster__label">Watch on ${video.provider || 'video'}</span>
+      </button>
+      <figcaption>
+        Video from ${a.source?.name || 'the publisher'}${video.provider === 'YouTube' ? ' · YouTube' : ''}
+        ${video.url ? html` · <a href="${video.url}" target="_blank" rel="noopener noreferrer">Watch on ${video.provider || 'the source'}</a>` : ''}
+      </figcaption>
+    </figure>`;
+}
+
+function bindVideo(root) {
+  root.querySelectorAll('[data-video-play]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const figure = button.closest('[data-video-embed]');
+      if (!figure) return;
+      const base = figure.dataset.videoEmbed;
+      const origin = encodeURIComponent(window.location.origin);
+      const referrer = encodeURIComponent(window.location.href);
+      const iframe = document.createElement('iframe');
+      iframe.src = `${base}${base.includes('?') ? '&' : '?'}autoplay=1&rel=0&playsinline=1&origin=${origin}&widget_referrer=${referrer}`;
+      iframe.title = 'Video player';
+      iframe.loading = 'lazy';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen';
+      iframe.allowFullscreen = true;
+      figure.innerHTML = '';
+      figure.appendChild(iframe);
+    });
+  });
 }
 
 function renderAccessBanner(a) {
@@ -672,6 +722,7 @@ function bindGallery(root, article) {
 
 function bindArticle(root, article) {
   bindGallery(root, article);
+  bindVideo(root);
   const prose = root.querySelector('#prose');
 
   root.querySelectorAll('[data-act]').forEach((button) => {

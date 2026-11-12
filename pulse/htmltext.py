@@ -54,6 +54,9 @@ class ExtractedArticle:
     published_hint: str | None = None
     paywall: bool = False
     word_count: int = 0
+    video_kind: str | None = None
+    video_id: str | None = None
+    video_url: str | None = None
 
     @property
     def text(self) -> str:
@@ -65,6 +68,9 @@ class ExtractedArticle:
             "blocks": [b.to_dict() for b in self.blocks],
             "image": self.image,
             "images": self.images,
+            "video_kind": self.video_kind,
+            "video_id": self.video_id,
+            "video_url": self.video_url,
             "author": self.author,
             "site_name": self.site_name,
             "paywall": self.paywall,
@@ -347,6 +353,75 @@ _PAYWALL_PHRASES = (
 )
 
 
+_YT_ID_RE = re.compile(
+    r"(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:[^#]*&)?v=|embed/|shorts/|live/)|youtu\.be/)"
+    r"([A-Za-z0-9_-]{11})",
+    re.I,
+)
+_VIMEO_ID_RE = re.compile(r"vimeo\.com/(?:video/)?(\d{6,})", re.I)
+_VIDEO_EXT_RE = re.compile(r"\.(?:mp4|webm|m3u8|mov|m4v)(?:\?|$)", re.I)
+
+
+def youtube_id(url: str | None) -> str | None:
+    if not url:
+        return None
+    match = _YT_ID_RE.search(url)
+    return match.group(1) if match else None
+
+
+def vimeo_id(url: str | None) -> str | None:
+    if not url:
+        return None
+    match = _VIMEO_ID_RE.search(url)
+    return match.group(1) if match else None
+
+
+def video_from_markup(markup: str, base_url: str = "") -> tuple[str | None, str | None, str | None]:
+    """Return (kind, id, url) for the main video on a page.
+
+    Only the page's declared video is considered: Open Graph/Twitter metadata,
+    JSON-LD contentUrl/embedUrl, a <video>/<source> tag, or a YouTube/Vimeo
+    iframe.  Related-video rails are deliberately ignored.
+    """
+    if not markup:
+        return (None, None, None)
+    candidates: list[str] = []
+    for name in (
+        "og:video:secure_url", "og:video:url", "og:video",
+        "twitter:player:stream", "twitter:player",
+    ):
+        value = meta_content(markup, name)
+        if value:
+            candidates.append(value)
+    for match in re.finditer(r'"(?:contentUrl|embedUrl)"\s*:\s*"([^"]+)"', markup, re.I):
+        candidates.append(match.group(1))
+    for tag in re.finditer(r"<(video|source)\b[^>]*>", markup, re.I):
+        attrs = {k.lower(): v for k, v in re.findall(r'([a-zA-Z_:.-]+)\s*=\s*["\']([^"\']*)["\']', tag.group(0))}
+        if tag.group(1).lower() == "video" or (attrs.get("type") or "").lower().startswith("video"):
+            if attrs.get("src"):
+                candidates.append(attrs["src"])
+    for match in re.finditer(r'<iframe[^>]+src=["\']([^"\']+)["\']', markup, re.I):
+        candidates.append(match.group(1))
+
+    for raw in candidates:
+        value = html_lib.unescape(raw).strip().strip('"\'')
+        if not value or value.startswith(("data:", "blob:", "javascript:")):
+            continue
+        if value.startswith("//"):
+            value = "https:" + value
+        elif value.startswith("/"):
+            value = urljoin(base_url, value)
+        yt = youtube_id(value)
+        if yt:
+            return ("youtube", yt, f"https://www.youtube.com/watch?v={yt}")
+        vm = vimeo_id(value)
+        if vm:
+            return ("vimeo", vm, f"https://vimeo.com/{vm}")
+        if value.startswith("http") and _VIDEO_EXT_RE.search(value):
+            return ("file", None, value)
+    return (None, None, None)
+
+
 def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> ExtractedArticle:
     """Pull the readable body out of a news page.
 
@@ -372,6 +447,7 @@ def extract_article(markup: str, url: str = "", *, min_words: int = 60) -> Extra
     result.published_hint = meta_content(
         markup, "article:published_time", "datePublished", "parsely-pub-date", "pubdate"
     )
+    result.video_kind, result.video_id, result.video_url = video_from_markup(markup, url)
 
     candidates: list[str] = []
     json_body = _json_ld_body(markup)
@@ -911,6 +987,12 @@ _SUBSCRIPTION_CTA = re.compile(
     r"[^.]{0,240}(?:subscriber|subscription|newsletter|premium|\bbeat\b|features)[^.]*\.",
     re.I,
 )
+_OFFER_CTA = re.compile(
+    r"(?:^|\s)(?:for exclusive (?:stories|content|access)|subscribe (?:to|now)|sign up (?:to|for)|"
+    r"get (?:the )?(?:full|latest)|read the full|become a (?:subscriber|member))"
+    r"[^.]{0,280}(?:\.|$)",
+    re.I,
+)
 _WIDGET_JUNK = re.compile(
     r"(add\s+\S+\s+as\s+(a\s+)?preferred source|preferred source|advertisement|sponsored content)",
     re.I,
@@ -939,6 +1021,7 @@ def clean_summary(text: str, limit: int = 520) -> str:
     plain = _strip_byline(plain)
     plain = _TRAILING_CTA.sub("", plain).strip()
     plain = _SUBSCRIPTION_CTA.sub(" ", plain).strip()
+    plain = _OFFER_CTA.sub(" ", plain).strip()
     plain = re.sub(r"\s{2,}", " ", plain)
     if len(plain) > limit:
         plain = truncate_words(plain, limit // 6)

@@ -265,7 +265,7 @@ def sanitise_prefs(prefs: dict) -> dict:
         clean["noise_volume"] = max(0, min(1, float(prefs.get("noise_volume", clean.get("noise_volume", .35)))))
     except (TypeError, ValueError):
         clean["noise_volume"] = .35
-    for key in ("compact_cards", "autoplay_shorts", "shorts_sound", "haptics", "confetti", "show_why", "line_spacing", "sections_v2", "sections_v3", "widgets_v2"):
+    for key in ("compact_cards", "autoplay_shorts", "shorts_sound", "haptics", "confetti", "show_why", "line_spacing", "sections_v2", "sections_v3", "sections_v4", "widgets_v2"):
         if key in prefs and not isinstance(prefs[key], dict):
             clean[key] = prefs[key]
     for key in ("text_size", "daily_goal"):

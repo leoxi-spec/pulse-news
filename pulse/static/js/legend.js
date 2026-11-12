@@ -28,6 +28,14 @@ const GROUPS = [
     ],
   },
   {
+    title: 'Video',
+    items: [
+      ['Video badge', 'The story has a clip. Open it to watch without leaving Pulse.'],
+      ['YouTube', 'Played through the privacy-enhanced youtube-nocookie.com player, only after you press play.'],
+      ['Watch', 'A dedicated stream of newsroom clips, highlights and explainers.'],
+    ],
+  },
+  {
     title: 'Scores',
     items: [
       ['Live', 'Game in progress; scores refresh every 30 seconds.'],
