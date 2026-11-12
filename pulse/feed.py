@@ -365,7 +365,7 @@ def article_detail(article_id: int, profile: dict) -> dict | None:
         stored_images = []
     if row["image_url"] and row["image_url"] not in stored_images:
         stored_images.insert(0, row["image_url"])
-    gallery = [proxied_image(url) for url in stored_images[:14] if url]
+    gallery = [proxied_image(url) for url in stored_images[:24] if url]
     payload.update(
         {
             "images": gallery,

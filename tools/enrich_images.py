@@ -36,7 +36,7 @@ def enrich(row, client: HttpClient) -> tuple[int, int]:
         parsed = htmltext.extract_article(result.text, url)
         if parsed.paywall:
             return article_id, 0
-        images = [image for image in parsed.images[:14] if image]
+        images = [image for image in parsed.images[:24] if image]
         if len(images) < 2:
             return article_id, len(images)
         with db.writer() as conn:
@@ -60,7 +60,7 @@ def main() -> None:
     rows = db.query(
         """SELECT id, url FROM articles
            WHERE content_state='extracted' AND url IS NOT NULL AND url <> ''
-             AND (images IS NULL OR images='' OR images='[]')
+             AND (images IS NULL OR images='' OR images='[]' OR json_array_length(images) < 24)
            ORDER BY COALESCE(published_at, first_seen_at) DESC LIMIT ?""",
         (max(1, args.limit),),
     )

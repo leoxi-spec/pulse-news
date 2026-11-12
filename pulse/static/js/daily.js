@@ -38,13 +38,13 @@ function write(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode */ }
 }
 
-const DEFAULT_WIDGETS = ['challenge', 'word', 'poll', 'quiz', 'top3', 'photo', 'journal', 'streak'];
+const DEFAULT_WIDGETS = ['challenge', 'joke', 'fact', 'quiz', 'poll', 'photo', 'streak', 'math', 'animal', 'storystarter'];
 const DEFAULTS_BY_BAND = {
-  junior: ['challenge', 'word', 'photo', 'top3', 'streak', 'quiz', 'guess', 'journal'],
-  kids: ['challenge', 'word', 'poll', 'quiz', 'top3', 'photo', 'thisorthat', 'streak'],
+  junior: ['challenge', 'joke', 'fact', 'quiz', 'poll', 'photo', 'streak', 'math', 'animal', 'storystarter'],
+  kids: ['challenge', 'joke', 'fact', 'quiz', 'poll', 'photo', 'streak', 'math', 'animal', 'storystarter'],
   tween: DEFAULT_WIDGETS,
-  teen: ['challenge', 'quiz', 'top3', 'poll', 'quick', 'photo', 'debate', 'streak'],
-  senior: ['challenge', 'top3', 'longread', 'most', 'quiz', 'numbers', 'tip', 'streak'],
+  teen: ['challenge', 'joke', 'fact', 'quiz', 'top3', 'poll', 'photo', 'streak', 'math', 'animal'],
+  senior: ['challenge', 'top3', 'longread', 'most', 'quiz', 'numbers', 'tip', 'streak', 'fact', 'detective'],
 };
 
 function widgetOrder() {
@@ -64,6 +64,49 @@ const MOODS = [
 ];
 
 // ------------------------------------------------------------------ markup
+function kidsHero(data) {
+  const name = (state.profile?.name || '').trim();
+  const who = name && name !== 'Student' ? `, ${name.split(' ')[0]}` : '';
+  const s = streak();
+  const l = levels();
+  const p = dailyProgress();
+  const top = (data.widgets?.top || []).slice(0, 3);
+  return html`
+    <section class="kids-hero">
+      <div class="kids-hero__copy">
+        <p class="eyebrow">Your day${who}</p>
+        <h2>Three stories. Two minutes. One curious brain.</h2>
+        <p class="kids-hero__sub">A short brief, a few things to know, and something to play with. No endless scroll.</p>
+        <div class="hstack" style="flex-wrap:wrap;margin-top:.7rem">
+          <a class="btn btn--primary" href="/brief" data-link>Start today’s brief</a>
+          <a class="btn btn--ghost" href="/reels" data-link>Watch Shorts</a>
+        </div>
+        <div class="kids-hero__stats">
+          <span><b>${s.count}</b> day streak</span>
+          <span><b>${l.xp}</b> XP</span>
+          <span><b>${p.read}/${p.goal}</b> today</span>
+        </div>
+      </div>
+      <div class="kids-hero__mascot" aria-hidden="true">
+        <svg viewBox="0 0 180 180" class="kids-mascot">
+          <defs><linearGradient id="kg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/>
+          </linearGradient></defs>
+          <rect x="18" y="18" width="144" height="144" rx="48" fill="url(#kg)"/>
+          <circle cx="70" cy="86" r="8" fill="#fff"/><circle cx="110" cy="86" r="8" fill="#fff"/>
+          <path d="M70 112 Q90 130 110 112" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <path d="M42 66 L56 66 L64 50 L74 82 L84 60 L96 60" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+        </svg>
+      </div>
+      ${top.length ? html`
+        <div class="kids-hero__three">
+          <p class="eyebrow" style="grid-column:1/-1">3 things to know</p>
+          ${top.map((item, index) => html`
+            <a href="/article/${item.id}" data-link><b>${index + 1}</b><span>${item.title}</span></a>`)}
+        </div>` : ''}
+    </section>`;
+}
+
 export function dailySection(data) {
   if (!data) return '';
   const order = widgetOrder();
@@ -76,6 +119,7 @@ export function dailySection(data) {
     <section class="home-section daily-section" data-id="daily">
       <div data-head>${sectionHead('Today', html`<button class="btn btn--sm btn--ghost" data-customize-widgets>${raw(icons.filter)} Edit widgets</button>`, { sub: `${cards.length} of ${WIDGETS.length} widgets · make it yours` })}</div>
       <div data-body>
+        ${kidsHero(data)}
         ${ticker(data.trending)}
         ${cards.length ? html`<div class="daily-grid">${cards}</div>` : html`
           <div class="card card-pad-lg" style="text-align:center">
@@ -540,6 +584,270 @@ function ambienceWidget() {
     <p class="daily-card__note">Sound starts when you tap a noise.</p>`);
 }
 
+
+// ------------------------------------------------------- kid-friendly play
+const KID_JOKES = [
+  ['Why did the scarecrow win an award?', 'Because he was outstanding in his field.'],
+  ['What do you call a fake noodle?', 'An impasta.'],
+  ['Why did the bicycle fall over?', 'It was two-tired.'],
+  ['What do you call a bear with no teeth?', 'A gummy bear.'],
+  ['Why did the math book look sad?', 'Too many problems.'],
+  ['What do you call a sleeping dinosaur?', 'A dino-snore.'],
+  ['Why did the cookie go to the doctor?', 'It felt crummy.'],
+  ['What do you call a fish wearing a bowtie?', 'Sofishticated.'],
+  ['Why did the student eat their homework?', 'The teacher said it was a piece of cake.'],
+  ['What do you call a penguin in the desert?', 'Lost.'],
+];
+const KID_FACTS = [
+  'Octopuses have three hearts.',
+  'A day on Venus is longer than a year on Venus.',
+  'Honey never spoils.',
+  'Bananas are berries; strawberries are not.',
+  'The Eiffel Tower grows about 15 cm taller in summer.',
+  'Sharks existed before trees.',
+  'A group of flamingos is called a flamboyance.',
+  'Your body has about 37 trillion cells.',
+  'The Moon is moving away from Earth about 3.8 cm a year.',
+  'Wombat poop is cube-shaped.',
+];
+const ANIMAL_FACTS = [
+  'Dolphins call each other by name.',
+  'Crows can recognize human faces.',
+  'A snail can sleep for three years.',
+  'Elephants are the only animals that cannot jump.',
+  'A blue whale’s heart is the size of a small car.',
+  'Bees can recognize human faces.',
+  'Sea otters hold hands while sleeping.',
+  'A giraffe’s tongue is about 50 cm long.',
+  'Penguins propose with pebbles.',
+  'A group of owls is called a parliament.',
+];
+const SPACE_FACTS = [
+  'There are more stars in the universe than grains of sand on Earth.',
+  'A day on Mars is 24 hours and 37 minutes.',
+  'Jupiter has 95 known moons.',
+  'The Sun contains 99.8% of the solar system’s mass.',
+  'Neutron stars can spin 600 times per second.',
+  'Venus is the hottest planet.',
+  'The ISS travels at about 28,000 km/h.',
+  'Saturn’s rings are mostly ice.',
+  'A year on Neptune is 165 Earth years.',
+  'The Moon has no atmosphere.',
+];
+const MATH_PUZZLES = [
+  ['What is 7 × 8?', '56'],
+  ['What is 144 ÷ 12?', '12'],
+  ['What is 15% of 200?', '30'],
+  ['What is 9 squared?', '81'],
+  ['What is 3/4 of 48?', '36'],
+  ['What is 2 cubed plus 5?', '13'],
+  ['What is 100 − 37?', '63'],
+  ['What is 12 × 12?', '144'],
+];
+const STORY_STARTERS = [
+  'A message arrives from a planet that should not exist…',
+  'The school library closes at midnight, but you are still inside…',
+  'Your phone starts predicting the future, but only by one minute…',
+  'A new student arrives with a shadow that does not match…',
+  'You find a door in your house that was not there yesterday…',
+  'The class pet starts leaving notes…',
+  'You wake up and everyone speaks in riddles…',
+  'A time capsule from 100 years from now is dug up at school…',
+  'The last tree in the city starts to glow…',
+  'Your reflection waves first…',
+];
+const DRAW_PROMPTS = [
+  'Draw a robot that helps with homework.',
+  'Draw your dream treehouse.',
+  'Draw a new animal that lives in the sea.',
+  'Draw a spaceship powered by music.',
+  'Draw your school in 100 years.',
+  'Draw a sandwich from another planet.',
+  'Draw a superhero whose power is kindness.',
+  'Draw the view from your window at midnight.',
+  'Draw a machine that makes rain.',
+  'Draw your favourite book as a map.',
+];
+const KINDNESS_CHALLENGES = [
+  'Give someone a genuine compliment.',
+  'Help someone with a task without being asked.',
+  'Send a nice message to a friend.',
+  'Thank a teacher or staff member.',
+  'Pick up one piece of litter.',
+  'Let someone go ahead of you.',
+  'Share something you are good at.',
+  'Ask someone how they are — and listen.',
+  'Write a kind note and leave it for someone.',
+  'Invite someone who is alone to join in.',
+];
+const DETECTIVE_TIPS = [
+  'Check who wrote the story, not just the headline.',
+  'Look for the original source behind a screenshot.',
+  'Ask: who benefits if I believe this?',
+  'Compare two outlets. What do they agree on?',
+  'A number without a unit is not evidence.',
+  'A photo can be old. Reverse-image search it.',
+  'Opinion pieces are allowed opinions. News should show its work.',
+  'If a story makes you angry, check it before sharing.',
+  'Look for a date. Old news can look new.',
+  'Two outlets repeating one wire is one source.',
+];
+const RIDDLES = [
+  ['I have keys but no locks. What am I?', 'A piano.'],
+  ['I am tall when young and short when old. What am I?', 'A candle.'],
+  ['What has to be broken before you can use it?', 'An egg.'],
+  ['What has a head and a tail but no body?', 'A coin.'],
+  ['What gets wetter the more it dries?', 'A towel.'],
+  ['What has many teeth but cannot bite?', 'A comb.'],
+  ['What has words but never speaks?', 'A book.'],
+  ['What goes up but never comes down?', 'Your age.'],
+];
+
+function dayPick(list) {
+  return list[new Date().getDate() % list.length];
+}
+
+function jokeCard() {
+  const [setup, punch] = dayPick(KID_JOKES);
+  return newCard('daily-card--game', icons.sparkle, 'Joke of the day', html`
+    <p class="daily-card__body">${setup}</p>
+    <button class="btn btn--sm btn--ghost" data-joke>Show punchline</button>
+    <p class="daily-card__body" data-joke-punch hidden>${punch}</p>`);
+}
+
+function factCard() {
+  return newCard('', icons.sparkle, 'Fun fact', html`<p class="daily-card__body">${dayPick(KID_FACTS)}</p>`);
+}
+
+function animalCard() {
+  return newCard('', icons.sparkle, 'Animal of the day', html`<p class="daily-card__body">${dayPick(ANIMAL_FACTS)}</p>`);
+}
+
+function spaceCard() {
+  return newCard('', icons.sparkle, 'Space fact', html`<p class="daily-card__body">${dayPick(SPACE_FACTS)}</p>`);
+}
+
+function mathCard() {
+  const [question, answer] = dayPick(MATH_PUZZLES);
+  return newCard('daily-card--game', icons.bolt, 'Math puzzle', html`
+    <p class="daily-card__body">${question}</p>
+    <form class="widget-game-form" data-math-form data-answer="${answer}">
+      <input data-math-input inputmode="numeric" placeholder="Your answer" aria-label="Math answer">
+      <button class="btn btn--sm btn--primary" type="submit">Check</button>
+    </form>
+    <p class="daily-card__note" data-math-note>Take your time.</p>`);
+}
+
+function storyStarterCard() {
+  const prompt = dayPick(STORY_STARTERS);
+  return newCard('', icons.note, 'Story starter', html`
+    <p class="daily-card__body">${prompt}</p>
+    <button class="btn btn--sm btn--ghost" data-copy-starter="${prompt}">Copy prompt</button>`);
+}
+
+function drawCard() {
+  return newCard('', icons.eye, 'Draw this', html`<p class="daily-card__body">${dayPick(DRAW_PROMPTS)}</p>`);
+}
+
+function kindnessCard() {
+  const challenge = dayPick(KINDNESS_CHALLENGES);
+  const done = read('pulse.kindness', {})[new Date().toISOString().slice(0, 10)] === challenge;
+  return newCard('', icons.sparkle, 'Kindness challenge', html`
+    <p class="daily-card__body">${challenge}</p>
+    <button class="btn btn--sm ${done ? 'btn--ghost' : 'btn--primary'}" data-kindness="${challenge}" ${done ? 'disabled' : ''}>${done ? 'Done for today' : 'I did it'}</button>`);
+}
+
+function detectiveCard() {
+  return newCard('', icons.info, 'News detective', html`<p class="daily-card__body">${dayPick(DETECTIVE_TIPS)}</p>`);
+}
+
+function captionCard(data) {
+  const item = (data.widgets?.photo || [])[0];
+  if (!item) return '';
+  const saved = read('pulse.captions', {})[item.id] || '';
+  return newCard('', icons.note, 'Caption this photo', html`
+    <a class="widget-photo" href="/article/${item.id}" data-link>
+      <img src="${item.image}" alt="" loading="lazy"><span>${item.title}</span>
+    </a>
+    <form class="widget-game-form" data-caption-form data-id="${item.id}">
+      <input data-caption-input maxlength="120" placeholder="Write a caption…" value="${saved}" aria-label="Caption">
+      <button class="btn btn--sm btn--primary" type="submit">Save</button>
+    </form>
+    <p class="daily-card__note" data-caption-note>${saved ? 'Saved on this device.' : 'Make it funny, kind or curious.'}</p>`);
+}
+
+function bookCard(data) {
+  const item = (data.widgets?.culture || [])[0];
+  if (!item) return '';
+  return newCard('', icons.book, 'Book / culture pick', html`${miniStory(item)}`);
+}
+
+function sportsHeroCard(data) {
+  const item = (data.widgets?.sports || [])[0];
+  if (!item) return '';
+  return newCard('', icons.trophy, 'Sports hero', html`${miniStory(item)}`);
+}
+
+function f1FactCard(data) {
+  const item = (data.widgets?.motorsport || [])[0];
+  if (!item) return '';
+  return newCard('', icons.fire, 'F1 fact', html`${miniStory(item)}`, html`<p class="daily-card__note">F1 cars can pull up to 5 g in a corner — more than a fighter jet at take-off.</p>`);
+}
+
+function explainCard(data) {
+  const item = (data.widgets?.top || [])[0];
+  if (!item) return '';
+  return newCard('', icons.sparkle, 'Explain it simply', html`${miniStory(item)}`, html`<a class="daily-card__note" href="/article/${item.id}" data-link>Open the simple overview →</a>`);
+}
+
+function askCard(data) {
+  const item = (data.widgets?.top || [])[0];
+  if (!item) return '';
+  return newCard('', icons.info, 'Ask this story', html`${miniStory(item)}`, html`<a class="daily-card__note" href="/article/${item.id}" data-link>Ask a question about it →</a>`);
+}
+
+function listenCard() {
+  return newCard('', icons.sound, 'Listen instead', html`
+    <p class="daily-card__body">Hear today’s brief read aloud while you walk, stretch or tidy up.</p>
+    <a class="btn btn--sm btn--primary" href="/brief" data-link>Open the brief</a>`);
+}
+
+function threeCard(data) {
+  const items = (data.widgets?.top || []).slice(0, 3);
+  if (!items.length) return '';
+  return newCard('', icons.bolt, '3 things to know', html`<div class="mini-list">${items.map((item) => miniStory(item))}</div>`);
+}
+
+function wordLadderCard(data) {
+  const word = data.word?.word;
+  if (!word) return '';
+  return newCard('', icons.text, 'Word ladder', html`
+    <p class="daily-card__body">How many smaller words can you make from the letters in <b>${word}</b>?</p>
+    <p class="daily-card__note">No timer. No score. Just your brain.</p>`);
+}
+
+function guessYearCard(data) {
+  const item = (data.history || [])[0];
+  if (!item?.published_at) return '';
+  const year = new Date(item.published_at).getFullYear();
+  if (!Number.isFinite(year)) return '';
+  const options = [year, year - 1, year + 1].sort((a, b) => a - b);
+  return newCard('daily-card--game', icons.clock, 'Guess the year', html`
+    <p class="daily-card__body">“${item.title}”</p>
+    <div class="opt-list" data-guess-year data-answer="${year}">
+      ${options.map((option) => html`<button type="button" class="opt" data-year-option="${option}"><span class="opt__dot"></span>${option}</button>`)}
+    </div>
+    <p class="daily-card__note" data-year-note>From the archive.</p>`);
+}
+
+function riddleCard() {
+  const [question, answer] = dayPick(RIDDLES);
+  return newCard('daily-card--game', icons.sparkle, 'Riddle', html`
+    <p class="daily-card__body">${question}</p>
+    <button class="btn btn--sm btn--ghost" data-riddle>Show answer</button>
+    <p class="daily-card__body" data-riddle-answer hidden>${answer}</p>`);
+}
+
 const WIDGETS = [
   { id: 'challenge', label: 'Daily challenge', render: (d) => challengeCard(d.challenge) },
   { id: 'word', label: 'Word of the day', render: (d) => wordCard(d.word) },
@@ -575,6 +883,26 @@ const WIDGETS = [
   { id: 'next', label: 'Read next', render: nextCard },
   { id: 'tip', label: 'Media literacy tip', render: () => tipWidget() },
   { id: 'ambience', label: 'Ambience', render: () => ambienceWidget() },
+  { id: 'joke', label: 'Joke of the day', render: jokeCard },
+  { id: 'fact', label: 'Fun fact', render: factCard },
+  { id: 'animal', label: 'Animal of the day', render: animalCard },
+  { id: 'space', label: 'Space fact', render: spaceCard },
+  { id: 'math', label: 'Math puzzle', render: mathCard },
+  { id: 'storystarter', label: 'Story starter', render: storyStarterCard },
+  { id: 'draw', label: 'Draw this', render: drawCard },
+  { id: 'kindness', label: 'Kindness challenge', render: kindnessCard },
+  { id: 'detective', label: 'News detective', render: detectiveCard },
+  { id: 'caption', label: 'Caption this photo', render: captionCard },
+  { id: 'book', label: 'Book / culture pick', render: bookCard },
+  { id: 'sportshero', label: 'Sports hero', render: sportsHeroCard },
+  { id: 'f1fact', label: 'F1 fact', render: f1FactCard },
+  { id: 'explain', label: 'Explain it simply', render: explainCard },
+  { id: 'ask', label: 'Ask this story', render: askCard },
+  { id: 'listen', label: 'Listen instead', render: listenCard },
+  { id: 'three', label: '3 things to know', render: threeCard },
+  { id: 'wordladder', label: 'Word ladder', render: wordLadderCard },
+  { id: 'guessyear', label: 'Guess the year', render: guessYearCard },
+  { id: 'riddle', label: 'Riddle', render: riddleCard },
 ];
 
 export const WIDGET_COUNT = WIDGETS.length;
@@ -597,6 +925,13 @@ export function bindDaily(root, data) {
   bindJournal(root);
   bindTimer(root);
   bindAmbience(root);
+  bindJoke(root);
+  bindMath(root);
+  bindStoryStarter(root);
+  bindKindness(root);
+  bindCaption(root);
+  bindRiddle(root);
+  bindGuessYear(root);
 }
 
 function bindChallenge(root, challenge) {
@@ -1017,5 +1352,101 @@ function bindAmbience(root) {
     const value = Number(volume.value) / 100;
     setNoiseVolume(value);
     await savePrefs({ noise_volume: value }).catch(() => {});
+  });
+}
+
+
+// ------------------------------------------------------- kid widget binds
+function bindJoke(root) {
+  const button = root.querySelector('[data-joke]');
+  if (!button) return;
+  button.addEventListener('click', () => {
+    const punch = root.querySelector('[data-joke-punch]');
+    if (!punch) return;
+    punch.hidden = !punch.hidden;
+    button.textContent = punch.hidden ? 'Show punchline' : 'Hide punchline';
+  });
+}
+
+function bindMath(root) {
+  const form = root.querySelector('[data-math-form]');
+  if (!form) return;
+  const input = form.querySelector('[data-math-input]');
+  const note = root.querySelector('[data-math-note]');
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const correct = input.value.trim() === form.dataset.answer;
+    if (note) note.textContent = correct ? 'Correct. Nice work.' : 'Not quite — try again.';
+    if (correct) { confetti(20); input.disabled = true; }
+    else input.select();
+  });
+}
+
+function bindStoryStarter(root) {
+  const button = root.querySelector('[data-copy-starter]');
+  if (!button) return;
+  button.addEventListener('click', async () => {
+    await copyText(button.dataset.copyStarter || '');
+    toast('Story starter copied');
+  });
+}
+
+function bindKindness(root) {
+  const button = root.querySelector('[data-kindness]');
+  if (!button) return;
+  button.addEventListener('click', () => {
+    const store = read('pulse.kindness', {});
+    store[new Date().toISOString().slice(0, 10)] = button.dataset.kindness;
+    write('pulse.kindness', store);
+    button.disabled = true;
+    button.textContent = 'Done for today';
+    button.classList.remove('btn--primary');
+    button.classList.add('btn--ghost');
+    confetti(20);
+    toast('Kindness logged');
+  });
+}
+
+function bindCaption(root) {
+  const form = root.querySelector('[data-caption-form]');
+  if (!form) return;
+  const input = form.querySelector('[data-caption-input]');
+  const note = root.querySelector('[data-caption-note]');
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const store = read('pulse.captions', {});
+    store[form.dataset.id] = input.value.trim().slice(0, 120);
+    write('pulse.captions', store);
+    if (note) note.textContent = 'Saved on this device.';
+    toast('Caption saved');
+  });
+}
+
+function bindRiddle(root) {
+  const button = root.querySelector('[data-riddle]');
+  if (!button) return;
+  button.addEventListener('click', () => {
+    const answer = root.querySelector('[data-riddle-answer]');
+    if (!answer) return;
+    answer.hidden = !answer.hidden;
+    button.textContent = answer.hidden ? 'Show answer' : 'Hide answer';
+  });
+}
+
+function bindGuessYear(root) {
+  const box = root.querySelector('[data-guess-year]');
+  if (!box) return;
+  const note = root.querySelector('[data-year-note]');
+  box.querySelectorAll('[data-year-option]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const correct = button.dataset.yearOption === box.dataset.answer;
+      box.querySelectorAll('[data-year-option]').forEach((node) => {
+        node.disabled = true;
+        if (node.dataset.yearOption === box.dataset.answer) node.classList.add('is-correct');
+        else if (node === button) node.classList.add('is-wrong');
+      });
+      if (note) note.textContent = correct ? 'Exactly right.' : `It was ${box.dataset.answer}.`;
+      if (correct) confetti(20);
+    });
   });
 }

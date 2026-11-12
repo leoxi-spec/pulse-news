@@ -583,7 +583,7 @@ class IngestService:
                     """,
                     (
                         json.dumps(blocks), text, words, minutes, "extracted",
-                        _safe_image(parsed.image), json.dumps(parsed.images[:14]),
+                        _safe_image(parsed.image), json.dumps(parsed.images[:24]),
                         parsed.author or None,
                         iso(published) if published else None,
                         iso(published) if published else None, confidence,

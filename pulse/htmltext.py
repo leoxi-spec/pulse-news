@@ -233,7 +233,7 @@ _IMG_SKIP = re.compile(
 _IMG_EXT = re.compile(r"\.(?:jpe?g|png|webp|avif)(?:[?#]|$)", re.I)
 
 
-def image_urls(markup: str, base_url: str = "", limit: int = 14) -> list[str]:
+def image_urls(markup: str, base_url: str = "", limit: int = 24) -> list[str]:
     """Collect large, article-like images from a page, in reading order."""
     if not markup:
         return []

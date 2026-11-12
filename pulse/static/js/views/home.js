@@ -8,7 +8,7 @@ import { open as openPalette, mountHomeSearch } from '../palette.js';
 import { dailySection, bindDaily, loadDaily } from '../daily.js';
 
 const DEFAULT_SECTIONS = [
-  'brief', 'top', 'shorts', 'for-you', 'daily', 'picks', 'my-sports',
+  'brief', 'daily', 'top', 'shorts', 'for-you', 'picks', 'my-sports',
   'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
 ];
 
@@ -69,10 +69,10 @@ function activeSections() {
     return valid;
   }
   if (younger) {
-    return ['brief', 'top', 'shorts', 'for-you', 'daily', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
+    return ['brief', 'daily', 'top', 'shorts', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
   }
   if (olderKid) {
-    return ['brief', 'top', 'shorts', 'for-you', 'daily', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
+    return ['brief', 'daily', 'top', 'shorts', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
   }
   const withInterests = [...DEFAULT_SECTIONS];
   for (const slug of followedTopics()) {

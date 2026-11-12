@@ -27,11 +27,11 @@ class ResearchTests(unittest.TestCase):
                 """INSERT INTO articles(guid, source_id, url, title, summary, author, published_at,
                                         first_seen_at, last_seen_at, primary_topic, word_count,
                                         reading_minutes, content_text, content_state)
-                   VALUES(?,?,?,?,?,?,?,datetime('now'),datetime('now'),'science',?,?,?,?)""",
+                   VALUES(?,?,?,?,?,?,datetime('now','-1 day'),datetime('now'),datetime('now'),'science',?,?,?,?)""",
                 (
                     f"research-{index}", "bbc", f"https://example.com/research-{index}",
                     f"Quantum result number {index}", "A compact summary of the research result.",
-                    "Jane Doe", "2026-11-09T10:00:00Z", words, max(1, words // 225),
+                    "Jane Doe", words, max(1, words // 225),
                     "Body text " * words if state == "extracted" else "short", state,
                 ),
             )
@@ -65,7 +65,8 @@ class ResearchTests(unittest.TestCase):
 
     def test_bibliography_style_switch(self):
         _, apa, _ = self.handle("/api/research/bibliography", query={"style": "apa"})
-        self.assertIn("(2026, November 9)", apa["entries"][0]["citation"])
+        self.assertIn("Doe, J. (", apa["entries"][0]["citation"])
+        self.assertIn("Quantum result number 1", apa["entries"][0]["citation"])
         _, bib, _ = self.handle("/api/research/bibliography", query={"style": "bibtex"})
         self.assertTrue(bib["entries"][0]["citation"].startswith("@misc{"))
 

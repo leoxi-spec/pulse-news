@@ -173,7 +173,7 @@ async function runSearch(root, { q, topic, source, since, sort, offset, append }
               <span class="tiny muted">${item.published_relative || ''}${item.date_label === 'First seen' ? ' (first seen)' : ''}</span>
               ${item.paywalled ? html`<span class="badge badge--muted" title="Subscription">Paid</span>` : ''}
             </div>
-            <h3 class="search-hit__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+            <h3 class="search-hit__title"><a href="/article/${item.id}" data-link>${raw(highlightQuery(item.title, q))}</a></h3>
             ${item.snippet ? html`<p class="search-hit__snippet">${raw(highlightQuery(item.snippet, q))}</p>` : ''}
             <div class="hstack" style="gap:.5rem;margin-top:auto">
               <span class="tiny faint">${item.reading_minutes} min read${item.word_count ? ` · ${item.word_count} words` : ''}</span>
