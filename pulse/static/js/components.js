@@ -30,19 +30,19 @@ export function reasonChips(item, max = 2) {
 
 export function accessInfo(item) {
   if (item.paywalled) {
-    return { kind: 'locked', icon: '🔒', label: 'Subscription', title: 'The publisher requires a subscription for the full text' };
+    return { kind: 'locked', label: 'Subscription', title: 'The publisher requires a subscription for the full text' };
   }
   const full = item.has_full_text || item.content_state === 'extracted' || Number(item.word_count || 0) >= 240;
   if (full) {
-    return { kind: 'full', icon: '📖', label: 'Read here', title: 'Full article text is readable inside Pulse' };
+    return { kind: 'full', label: 'Read here', title: 'Full article text is readable inside Pulse' };
   }
-  return { kind: 'preview', icon: '👁️', label: 'Preview', title: 'Preview only — the full story opens at the publisher' };
+  return { kind: 'preview', label: 'Preview', title: 'Preview only — the full story opens at the publisher' };
 }
 
 export function accessPill(item, { compact = false } = {}) {
   const info = accessInfo(item);
   return html`<span class="access-pill access-pill--${info.kind}" title="${info.title}">
-    <span aria-hidden="true">${info.icon}</span>${compact ? '' : html`<span>${info.label}</span>`}
+    <span class="access-dot" aria-hidden="true"></span>${compact ? '' : html`<span>${info.label}</span>`}
   </span>`;
 }
 
@@ -173,7 +173,7 @@ export function mosaicCard(item, { size = 'small' } = {}) {
       ${hasImage ? html`
         <a class="mcard__media" href="/article/${item.id}" data-link aria-label="${item.title}">
           <span class="media-fallback" aria-hidden="true">
-            <b>${topicEmoji(item.topic) || '📰'}</b>
+            <b>${topicEmoji(item.topic) || 'N'}</b>
             <i>${item.source?.name || ''}</i>
           </span>
           <img class="mcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">
@@ -182,12 +182,12 @@ export function mosaicCard(item, { size = 'small' } = {}) {
         </a>` : ''}
       ${hasImage ? '' : html`
         <div class="mcard__noimg-banner" aria-hidden="true">
-          <span>${topicEmoji(item.topic) || '📰'}</span>
+          <span>${topicEmoji(item.topic) || 'N'}</span>
           <b>${item.topic_label || item.source?.name || ''}</b>
         </div>`}
       <div class="mcard__body">
         <div class="mcard__kicker">
-          ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${topicEmoji(item.topic) || '📰'}</span>`}
+          ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>`}
           <span>${item.source?.name || ''}</span>
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
           ${!hasImage && isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
@@ -212,14 +212,14 @@ export function topCard(item) {
       ${item.image ? html`
         <a href="/article/${item.id}" data-link aria-label="${item.title}" class="top-card__media">
           <span class="media-fallback" aria-hidden="true">
-            <b>${topicEmoji(item.topic) || '📰'}</b>
+            <b>${topicEmoji(item.topic) || 'N'}</b>
             <i>${item.source?.name || ''}</i>
           </span>
           <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
           ${item.image_count > 1 ? html`<span class="photo-count photo-count--card">${raw(icons.camera)} ${item.image_count}</span>` : ''}
         </a>` : html`
         <a class="top-card__banner" href="/article/${item.id}" data-link aria-label="${item.title}">
-          <span aria-hidden="true">${topicEmoji(item.topic) || '📰'}</span>
+          <span aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>
           <b>${item.topic_label || ''}</b>
         </a>`}
       <div class="top-card__body">
@@ -246,7 +246,7 @@ export function hCard(item) {
       <a href="/article/${item.id}" data-link aria-label="${item.title}">
         ${item.image
           ? html`<img class="hcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">`
-          : html`<div class="hcard__img media-placeholder" aria-hidden="true"><span>${topicEmoji(item.topic) || '📰'}</span></div>`}
+          : html`<div class="hcard__img media-placeholder" aria-hidden="true"><span>${topicEmoji(item.topic) || 'N'}</span></div>`}
       </a>
       <div class="hcard__body">
         <h3 class="hcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
@@ -302,7 +302,7 @@ export function leanBar(leans = {}) {
 export function topicTile(topic) {
   return html`
     <a class="tile" href="/topic/${topic.slug}" data-link>
-      <span class="tile__icon" aria-hidden="true">${topic.icon || topicIcon(topic.slug)}</span>
+      <span class="tile__icon" aria-hidden="true">${topicEmoji(topic.slug)}</span>
       <span>
         <span class="tile__label">${topic.label}</span>
         <span class="tile__count">${compactNumber(topic.count)} stories${topic.relative ? ` · ${topic.relative}` : ''}</span>
@@ -336,6 +336,6 @@ export function readTimeChip(minutes) {
 
 export function topicChips(topics, { active = '', base = '/topic' } = {}) {
   return html`<div class="chip-row" role="tablist">
-    ${topics.map((t) => html`<a class="chip ${active === t.slug ? 'is-on' : ''}" href="${base}/${t.slug}" data-link role="tab">${t.icon || ''} ${t.label}</a>`)}
+    ${topics.map((t) => html`<a class="chip ${active === t.slug ? 'is-on' : ''}" href="${base}/${t.slug}" data-link role="tab">${t.label}</a>`)}
   </div>`;
 }

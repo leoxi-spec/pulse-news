@@ -105,7 +105,6 @@ export async function topicView(root, ctx) {
   root.innerHTML = html`
     <div class="between" style="align-items:flex-start;gap:1rem">
       <div class="hstack" style="gap:.6rem">
-        <span style="font-size:2rem" aria-hidden="true">${meta.icon}</span>
         <div>
           <h1 class="page-title" style="font-size:1.7rem">${meta.label}</h1>
           <p class="page-sub">The latest from ${state.boot?.catalog?.sources || 0} sources, ranked for you.</p>
@@ -254,7 +253,7 @@ export async function archiveView(root) {
           <div class="tile-grid">
             ${months.map((month) => html`
               <a class="tile" href="/search?q=&since=${month.month}-01&sort=newest" data-link>
-                <span class="tile__icon">🗓️</span>
+
                 <span><span class="tile__label">${month.month}</span><span class="tile__count">${compactNumber(month.n)} stories</span></span>
               </a>`)}
           </div>

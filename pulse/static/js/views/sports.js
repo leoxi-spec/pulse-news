@@ -220,7 +220,6 @@ function renderGames(root) {
   const events = filteredEvents();
   if (!events.length) {
     body.innerHTML = emptyState({
-      icon: currentFilter === 'pinned' ? '📌' : '🏟️',
       title: currentFilter === 'pinned' ? 'No pinned games right now' : 'Nothing scheduled here',
       text: currentFilter === 'pinned'
         ? 'Pin teams or leagues and their games will collect here. Scores refresh every 30 seconds.'
@@ -396,7 +395,7 @@ async function loadMotorsportNews(root) {
     const block = document.createElement('div');
     block.className = 'section';
     block.innerHTML = html`
-      <div class="section-head"><h2>🏎️ Formula 1 & motorsport</h2>
+      <div class="section-head"><h2>Formula 1 & motorsport</h2>
         <a href="/topic/motorsport" data-link>All motorsport ${raw(icons.chevron)}</a></div>
       <div class="topic-grid">
         ${data.items.slice(0, 3).map((item) => html`

@@ -2,7 +2,7 @@
 // make Pulse feel like a place to hang out rather than a wall of headlines.
 import { get, post } from './api.js';
 import { html, raw, icons, toast, confetti, copyText, modal } from './ui.js';
-import { state, prefs, savePrefs, dailyProgress, streak, levels, ageBand } from './store.js';
+import { state, prefs, savePrefs, dailyProgress, streak, levels, ageBand, topicIcon } from './store.js';
 import { sectionHead } from './components.js';
 import { chooseAnimation, chooseNoise, setNoiseVolume } from './ambient.js';
 import { navigate } from './router.js';
@@ -56,11 +56,11 @@ function widgetOrder() {
 }
 
 const MOODS = [
-  ['😌', 'Chill', 'Calmer, slower stories'],
-  ['⚡', 'Hype', 'Fast, breaking, big'],
-  ['🧠', 'Deep', 'Explainers and long reads'],
-  ['😂', 'Light', 'Fun, culture, weird'],
-  ['😐', 'Just facts', 'Straight news only'],
+  ['Chill', 'Calmer, slower stories'],
+  ['Hype', 'Fast, breaking, big'],
+  ['Deep', 'Explainers and long reads'],
+  ['Light', 'Fun, culture, weird'],
+  ['Just facts', 'Straight news only'],
 ];
 
 // ------------------------------------------------------------------ markup
@@ -116,11 +116,11 @@ function challengeCard(challenge) {
         <span class="daily-card__eyebrow">${raw(icons.bolt)} Daily challenge</span>
         ${ring(challenge?.percent || 0)}
       </div>
-      <h3 class="daily-card__title">${complete ? 'Challenge complete 🎉' : 'Four tiny wins today'}</h3>
+      <h3 class="daily-card__title">${complete ? 'Challenge complete' : 'Four tiny wins today'}</h3>
       <ul class="quest-list">
         ${(challenge?.tasks || []).map((task) => html`
           <li class="${task.done ? 'is-done' : ''}">
-            <span class="quest-list__icon">${task.done ? '✅' : task.icon}</span>
+            <span class="quest-list__icon">${task.done ? '✓' : ''}</span>
             <span class="quest-list__label">${task.label}</span>
             <span class="quest-list__count">${task.now}/${task.target}</span>
           </li>`)}
@@ -214,7 +214,7 @@ function historyCard(items, label = 'On this day') {
       <div class="mini-list">
         ${items.slice(0, 2).map((item) => html`
           <a class="mini-story" href="/article/${item.id}" data-link>
-            ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="mini-story__fallback">🗓️</span>`}
+            ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="mini-story__fallback">${topicIcon(item.topic)}</span>`}
             <span class="mini-story__text">
               <b>${item.title}</b>
               <i>${item.source?.name || ''} · ${item.published_relative}</i>
@@ -242,9 +242,9 @@ function moodCard() {
       <span class="daily-card__eyebrow">${raw(icons.sparkle)} Mood check</span>
       <h3 class="daily-card__title">What do you need today?</h3>
       <div class="mood-row">
-        ${MOODS.map(([emoji, label, hint]) => html`
+        ${MOODS.map(([label, hint]) => html`
           <button type="button" class="mood ${saved === label ? 'is-on' : ''}" data-mood="${label}" title="${hint}" aria-label="${label}: ${hint}">
-            <span>${emoji}</span><i>${label}</i>
+            <i>${label}</i>
           </button>`)}
       </div>
       <p class="daily-card__note" data-mood-note>${saved ? `Feed mood: ${saved}` : 'Sets the tone for your feed.'}</p>
@@ -258,7 +258,7 @@ function miniStory(item, { time = true } = {}) {
   if (!item) return '';
   return html`
     <a class="mini-story" href="/article/${item.id}" data-link>
-      ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="mini-story__fallback">📰</span>`}
+      ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="mini-story__fallback">${topicIcon(item.topic)}</span>`}
       <span class="mini-story__text">
         <b>${item.title}</b>
         <i>${item.source?.name || ''}${time ? ` · ${item.reading_minutes || 1} min` : ''}</i>
@@ -293,7 +293,7 @@ function longReadCard(data) {
   if (!item) return '';
   return newCard('', icons.book, 'Long read of the day', html`
     <a class="mini-story" href="/article/${item.id}" data-link>
-      ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="mini-story__fallback">📖</span>`}
+      ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="mini-story__fallback">${topicIcon(item.topic)}</span>`}
       <span class="mini-story__text"><b>${item.title}</b><i>${item.reading_minutes || 6} min · ${item.source?.name || ''}</i></span>
     </a>`, html`<p class="daily-card__note">${item.preview || ''}</p>`);
 }
@@ -342,7 +342,7 @@ function sportsCard(data) {
 function f1Card(data) {
   const items = (data.widgets?.motorsport || []).slice(0, 2);
   if (!items.length) return '';
-  return newCard('', icons.fire, '🏎️ F1 & motorsport', html`<div class="mini-list">${items.map((item) => miniStory(item))}</div>`);
+  return newCard('', icons.fire, 'F1 & motorsport', html`<div class="mini-list">${items.map((item) => miniStory(item))}</div>`);
 }
 
 function scienceCard(data) {
@@ -420,8 +420,8 @@ function journalCard() {
   const entry = store[todayKey] || {};
   return newCard('daily-card--journal', icons.note, 'Two-second journal', html`
     <div class="mood-row" data-journal-moods>
-      ${['😊', '😐', '😴', '😤', '🤯', '🥳'].map((emoji) => html`
-        <button type="button" class="mood ${entry.emoji === emoji ? 'is-on' : ''}" data-journal-mood="${emoji}" aria-label="${emoji}">${emoji}</button>`)}
+      ${['Good', 'Okay', 'Tired', 'Angry', 'Wow', 'Great'].map((mood) => html`
+        <button type="button" class="mood ${entry.emoji === mood ? 'is-on' : ''}" data-journal-mood="${mood}" aria-label="${mood}"><i>${mood}</i></button>`)}
     </div>
     <textarea data-journal-note rows="2" placeholder="One line about today…" style="margin-top:.4rem">${entry.note || ''}</textarea>
     <button class="btn btn--sm btn--ghost" data-journal-save>Save today</button>
@@ -436,7 +436,7 @@ function streakWidget() {
       <div><b>${progress.read}</b><span>read today</span></div>
       <div><b>${progress.goal}</b><span>goal</span></div>
     </div>
-    <div class="progress"><span style="width:${progress.percent}%"></span></div>`, html`<p class="daily-card__note">${progress.percent >= 100 ? 'Goal smashed. 🔥' : 'One more story keeps it alive.'}</p>`);
+    <div class="progress"><span style="width:${progress.percent}%"></span></div>`, html`<p class="daily-card__note">${progress.percent >= 100 ? 'Goal smashed.' : 'One more story keeps it alive.'}</p>`);
 }
 
 function xpWidget() {
@@ -456,7 +456,7 @@ function badgeWidget() {
   return newCard('', icons.trophy, `${earned.length} badges earned`, html`
     ${next ? html`
       <div class="badge-spot">
-        <span class="badge-spot__icon">${next.icon}</span>
+        <span class="badge-spot__icon">${(next.label || '?').slice(0, 1)}</span>
         <span><b>${next.label}</b><i>${next.hint}</i></span>
       </div>` : html`<p class="daily-card__body">You have them all. Absolute legend.</p>`}`, html`<a class="daily-card__note" href="/profile" data-link>See the collection →</a>`);
 }
@@ -541,40 +541,40 @@ function ambienceWidget() {
 }
 
 const WIDGETS = [
-  { id: 'challenge', label: 'Daily challenge', icon: '⚡', render: (d) => challengeCard(d.challenge) },
-  { id: 'word', label: 'Word of the day', icon: '🔤', render: (d) => wordCard(d.word) },
-  { id: 'poll', label: 'Your take poll', icon: '🗳️', render: (d) => pollCard(d.poll) },
-  { id: 'quiz', label: 'News IQ quiz', icon: '🧠', render: (d) => quizCard(d.quiz) },
-  { id: 'debate', label: 'Debate club', icon: '💬', render: (d) => debateCard(d.debate) },
-  { id: 'wyr', label: 'Would you rather', icon: '🤔', render: (d) => wyrCard(d.wyr) },
-  { id: 'history', label: 'On this day', icon: '🗓️', render: (d) => historyCard(d.history, d.history_label) },
-  { id: 'quote', label: 'Quote', icon: '❝', render: (d) => quoteCard(d.quote) },
-  { id: 'mood', label: 'Mood check', icon: '🌈', render: () => moodCard() },
-  { id: 'top3', label: 'Top 3 right now', icon: '🔥', render: top3Card },
-  { id: 'quick', label: 'Under 2 minutes', icon: '⚡', render: quickCard },
-  { id: 'longread', label: 'Long read of the day', icon: '📖', render: longReadCard },
-  { id: 'good', label: 'One good thing', icon: '✨', render: goodCard },
-  { id: 'photo', label: 'Photo of the day', icon: '📷', render: photoCard },
-  { id: 'topic', label: 'Topic spotlight', icon: '🧭', render: topicCard },
-  { id: 'source', label: 'Source spotlight', icon: '🏛️', render: sourceCard },
-  { id: 'most', label: 'Most covered', icon: '📣', render: mostCoveredCard },
-  { id: 'sports', label: 'Sports quick hits', icon: '🏆', render: sportsCard },
-  { id: 'f1', label: 'F1 & motorsport', icon: '🏎️', render: f1Card },
-  { id: 'science', label: 'Science spark', icon: '🔬', render: scienceCard },
-  { id: 'culture', label: 'Culture pick', icon: '🎭', render: cultureCard },
-  { id: 'numbers', label: 'Number of the day', icon: '🔢', render: numbersCard },
-  { id: 'scramble', label: 'Word scramble', icon: '🔤', render: scrambleCard },
-  { id: 'guess', label: 'Which section?', icon: '🎯', render: guessCard },
-  { id: 'thisorthat', label: 'This or that', icon: '🤔', render: thisOrThatCard },
-  { id: 'journal', label: 'Two-second journal', icon: '📝', render: journalCard },
-  { id: 'streak', label: 'Streak & goal', icon: '🔥', render: () => streakWidget() },
-  { id: 'xp', label: 'Level progress', icon: '⚡', render: () => xpWidget() },
-  { id: 'badge', label: 'Badge spotlight', icon: '🏅', render: () => badgeWidget() },
-  { id: 'timer', label: '5-minute focus', icon: '⏱️', render: () => timerWidget() },
-  { id: 'slang', label: 'Slang of the day', icon: '💬', render: () => slangWidget() },
-  { id: 'next', label: 'Read next', icon: '➡️', render: nextCard },
-  { id: 'tip', label: 'Media literacy tip', icon: '💡', render: () => tipWidget() },
-  { id: 'ambience', label: 'Ambience', icon: '🎧', render: () => ambienceWidget() },
+  { id: 'challenge', label: 'Daily challenge', render: (d) => challengeCard(d.challenge) },
+  { id: 'word', label: 'Word of the day', render: (d) => wordCard(d.word) },
+  { id: 'poll', label: 'Your take poll', render: (d) => pollCard(d.poll) },
+  { id: 'quiz', label: 'News IQ quiz', render: (d) => quizCard(d.quiz) },
+  { id: 'debate', label: 'Debate club', render: (d) => debateCard(d.debate) },
+  { id: 'wyr', label: 'Would you rather', render: (d) => wyrCard(d.wyr) },
+  { id: 'history', label: 'On this day', render: (d) => historyCard(d.history, d.history_label) },
+  { id: 'quote', label: 'Quote', render: (d) => quoteCard(d.quote) },
+  { id: 'mood', label: 'Mood check', render: () => moodCard() },
+  { id: 'top3', label: 'Top 3 right now', render: top3Card },
+  { id: 'quick', label: 'Under 2 minutes', render: quickCard },
+  { id: 'longread', label: 'Long read of the day', render: longReadCard },
+  { id: 'good', label: 'One good thing', render: goodCard },
+  { id: 'photo', label: 'Photo of the day', render: photoCard },
+  { id: 'topic', label: 'Topic spotlight', render: topicCard },
+  { id: 'source', label: 'Source spotlight', render: sourceCard },
+  { id: 'most', label: 'Most covered', render: mostCoveredCard },
+  { id: 'sports', label: 'Sports quick hits', render: sportsCard },
+  { id: 'f1', label: 'F1 & motorsport', render: f1Card },
+  { id: 'science', label: 'Science spark', render: scienceCard },
+  { id: 'culture', label: 'Culture pick', render: cultureCard },
+  { id: 'numbers', label: 'Number of the day', render: numbersCard },
+  { id: 'scramble', label: 'Word scramble', render: scrambleCard },
+  { id: 'guess', label: 'Which section?', render: guessCard },
+  { id: 'thisorthat', label: 'This or that', render: thisOrThatCard },
+  { id: 'journal', label: 'Two-second journal', render: journalCard },
+  { id: 'streak', label: 'Streak & goal', render: () => streakWidget() },
+  { id: 'xp', label: 'Level progress', render: () => xpWidget() },
+  { id: 'badge', label: 'Badge spotlight', render: () => badgeWidget() },
+  { id: 'timer', label: '5-minute focus', render: () => timerWidget() },
+  { id: 'slang', label: 'Slang of the day', render: () => slangWidget() },
+  { id: 'next', label: 'Read next', render: nextCard },
+  { id: 'tip', label: 'Media literacy tip', render: () => tipWidget() },
+  { id: 'ambience', label: 'Ambience', render: () => ambienceWidget() },
 ];
 
 export const WIDGET_COUNT = WIDGETS.length;
@@ -853,7 +853,7 @@ export function openWidgetEditor(root, data = null) {
     chosenEl.innerHTML = html`
       ${current().map((widget, index) => html`
         <div class="widget-row is-on">
-          <span class="widget-row__icon">${widget.icon}</span>
+          <span class="widget-row__icon">${(widget.label || '?').slice(0, 1)}</span>
           <span class="widget-row__label">${widget.label}</span>
           <button type="button" class="widget-row__btn" data-editor-up="${widget.id}" aria-label="Move up" ${index === 0 ? 'disabled' : ''}>↑</button>
           <button type="button" class="widget-row__btn" data-editor-down="${widget.id}" aria-label="Move down" ${index === chosen.length - 1 ? 'disabled' : ''}>↓</button>
@@ -862,7 +862,7 @@ export function openWidgetEditor(root, data = null) {
     availableEl.innerHTML = html`
       ${available().map((widget) => html`
         <div class="widget-row">
-          <span class="widget-row__icon">${widget.icon}</span>
+          <span class="widget-row__icon">${(widget.label || '?').slice(0, 1)}</span>
           <span class="widget-row__label">${widget.label}</span>
           <button type="button" class="btn btn--sm btn--ghost" data-editor-add="${widget.id}">+ Add</button>
         </div>`)}`;

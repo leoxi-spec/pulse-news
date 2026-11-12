@@ -143,7 +143,7 @@ export function toastProgress(progress) {
   const fresh = (progress.badges || []).filter((b) => b.earned && !progress.__known);
   if (fresh.length && progress.xp_awarded > 0) {
     const newest = fresh[fresh.length - 1];
-    if (newest) toast(`${newest.icon} Badge unlocked: ${newest.label}`, { type: 'good', duration: 4000 });
+    if (newest) toast(`Badge unlocked: ${newest.label}`, { type: 'good', duration: 4000 });
   }
 }
 
@@ -282,7 +282,7 @@ export function setLoading(node, label = 'Loading') {
 export function errorState(node, message, retry = null) {
   node.innerHTML = html`
     <div class="empty">
-      <div class="empty__icon">⚠️</div>
+      <div class="empty__mark"></div>
       <h2>That didn't load</h2>
       <p>${message || 'Check your connection and try again.'}</p>
       ${retry ? '<button class="btn btn--ghost" style="margin-top:1rem" data-retry>Try again</button>' : ''}
@@ -326,10 +326,10 @@ export const icons = {
   eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>',
 };
 
-export function emptyState({ icon = '🗞️', title, text, action = '' }) {
+export function emptyState({ icon = '', title, text, action = '' }) {
   return html`
     <div class="empty">
-      <div class="empty__icon" aria-hidden="true">${icon}</div>
+      <div class="empty__mark" aria-hidden="true"></div>
       <h2>${title}</h2>
       <p>${text}</p>
       ${action ? html`<div style="margin-top:1.1rem">${raw(action)}</div>` : ''}

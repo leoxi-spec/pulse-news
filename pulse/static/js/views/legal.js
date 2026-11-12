@@ -10,7 +10,6 @@ function legalShell(title, updated, body) {
       <p class="page-sub">Last updated ${updated}</p>
       ${body}
       <p class="legal__foot">
-        <a href="/account" data-link>Account</a> ·
         <a href="/privacy" data-link>Privacy</a> ·
         <a href="/terms" data-link>Terms</a> ·
         <a href="mailto:support@pulse.local">Contact the operator</a>
@@ -36,7 +35,7 @@ export function privacyView(root) {
       <p>Only essential cookies are used: a profile id, a session token if you sign in, and an access token only if the operator has protected this server with one. There are no advertising or analytics cookies.</p>
     </section>
     <section><h2>Email accounts and age</h2>
-      <p>Email accounts are for readers aged 13 and over. Under-13 readers can use Pulse as a guest; their data stays on that device and their account cannot be created. Email addresses are recorded but not verified, because this self-hosted build does not include a mail server. The server admin can see account emails, join dates and last sign-in times, and can export them as CSV.</p>
+      <p>Email accounts are not exposed in this build. If the operator enables them later, they are for readers aged 13 and over; under-13 readers use guest mode. Email addresses would be recorded but not verified because this self-hosted build has no mail server.</p>
     </section>
     <section><h2>News content</h2>
       <p>Pulse shows previews and, where extraction succeeds, article text for personal reading and study. Copyright and all other rights remain with each publisher. Images are fetched through this server only to display them in the app. “Read the original” always links to the publisher.</p>

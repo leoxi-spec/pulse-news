@@ -54,7 +54,9 @@ export function topicLabel(slug) {
   return state.topicMap.get(slug)?.label || (slug ? slug[0].toUpperCase() + slug.slice(1) : '');
 }
 export function topicIcon(slug) {
-  return state.topicMap.get(slug)?.icon || '•';
+  const label = topicLabel(slug);
+  const letters = (label.match(/[A-Za-z]/g) || []).slice(0, 2).join('');
+  return letters ? letters.toUpperCase() : 'N';
 }
 export function sourceOf(id) {
   return state.sourceMap.get(id) || null;
@@ -69,11 +71,11 @@ const THEME_COLORS = {
 };
 
 export const AGE_BANDS = [
-  { id: 'junior', label: 'Junior', icon: '🧸', min: 6, max: 8, mode: 'kids', goal: 2, length: 'short', scale: 1.15, blurb: 'Big pictures, play and gentle news' },
-  { id: 'kids', label: 'Kids', icon: '🎒', min: 9, max: 11, mode: 'kids', goal: 3, length: 'short', scale: 1.08, blurb: 'Quizzes, explainers and bigger type' },
-  { id: 'tween', label: 'Tween', icon: '🚀', min: 12, max: 14, mode: 'teens', goal: 5, length: 'medium', scale: 1, blurb: 'The full feed, training wheels off' },
-  { id: 'teen', label: 'Teen', icon: '🎧', min: 15, max: 16, mode: 'teens', goal: 6, length: 'medium', scale: 1, blurb: 'Deeper reads and study tools' },
-  { id: 'senior', label: 'Senior', icon: '🎓', min: 17, max: 18, mode: 'teens', goal: 8, length: 'long', scale: 1, blurb: 'Research mode and long reads' },
+  { id: 'junior', label: 'Junior', min: 6, max: 8, mode: 'kids', goal: 2, length: 'short', scale: 1.15, blurb: 'Big pictures, play and gentle news' },
+  { id: 'kids', label: 'Kids', min: 9, max: 11, mode: 'kids', goal: 3, length: 'short', scale: 1.08, blurb: 'Quizzes, explainers and bigger type' },
+  { id: 'tween', label: 'Tween', min: 12, max: 14, mode: 'teens', goal: 5, length: 'medium', scale: 1, blurb: 'The full feed, training wheels off' },
+  { id: 'teen', label: 'Teen', min: 15, max: 16, mode: 'teens', goal: 6, length: 'medium', scale: 1, blurb: 'Deeper reads and study tools' },
+  { id: 'senior', label: 'Senior', min: 17, max: 18, mode: 'teens', goal: 8, length: 'long', scale: 1, blurb: 'Research mode and long reads' },
 ];
 
 export function ageBand(age) {

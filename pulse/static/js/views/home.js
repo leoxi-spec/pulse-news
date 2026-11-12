@@ -1,6 +1,6 @@
 import { get, post } from '../api.js';
 import {
-  state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel, ageBand,
+  state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel, topicIcon, ageBand,
 } from '../store.js';
 import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
 import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed } from '../components.js';
@@ -29,7 +29,7 @@ const BASE_SECTIONS = [
 function allSections() {
   const topics = (state.boot?.topics || []).map((topic) => ({
     id: `topic:${topic.slug}`,
-    label: `${topic.icon} ${topic.label}`,
+    label: topic.label,
     hint: 'A topic row',
   }));
   return [...BASE_SECTIONS, ...topics];
@@ -146,8 +146,7 @@ export async function homeView(root, ctx) {
         <p class="today-bar__meta">${todayLine()}</p>
       </div>
       <div class="today-bar__actions">
-        ${streakInfo.count > 0 && prefs().show_reading_streak !== false ? html`<span class="pill-progress streak-pill" title="Daily streak">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
-        ${state.account ? '' : html`<a class="pill-progress pill-progress--signin" href="/account" data-link>Sign in</a>`}
+        ${streakInfo.count > 0 && prefs().show_reading_streak !== false ? html`<span class="pill-progress streak-pill" title="Daily streak">${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
         <a class="pill-progress" href="/profile" data-link title="Level ${levelInfo.level} · ${levelInfo.xp} XP">
           <span class="progress" role="progressbar" aria-valuenow="${levelInfo.progress.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${levelInfo.progress.percent}%"></span></span>
           Lv ${levelInfo.level} · ${levelInfo.xp} XP
@@ -165,9 +164,9 @@ export async function homeView(root, ctx) {
       <div class="chip-row" id="quick-links">
         <a class="chip chip--shorts" href="/reels" data-link>${raw(icons.play)} Shorts</a>
         ${followedTopics().filter((slug) => !kidHidden?.has(slug)).slice(0, 5).map((slug) => html`
-          <a class="chip" href="/topic/${slug}" data-link>${state.topicMap.get(slug)?.icon || '•'} ${topicLabel(slug)}</a>`)}
+          <a class="chip" href="/topic/${slug}" data-link>${topicLabel(slug)}</a>`)}
         ${followedTopics().includes('motorsport') ? '' : html`
-          <a class="chip" href="/topic/motorsport" data-link>🏎️ F1 &amp; motorsport</a>`}
+          <a class="chip" href="/topic/motorsport" data-link>F1 &amp; motorsport</a>`}
         <a class="chip" href="/discover" data-link>${raw(icons.compass)} All sections</a>
       </div>
       <div class="hstack" style="gap:.3rem">
@@ -301,7 +300,7 @@ function forYouSection(data, mode, items, hasMore, offset) {
     <div class="section-head" style="margin-top:1.6rem">
       <h2>For you</h2>
       <div class="segmented" role="tablist" aria-label="Feed stream">
-        ${[['for-you', 'For you'], ['readable', '📖 Readable'], ['breaking', 'Breaking'], ['latest', 'Latest']].map(([id, label]) => html`
+        ${[['for-you', 'For you'], ['readable', 'Readable'], ['breaking', 'Breaking'], ['latest', 'Latest']].map(([id, label]) => html`
           <button type="button" role="tab" aria-selected="${mode === id}" class="${mode === id ? 'is-on' : ''}" data-mode="${id}">${label}</button>`)}
       </div>
     </div>`;
@@ -324,7 +323,7 @@ function topicSection(slug, data) {
   const meta = state.topicMap.get(slug);
   if (!meta) return '';
   const items = (data?.items || []).slice(0, 8);
-  const head = sectionHead(`${meta.icon} ${meta.label}`, html`<a href="/topic/${slug}" data-link>See all ${raw(icons.chevron)}</a>`);
+  const head = sectionHead(`${meta.label}`, html`<a href="/topic/${slug}" data-link>See all ${raw(icons.chevron)}</a>`);
   if (!items.length) return sectionWrap(`topic:${slug}`, head, html`<div class="card card-pad"><p class="small muted">No fresh ${meta.label} stories yet — <a class="link" href="/topic/${slug}" data-link>browse the topic</a>.</p></div>`);
   return sectionWrap(`topic:${slug}`, head, rowsHtml(items, { lead: false, seed: slug }));
 }
@@ -351,7 +350,7 @@ function shortsSection(data) {
   return sectionWrap('shorts', head, html`
     <div class="shorts-home">
       <a class="shorts-home__lead" href="/reels?start=${lead.id}" data-link>
-        <span class="shorts-home__fallback"><i>${state.topicMap.get(lead.topic)?.icon || '📰'}</i><b>${lead.topic_label || 'News'}</b></span>
+        <span class="shorts-home__fallback"><i>${topicIcon(lead.topic)}</i><b>${lead.topic_label || 'News'}</b></span>
         ${lead.image ? html`<img src="${lead.image}" alt="" loading="lazy">` : ''}
         <span class="shorts-home__shade"></span>
         <span class="shorts-home__play" aria-hidden="true">▶</span>
@@ -364,7 +363,7 @@ function shortsSection(data) {
       <div class="shorts-home__side">
         ${items.slice(1, 4).map((item) => html`
           <a class="shorts-home__tile" href="/reels?start=${item.id}" data-link>
-            <span class="shorts-home__tile-fallback">${state.topicMap.get(item.topic)?.icon || '📰'}</span>
+            <span class="shorts-home__tile-fallback">${topicIcon(item.topic)}</span>
             ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : ''}
             <span class="shorts-home__tile-shade"></span>
             <b>${item.title}</b>
@@ -392,7 +391,7 @@ function researchSection() {
 function sportsSection(data) {
   const events = (data?.events || []).slice(0, 8);
   const head = sectionHead(
-    `🏆 Live & upcoming ${data?.live_count ? html`<span class="badge badge--live">${data.live_count} live</span>` : ''}`,
+    `Live & upcoming ${data?.live_count ? html`<span class="badge badge--live">${data.live_count} live</span>` : ''}`,
     html`<a href="/sports" data-link>All scores ${raw(icons.chevron)}</a>`,
   );
   if (!events.length) return sectionWrap('sports', head, html`<div class="card card-pad"><p class="small muted">No games scheduled right now. <a class="link" href="/sports" data-link>Open scores</a></p></div>`);
@@ -405,7 +404,7 @@ function mySportsSection(data) {
   if (!pinnedLeagues.size && !teamIds.size) return '';
   const games = (data?.events || []).filter((game) => pinnedLeagues.has(game.league)
     || game.competitors.some((team) => teamIds.has(String(team.id)))).slice(0, 5);
-  const head = sectionHead('★ My sports', html`<a href="/sports" data-link>Open scores ${raw(icons.chevron)}</a>`,
+  const head = sectionHead('My sports', html`<a href="/sports" data-link>Open scores ${raw(icons.chevron)}</a>`,
     { sub: (prefs().pinned_teams || []).map((team) => team.abbr || team.name).slice(0, 4).join(' · ') || `${pinnedLeagues.size} leagues` });
   if (!games.length) return sectionWrap('my-sports', head, html`<div class="card card-pad"><p class="small muted">No games for your pinned teams today.</p></div>`);
   return sectionWrap('my-sports', head, html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`);

@@ -14,7 +14,6 @@ const ACTIONS = [
   { id: 'research', label: 'Research & citations', hint: 'Build a bibliography', icon: 'quote', path: '/research' },
   { id: 'sources', label: 'Sources directory', hint: '336 outlets and feed health', icon: 'filter', path: '/sources' },
   { id: 'saved', label: 'Saved stories', hint: 'Your reading list', icon: 'bookmark', path: '/saved' },
-  { id: 'account', label: 'Account & sign in', hint: 'Email, password and account settings', icon: 'user', path: '/account' },
   { id: 'profile', label: 'Profile & settings', hint: 'Themes, goals, AI, data', icon: 'user', path: '/profile' },
   { id: 'random', label: 'Surprise me', hint: 'Open a random story from the archive', icon: 'sparkle' },
 ];
@@ -107,7 +106,7 @@ function itemMarkup(item, index) {
     : icons.search;
   return html`
     <button class="palette__item ${index === active ? 'is-active' : ''}" data-index="${index}" type="button">
-      <span class="palette__icon">${item.kind === 'topic' ? (item.icon || '•') : item.kind === 'source' ? (item.initials || 'S') : raw(icon || icons.search)}</span>
+      <span class="palette__icon">${item.kind === 'topic' ? (item.slug || 'T').slice(0, 2).toUpperCase() : item.kind === 'source' ? (item.initials || 'S') : raw(icon || icons.search)}</span>
       <span class="palette__body">
         <span class="palette__label">${item.label}</span>
         <span class="palette__hint">${item.hint}</span>
@@ -134,7 +133,7 @@ async function query(value) {
     }
     if (data.topics?.length) {
       groups.push(sectionLabel('Topics'));
-      data.topics.forEach((topic) => next.push({ kind: 'topic', label: topic.label, hint: 'Topic', slug: topic.slug, icon: topic.icon }));
+      data.topics.forEach((topic) => next.push({ kind: 'topic', label: topic.label, hint: 'Topic', slug: topic.slug }));
     }
     if (data.sources?.length) {
       groups.push(sectionLabel('Sources'));

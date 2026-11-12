@@ -1,7 +1,7 @@
 import { get, post, patch, del } from '../api.js';
 import {
   state, prefs, savePrefs, saveSurvey, record, setProfile, profileInitials,
-  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES, ageBand,
+  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES, ageBand, AGE_BANDS,
 } from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
@@ -33,7 +33,7 @@ export async function searchView(root, ctx) {
       <div class="hstack" style="gap:.45rem;margin-top:.6rem">
         <select id="f-topic" aria-label="Topic filter" style="width:auto;min-width:130px">
           <option value="">Any topic</option>
-          ${(boot.topics || []).map((t) => html`<option value="${t.slug}" ${topic === t.slug ? 'selected' : ''}>${t.icon} ${t.label}</option>`)}
+          ${(boot.topics || []).map((t) => html`<option value="${t.slug}" ${topic === t.slug ? 'selected' : ''}>${t.label}</option>`)}
         </select>
         <select id="f-range" aria-label="Date range" style="width:auto;min-width:130px">
           <option value="">Any time</option>
@@ -98,7 +98,7 @@ function renderSearchHome(root) {
         <div class="tile-grid">
           ${(boot.archive.months || []).slice(0, 8).map((m) => html`
             <a class="tile" href="/search?q=&since=${m.month}-01&sort=newest" data-link>
-              <span class="tile__icon">🗓️</span><span><span class="tile__label">${monthLabel(m.month)}</span><span class="tile__count">${compactNumber(m.n)} stories</span></span>
+              <span><span class="tile__label">${monthLabel(m.month)}</span><span class="tile__count">${compactNumber(m.n)} stories</span></span>
             </a>`)}
         </div>
       </div>` : ''}`;
@@ -171,7 +171,7 @@ async function runSearch(root, { q, topic, source, since, sort, offset, append }
               <span class="tiny muted">${item.source_name}</span>
               <span class="tiny faint">·</span>
               <span class="tiny muted">${item.published_relative || ''}${item.date_label === 'First seen' ? ' (first seen)' : ''}</span>
-              ${item.paywalled ? html`<span class="tiny faint" title="Subscription">🔒</span>` : ''}
+              ${item.paywalled ? html`<span class="badge badge--muted" title="Subscription">Paid</span>` : ''}
             </div>
             <h3 class="search-hit__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
             ${item.snippet ? html`<p class="search-hit__snippet">${raw(highlightQuery(item.snippet, q))}</p>` : ''}
@@ -349,7 +349,7 @@ function loadStudyExtras(root) {
         <p class="tiny faint" data-focus-note style="margin-top:.5rem">One Pomodoro. Phone face down.</p>
       </div>
       <div class="card card-pad">
-        <div class="between"><h3 class="extras-card__title">📚 Your words</h3><span class="tiny faint">${words.length}</span></div>
+        <div class="between"><h3 class="extras-card__title">Your words</h3><span class="tiny faint">${words.length}</span></div>
         ${words.length ? html`
           <div class="word-list">
             ${words.slice(0, 8).map((entry) => html`<div class="word-row"><b>${entry.word}</b><span>${entry.meaning}</span></div>`)}
@@ -358,7 +358,7 @@ function loadStudyExtras(root) {
       </div>
     </div>
     <div class="card card-pad" style="margin-top:.7rem">
-      <div class="between"><h3 class="extras-card__title">💬 Slang decoder</h3><span class="tiny faint">${SLANG.length} terms</span></div>
+      <div class="between"><h3 class="extras-card__title">Slang decoder</h3><span class="tiny faint">${SLANG.length} terms</span></div>
       <input type="search" id="slang-search" placeholder="Type a word or meaning…" style="margin:.5rem 0 .7rem" aria-label="Search slang">
       <div id="slang-list"></div>
     </div>`;
@@ -682,28 +682,14 @@ export async function profileView(root, ctx) {
           <p class="tiny muted">Level ${level.level} · ${level.title} · ${number(level.xp)} XP</p>
         </div>
         <div class="hstack">
-          <span class="pill-progress pill-progress--band" title="${band.blurb}">${band.icon} ${band.label} · ${age}</span>
-          ${p.show_reading_streak !== false ? html`<span class="pill-progress streak-pill">🔥 ${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
+          <span class="pill-progress pill-progress--band" title="${band.blurb}">${band.label} · ${age}</span>
+          ${p.show_reading_streak !== false ? html`<span class="pill-progress streak-pill">${streakInfo.count} day${streakInfo.count === 1 ? '' : 's'}</span>` : ''}
           <span class="pill-progress">Today ${today.read}/${today.goal}</span>
         </div>
       </div>
       <div class="level-bar">
         <div class="level-bar__labels"><span>${level.progress.into} / ${level.progress.needed} XP to level ${level.level + 1}</span><span>${level.progress.percent}%</span></div>
         <div class="progress"><span style="width:${level.progress.percent}%"></span></div>
-      </div>
-    </div>
-
-    <div class="section">
-      ${sectionHead('Account')}
-      <div class="card card-pad between" style="gap:1rem">
-        <div>
-          ${state.account
-            ? html`<div class="settings-row__label">${state.account.email}${state.account.is_admin ? html` <span class="badge badge--topic">admin</span>` : ''}</div>
-                   <div class="settings-row__hint">Signed in · your reading history is attached to this account.</div>`
-            : html`<div class="settings-row__label">You are reading as a guest</div>
-                   <div class="settings-row__hint">Create an email account to keep your streak, saves and history across browsers.</div>`}
-        </div>
-        <a class="btn btn--sm ${state.account ? 'btn--ghost' : 'btn--primary'}" href="/account" data-link>${state.account ? 'Manage account' : 'Create account'}</a>
       </div>
     </div>
 
@@ -764,7 +750,7 @@ export async function profileView(root, ctx) {
       <div class="badge-grid">
         ${badges.map((badge) => html`
           <div class="badge-tile ${badge.earned ? 'is-earned' : ''}" title="${badge.hint}">
-            <div class="badge-tile__icon">${badge.icon}</div>
+            <div class="badge-tile__icon">${(badge.label || '?').slice(0, 1)}</div>
             <div class="badge-tile__label">${badge.label}</div>
           </div>`)}
       </div>
@@ -839,7 +825,7 @@ export async function profileView(root, ctx) {
           </select>
         </div>
         <div class="settings-row">
-          <div><div class="settings-row__label">Reading plan</div><div class="settings-row__hint">${band.icon} ${band.label} · ${goalForAge(age)} stories a day · ${lengthForAge(age)} reads</div></div>
+          <div><div class="settings-row__label">Reading plan</div><div class="settings-row__hint">${band.label} · ${goalForAge(age)} stories a day · ${lengthForAge(age)} reads</div></div>
           <span class="badge badge--topic">${age <= 12 ? 'Kids' : 'Teens'}</span>
         </div>
       </div>
@@ -960,7 +946,7 @@ export async function profileView(root, ctx) {
           Server time ${absDate(boot.app?.server_time)}. Scores by ESPN. Headlines belong to their publishers.
         </p>
         <div class="hstack" style="margin-top:.7rem;flex-wrap:wrap">
-          <button class="btn btn--sm btn--ghost" id="open-legend">Key to symbols</button>
+          <button class="btn btn--sm btn--ghost" id="open-legend">Reading key</button>
           <button class="btn btn--sm btn--ghost" id="install-app">Install app</button>
           <a class="btn btn--sm btn--ghost" href="/research" data-link>Research desk</a>
           <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Privacy</a>
@@ -1267,9 +1253,9 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
         <label class="tiny muted" for="name" style="display:block;margin-bottom:.35rem">What should we call you?</label>
         <input id="name" type="text" maxlength="40" placeholder="First name or nickname" value="${draft.name}" autocomplete="given-name">
         <div class="grid-3" style="margin-top:1.2rem">
-          <div class="card card-pad"><div style="font-size:1.3rem">🗞️</div><b class="small">300+ sources</b><p class="tiny muted">Every major outlet, all topics.</p></div>
-          <div class="card card-pad"><div style="font-size:1.3rem">✨</div><b class="small">Overviews</b><p class="tiny muted">Know the story before you commit.</p></div>
-          <div class="card card-pad"><div style="font-size:1.3rem">🏆</div><b class="small">Live scores</b><p class="tiny muted">NBA, NFL, football and more.</p></div>
+          <div class="card card-pad"><b class="small">300+ sources</b><p class="tiny muted">Every major outlet, all topics.</p></div>
+          <div class="card card-pad"><b class="small">Overviews</b><p class="tiny muted">Know the story before you commit.</p></div>
+          <div class="card card-pad"><b class="small">Live scores</b><p class="tiny muted">NBA, NFL, football and more.</p></div>
         </div>
         <p class="tiny faint" style="margin-top:1rem">Everything stays on your device. No ads, no tracking, no account required.</p>
         ${!editing ? html`<p class="small muted" style="margin-top:.9rem">In a hurry? <button class="link" id="skip-welcome" style="background:none;border:0;font:inherit">Skip the survey</button> and start with a general feed — you can personalise it any time from Profile.</p>` : ''}
@@ -1280,14 +1266,22 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
       <h1>How old are you?</h1>
       <p class="onboarding__sub">This sets your reading level, daily goal and the tone of your feed. Younger readers get shorter stories and bigger type; the goal grows as you do.</p>
       <div class="onboarding__body">
-        <div class="age-grid">
-          ${Array.from({ length: 13 }, (_, index) => index + 6).map((age) => html`
-            <button class="choice age-choice ${Number(draft.age) === age ? 'is-on' : ''}" data-age="${age}" aria-pressed="${Number(draft.age) === age}">
-              <span class="choice__icon">${age <= 8 ? '🧸' : age <= 11 ? '🎒' : age <= 14 ? '🚀' : '🎓'}</span>
-              <span>${age}<span class="choice__sub">years</span></span>
-            </button>`)}
+        <div class="age-bands">
+          ${AGE_BANDS.map((band) => html`
+            <section class="age-band">
+              <div class="age-band__head">
+                <div><b>${band.label}</b><span>${band.blurb}</span></div>
+                <em>${band.min}–${band.max}</em>
+              </div>
+              <div class="age-band__ages">
+                ${Array.from({ length: band.max - band.min + 1 }, (_, index) => band.min + index).map((age) => html`
+                  <button class="age-choice ${Number(draft.age) === age ? 'is-on' : ''}" data-age="${age}" aria-pressed="${Number(draft.age) === age}">
+                    <b>${age}</b><span>years</span>
+                  </button>`)}
+              </div>
+            </section>`)}
         </div>
-        <p class="small muted" style="margin-top:.8rem">${ageBand(draft.age || 13).icon} <b>${ageBand(draft.age || 13).label}</b> · at ${draft.age || 13}, we will start you on <b>${goalForAge(draft.age || 13)} stories a day</b> and ${lengthForAge(draft.age || 13)} reads. ${ageBand(draft.age || 13).blurb}.</p>
+        <p class="small muted" style="margin-top:.8rem" data-age-note><b>${ageBand(draft.age || 13).label}</b> · at ${draft.age || 13}, we will start you on <b>${goalForAge(draft.age || 13)} stories a day</b> and ${lengthForAge(draft.age || 13)} reads.</p>
       </div>`;
   }
   if (key === 'topics') {
@@ -1300,7 +1294,6 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
             const level = Number(draft.topics[topic.slug] || 0);
             return html`
               <button class="choice ${level ? 'is-on' : ''}" data-topic="${topic.slug}" aria-pressed="${level > 0}">
-                <span class="choice__icon">${topic.icon}</span>
                 <span>${topic.label}<span class="choice__sub">${level === 0 ? 'tap to add' : level === 1 ? 'interested' : 'love it'}</span></span>
               </button>`;
           })}
@@ -1333,14 +1326,13 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
         <div class="choice-grid">
           ${[['short', 'Quick hits', 'under 4 minutes'], ['medium', 'A mix', '4–8 minutes'], ['long', 'Deep dives', '8+ minutes']].map(([id, label, sub]) => html`
             <button class="choice ${draft.reading_length === id ? 'is-on' : ''}" data-reading="${id}">
-              <span class="choice__icon">${id === 'short' ? '⚡' : id === 'medium' ? '⚖️' : '📖'}</span><span>${label}<span class="choice__sub">${sub}</span></span>
+              <span>${label}<span class="choice__sub">${sub}</span></span>
             </button>`)}
         </div>
         <p class="tiny muted" style="margin:1.2rem 0 .4rem">What are you using the news for?</p>
         <div class="choice-grid">
           ${['exam prep', 'current events class', 'writing & debate', 'college apps', 'general knowledge', 'science & tech', 'sports', 'culture'].map((goal) => html`
             <button class="choice ${draft.goals.includes(goal) ? 'is-on' : ''}" data-goal="${goal}">
-              <span class="choice__icon">${goal === 'exam prep' ? '📝' : goal === 'writing & debate' ? '🗣️' : goal === 'college apps' ? '🎓' : goal === 'sports' ? '🏀' : goal === 'culture' ? '🎬' : '✨'}</span>
               <span>${goal}</span>
             </button>`)}
         </div>
@@ -1381,10 +1373,8 @@ function bindStep(key, body, draft, persist) {
       button.addEventListener('click', () => {
         draft.age = Number(button.dataset.age);
         body.querySelectorAll('[data-age]').forEach((b) => b.classList.toggle('is-on', b === button));
-        const note = body.querySelector('.small.muted b');
-        const tail = body.querySelector('.small.muted');
-        if (tail) tail.innerHTML = `${ageBand(draft.age).icon} <b>${ageBand(draft.age).label}</b> · at ${draft.age}, we will start you on <b>${goalForAge(draft.age)} stories a day</b> and ${lengthForAge(draft.age)} reads.`;
-        void note;
+        const note = body.querySelector('[data-age-note]');
+        if (note) note.innerHTML = `<b>${ageBand(draft.age).label}</b> · at ${draft.age}, we will start you on <b>${goalForAge(draft.age)} stories a day</b> and ${lengthForAge(draft.age)} reads.`;
         persist();
       });
     });

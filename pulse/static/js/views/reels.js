@@ -145,11 +145,11 @@ export async function reelsView(root, ctx) {
 }
 
 function reelCard(item) {
-  const icon = state.topicMap.get(item.topic)?.icon || '📰';
+  const icon = state.topicMap.get(item.topic)?.label ? (state.topicMap.get(item.topic).label.match(/[A-Za-z]/g) || ['N']).slice(0, 2).join('').toUpperCase() : 'N';
   const liked = Boolean(reactionMap()[item.id]);
   return html`
     <section class="reel" data-article="${item.id}">
-      <div class="reel__bg reel__bg--fallback" aria-hidden="true"><span>${icon}</span><b>${item.topic_label || ''}</b></div>
+      <div class="reel__bg reel__bg--fallback" aria-hidden="true"><span class="reel__monogram">${icon}</span><b>${item.topic_label || ''}</b></div>
       ${item.image ? html`
         <img class="reel__bg reel__bg--img" src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
       <div class="reel__shade"></div>
@@ -184,7 +184,7 @@ function reelCard(item) {
         <button class="reel-act reel-act--open" data-open aria-label="Open article">${raw(icons.external)}<span>Open</span></button>
       </div>
 
-      <div class="reel__heart" aria-hidden="true">❤️</div>
+      <div class="reel__heart" aria-hidden="true">${raw(icons.heart)}</div>
     </section>`;
 }
 
@@ -387,7 +387,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   const like = (reel, item, button = null) => {
     const liked = Boolean(reactionMap()[item.id]);
     const next = !liked;
-    setReaction(item.id, next ? '❤️' : null);
+    setReaction(item.id, next ? 'liked' : null);
     const heart = reel.querySelector('.reel__heart');
     if (heart && next) {
       heart.classList.remove('is-pop');

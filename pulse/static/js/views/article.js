@@ -171,7 +171,7 @@ function renderAccessBanner(a) {
   if (access.kind === 'full') {
     return html`
       <div class="reader-banner reader-banner--full">
-        <span class="reader-banner__icon" aria-hidden="true">${access.icon}</span>
+        <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
         <div><b>Full story available here</b><span>You can read the complete article inside Pulse — no need to leave the app.</span></div>
         ${a.read_url ? html`<a class="btn btn--sm btn--ghost" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Original ${raw(icons.external)}</a>` : ''}
       </div>`;
@@ -179,14 +179,14 @@ function renderAccessBanner(a) {
   if (access.kind === 'locked') {
     return html`
       <div class="reader-banner reader-banner--locked">
-        <span class="reader-banner__icon" aria-hidden="true">${access.icon}</span>
+        <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
         <div><b>Subscription required at ${a.source.name}</b><span>This is the publisher's preview. Pulse shows you the overview, coverage and full metadata, then links to the source.</span></div>
         <a class="btn btn--sm btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at source ${raw(icons.external)}</a>
       </div>`;
   }
   return html`
     <div class="reader-banner reader-banner--preview">
-      <span class="reader-banner__icon" aria-hidden="true">${access.icon}</span>
+      <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
       <div><b>Preview only</b><span>Pulse has the summary and overview. The full article is at ${a.source.name}.</span></div>
       <a class="btn btn--sm btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at source ${raw(icons.external)}</a>
     </div>`;
@@ -217,14 +217,14 @@ function renderNoBody(a) {
   if (a.paywalled) {
     return html`
       <div class="paywall">
-        <h3>🔒 The full story is at ${a.source.name}</h3>
+        <h3>The full story is at ${a.source.name}</h3>
         <p>This outlet requires a subscription for the full text. Pulse can still show you the preview, the overview, related coverage and the archive metadata — and you can open the original any time.</p>
         <a class="btn btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Continue at ${a.source.name} ${raw(icons.external)}</a>
       </div>`;
   }
   return html`
     <div class="paywall">
-      <h3>📄 Preview available</h3>
+      <h3>Preview available</h3>
       <p>Pulse could not extract the full text from ${a.source.name}'s page, so this is the publisher's own summary. The original is one tap away.</p>
       <a class="btn btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at ${a.source.name} ${raw(icons.external)}</a>
     </div>`;
@@ -254,7 +254,7 @@ function renderCoverage(a) {
                 <span>${item.published_relative}</span>
                 <span aria-hidden="true">·</span>
                 <span>${item.lean}</span>
-                ${item.paywall ? html`<span title="Paywalled">🔒</span>` : ''}
+                ${item.paywall ? html`<span class="tiny faint">Paywalled</span>` : ''}
               </div>
             </div>
           </div>`)}
@@ -311,7 +311,7 @@ function renderNotes(root, article, notes = null) {
   });
 }
 
-const REACTIONS = [['🔥', 'Hype'], ['😮', 'Whoa'], ['😂', 'Funny'], ['😢', 'Sad'], ['💡', 'Learned']];
+const REACTIONS = ['Hype', 'Whoa', 'Funny', 'Sad', 'Learned'];
 
 function readabilityOf(text) {
   const words = text.match(/[A-Za-z’'-]+/g) || [];
@@ -338,9 +338,9 @@ function toneOf(text) {
     if (POSITIVE.has(token)) positive += 1;
     if (NEGATIVE.has(token)) negative += 1;
   }
-  if (positive > negative * 1.4) return { label: 'Upbeat tone', icon: '🌤️' };
-  if (negative > positive * 1.4) return { label: 'Critical tone', icon: '🌧️' };
-  return { label: 'Neutral tone', icon: '🌥️' };
+  if (positive > negative * 1.4) return { label: 'Upbeat tone' };
+  if (negative > positive * 1.4) return { label: 'Critical tone' };
+  return { label: 'Neutral tone' };
 }
 
 function numbersOf(text) {
@@ -384,7 +384,7 @@ function renderStoryExtras(root, article) {
     const reasons = (article.reasons || []).slice(0, 2);
     facts.innerHTML = html`
       <span class="fact-pill" title="${read.help}">${raw(icons.text)} ${read.label}</span>
-      <span class="fact-pill" title="Rough tone estimate from the story's own words">${tone.icon} ${tone.label}</span>
+      <span class="fact-pill" title="Rough tone estimate from the story's own words">${tone.label}</span>
       ${reasons.map((reason) => html`<span class="fact-pill fact-pill--why" title="Why Pulse included this">${reason}</span>`)}`;
   }
 
@@ -392,18 +392,18 @@ function renderStoryExtras(root, article) {
     const stored = reactionMap()[article.id];
     bar.innerHTML = html`
       <span class="reaction-bar__label">React</span>
-      ${REACTIONS.map(([emoji, label]) => html`
-        <button type="button" class="reaction ${stored === emoji ? 'is-on' : ''}" data-reaction="${emoji}" title="${label}" aria-label="${label}">${emoji}</button>`)}
+      ${REACTIONS.map((label) => html`
+        <button type="button" class="reaction ${stored === label ? 'is-on' : ''}" data-reaction="${label}" title="${label}" aria-label="${label}">${label}</button>`)}
       <span class="reaction-bar__note" data-reaction-note>${stored ? `You reacted ${stored}` : ''}</span>`;
     bar.querySelectorAll('[data-reaction]').forEach((button) => {
       button.addEventListener('click', () => {
-        const emoji = button.dataset.reaction;
+        const reaction = button.dataset.reaction;
         const map = reactionMap();
-        map[article.id] = map[article.id] === emoji ? null : emoji;
+        map[article.id] = map[article.id] === reaction ? null : reaction;
         try { localStorage.setItem('pulse.reactions', JSON.stringify(map)); } catch { /* ignore */ }
         bar.querySelectorAll('[data-reaction]').forEach((node) => node.classList.toggle('is-on', node === button && Boolean(map[article.id])));
         const note = bar.querySelector('[data-reaction-note]');
-        if (note) note.textContent = map[article.id] ? `You reacted ${emoji}` : '';
+        if (note) note.textContent = map[article.id] ? `You reacted: ${reaction}` : '';
         if (map[article.id]) confetti(8);
       });
     });
@@ -418,19 +418,19 @@ function renderStoryExtras(root, article) {
         <div class="extras-grid">
           ${numbers.length ? html`
             <div class="card card-pad">
-              <h3 class="extras-card__title">🔢 By the numbers</h3>
+              <h3 class="extras-card__title">By the numbers</h3>
               <ul class="numbers-list">
                 ${numbers.map((number) => html`<li><b>${number.value}</b><span>${number.context}</span></li>`)}
               </ul>
             </div>` : ''}
           <div class="card card-pad class-card">
-            <h3 class="extras-card__title">🗣️ Three questions for class</h3>
+            <h3 class="extras-card__title">Three questions for class</h3>
             <ol class="class-list">
               ${questions.map((question) => html`<li>${question}</li>`)}
             </ol>
           </div>
           <div class="card card-pad ask-card">
-            <h3 class="extras-card__title">🔎 Ask this article</h3>
+            <h3 class="extras-card__title">Ask this article</h3>
             <p class="tiny muted">Type a question. The answer is always a sentence from this story — no invented facts.</p>
             <form class="ask-form" data-ask-form>
               <input data-ask-input type="search" placeholder="What did the coach say about…?" aria-label="Ask this article">
@@ -707,8 +707,8 @@ function bindArticle(root, article) {
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     menu.innerHTML = html`
-      <button type="button" data-sel="mark">🖍 Highlight</button>
-      <button type="button" data-sel="note">✍️ Note</button>
+      <button type="button" data-sel="mark">Highlight</button>
+      <button type="button" data-sel="note">Note</button>
       <button type="button" data-sel="copy">Copy</button>`;
     menu.hidden = false;
     const top = rect.top + window.scrollY - 46;

@@ -103,28 +103,35 @@
       "sizes": "1440x900",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Your front page: brief, top stories and Shorts"
+      "label": "Your front page"
     },
     {
-      "src": "/screenshots/shorts-narrow.png",
-      "sizes": "860x1864",
+      "src": "/screenshots/onboarding-wide.png",
+      "sizes": "1440x900",
       "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Pulse Shorts: full-screen stories"
+      "form_factor": "wide",
+      "label": "Choose a reading level for your age"
     },
     {
       "src": "/screenshots/article-wide.png",
       "sizes": "1440x900",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Reading with photo galleries and an overview"
+      "label": "Reading with photo galleries"
     },
     {
-      "src": "/screenshots/account-wide.png",
-      "sizes": "1440x900",
+      "src": "/screenshots/shorts-narrow.png",
+      "sizes": "860x1864",
       "type": "image/png",
-      "form_factor": "wide",
-      "label": "Email accounts and your reading history"
+      "form_factor": "narrow",
+      "label": "Pulse Shorts"
+    },
+    {
+      "src": "/screenshots/home-narrow.png",
+      "sizes": "860x1864",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The front page on mobile"
     }
   ]
 }

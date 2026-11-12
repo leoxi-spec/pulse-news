@@ -374,7 +374,7 @@ async function boot() {
     ]);
   } catch (err) {
     if (bootEl) {
-      bootEl.innerHTML = `<div class="empty" style="max-width:420px"><div class="empty__icon">📡</div><h2>Can't reach the Pulse server</h2><p>${err.message}</p><button class="btn btn--primary" style="margin-top:1rem" onclick="location.reload()">Retry</button></div>`;
+      bootEl.innerHTML = `<div class="empty" style="max-width:420px"><div class="empty__mark"></div><h2>Can't reach the Pulse server</h2><p>${err.message}</p><button class="btn btn--primary" style="margin-top:1rem" onclick="location.reload()">Retry</button></div>`;
     }
     return;
   }
