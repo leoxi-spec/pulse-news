@@ -950,6 +950,10 @@ export async function profileView(root, ctx) {
           <button class="btn btn--sm btn--ghost" id="open-legend">Reading key</button>
           <button class="btn btn--sm btn--ghost" id="install-app">Install app</button>
           <a class="btn btn--sm btn--ghost" href="/research" data-link>Research desk</a>
+          <a class="btn btn--sm btn--ghost" href="/about" data-link>About the project</a>
+          <a class="btn btn--sm btn--ghost" href="/impact" data-link>Impact</a>
+          <a class="btn btn--sm btn--ghost" href="/classroom" data-link>Classroom</a>
+          <a class="btn btn--sm btn--ghost" href="/roadmap" data-link>Roadmap &amp; feedback</a>
           <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Privacy</a>
           <a class="btn btn--sm btn--ghost" href="/terms" data-link>Terms</a>
         </div>
@@ -1264,7 +1268,7 @@ function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
           <input id="name" type="text" maxlength="40" placeholder="First name or nickname" value="${draft.name}" autocomplete="given-name">
           <p class="tiny faint">No account. No tracking. You can change everything later.</p>
         </div>
-        ${!editing ? html`<p class="welcome__skip">In a hurry? <button class="link" id="skip-welcome">Skip the survey</button> and start with a general feed.</p>` : ''}
+        ${!editing ? html`<p class="welcome__skip">In a hurry? <button class="link" id="skip-welcome">Skip the survey</button> and start with a general feed. <a class="link" href="/about" data-link>Why Pulse?</a></p>` : ''}
       </div>`;
   }
   if (key === 'grade') {

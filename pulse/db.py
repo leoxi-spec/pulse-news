@@ -26,7 +26,7 @@ from .timeutil import iso, now, parse_iso
 
 log = get_logger("db")
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -277,6 +277,24 @@ CREATE TABLE IF NOT EXISTS daily_stats (
     xp          INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (profile_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS roadmap_votes (
+    profile_id TEXT NOT NULL,
+    item_id    TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_roadmap_votes_item ON roadmap_votes(item_id);
+
+CREATE TABLE IF NOT EXISTS feedback (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id TEXT,
+    category   TEXT NOT NULL,
+    message    TEXT NOT NULL,
+    email      TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
 """
 
 

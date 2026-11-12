@@ -60,6 +60,9 @@ def load_candidates(
         params.append(iso(now() - timedelta(hours=24)))
     if mode == "longreads":
         sql += " AND a.word_count >= 700 AND a.content_state = 'extracted'"
+    if mode == "video":
+        sql += (" AND a.video_kind IS NOT NULL"
+                " AND NOT (a.video_kind='file' AND (a.video_url LIKE '%.m3u8%' OR a.video_url LIKE '%.mpd%'))")
     if readable_only:
         sql += " AND (a.content_state = 'extracted' OR a.word_count >= 240)"
     sql += " ORDER BY COALESCE(a.published_at, a.first_seen_at) DESC LIMIT ?"
@@ -265,6 +268,8 @@ def video_payload(row) -> dict | None:
         }
     if kind == "file" and url:
         url = str(url).replace("\\/", "/")
+        if url.lower().split("?")[0].endswith((".m3u8", ".mpd")):
+            return None
         return {"kind": "file", "id": None, "url": url, "embed": None, "thumbnail": None, "provider": "Video"}
     return None
 
@@ -310,6 +315,9 @@ def feed_page(
         ranked = rank.rank(rows, model, limit=len(rows) or 1)
     elif mode == "readable":
         rows = load_candidates(days=days, limit=600, topic=topic, source=source, readable_only=True)
+        ranked = rank.rank(rows, model, limit=len(rows) or 1)
+    elif mode == "video":
+        rows = load_candidates(days=days, limit=600, topic=topic, source=source, mode="video")
         ranked = rank.rank(rows, model, limit=len(rows) or 1)
     else:  # for-you and topic/source views use personalisation
         rows = load_candidates(days=days, limit=900, topic=topic, source=source)
@@ -365,6 +373,7 @@ def video_feed(
     where = [
         "a.video_kind IS NOT NULL",
         "a.video_url IS NOT NULL",
+        "NOT (a.video_kind='file' AND (a.video_url LIKE '%.m3u8%' OR a.video_url LIKE '%.mpd%'))",
         "COALESCE(a.published_at, a.first_seen_at) >= ?",
     ]
     params: list = [since]
@@ -413,8 +422,11 @@ def video_feed(
         key = row["story_id"] or (row["title"] or "").strip().lower()
         if key in seen:
             continue
+        payload = card(row)
+        if not payload.get("video"):
+            continue
         seen.add(key)
-        items.append(card(row))
+        items.append(payload)
     return {
         "items": items,
         "total": total,

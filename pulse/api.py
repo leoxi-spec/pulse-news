@@ -16,7 +16,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import ai, auth, citations, daily, feed, ingest, profiles, rank, search, sports, stories
+from . import ai, auth, citations, daily, feed, impact, ingest, profiles, rank, search, sports, stories
 from .config import APP_NAME, APP_TAGLINE, APP_VERSION, settings
 from .db import db
 from .httpclient import FetchError, FetchResult, HttpClient, validate_url
@@ -211,6 +211,35 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             days = request.int_param("days", 3, minimum=1, maximum=365)
             payload = feed.feed_page(profile, mode=mode, topic=topic, source=source, offset=offset, limit=limit, days=days)
             return 200, payload, {}
+        if path == "/api/impact" and method == "GET":
+            return 200, impact.metrics(profile), {}
+        if path == "/api/impact/report" and method == "GET":
+            data = impact.metrics(profile)
+            return 200, {"markdown": impact.report_markdown(data), "filename": "pulse-impact-report.md"}, {}
+        if path == "/api/press-kit" and method == "GET":
+            data = impact.metrics(profile)
+            return 200, {"markdown": impact.press_kit_markdown(data), "filename": "pulse-press-kit.md"}, {}
+        if path == "/api/roadmap" and method == "GET":
+            return 200, {"items": impact.roadmap(profile["id"]), "categories": impact.FEEDBACK_CATEGORIES}, {}
+        if path == "/api/roadmap/vote" and method == "POST":
+            payload = request.json()
+            try:
+                item = impact.vote(profile["id"], str(payload.get("id") or ""), on=bool(payload.get("on", True)))
+            except ValueError as exc:
+                raise ApiError(400, str(exc)) from exc
+            return 200, {"item": item}, {}
+        if path == "/api/feedback" and method == "POST":
+            payload = request.json()
+            try:
+                result = impact.add_feedback(
+                    profile["id"],
+                    str(payload.get("category") or "other"),
+                    str(payload.get("message") or ""),
+                    str(payload.get("email") or ""),
+                )
+            except ValueError as exc:
+                raise ApiError(400, str(exc)) from exc
+            return 201, result, {}
         if path == "/api/videos" and method == "GET":
             topic = request.query.get("topic") or None
             offset = request.int_param("offset", 0, minimum=0, maximum=5000)

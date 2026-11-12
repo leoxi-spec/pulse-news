@@ -680,6 +680,8 @@ def export(profile_id: str) -> dict:
         (profile_id,),
     )
     stats_row = db.query("SELECT * FROM daily_stats WHERE profile_id=? ORDER BY day DESC", (profile_id,))
+    feedback_rows = db.query("SELECT category, message, email, created_at FROM feedback WHERE profile_id=? ORDER BY id DESC", (profile_id,))
+    roadmap_rows = db.query("SELECT item_id, created_at FROM roadmap_votes WHERE profile_id=? ORDER BY created_at DESC", (profile_id,))
     return {
         "exported_at": iso(),
         "app": "Pulse",
@@ -689,13 +691,15 @@ def export(profile_id: str) -> dict:
         "follows": [dict(row) for row in follows],
         "activity": [dict(row) for row in events],
         "daily_stats": [dict(row) for row in stats_row],
+        "feedback": [dict(row) for row in feedback_rows],
+        "roadmap_votes": [dict(row) for row in roadmap_rows],
         "note": "Articles themselves live in the shared archive and are not personal data.",
     }
 
 
 def delete(profile_id: str) -> None:
     with db.writer() as conn:
-        for table in ("events", "saves", "notes", "follows", "searches", "daily_stats"):
+        for table in ("events", "saves", "notes", "follows", "searches", "daily_stats", "feedback", "roadmap_votes"):
             conn.execute(f"DELETE FROM {table} WHERE profile_id=?", (profile_id,))
         conn.execute("DELETE FROM profiles WHERE id=?", (profile_id,))
 

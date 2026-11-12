@@ -103,6 +103,17 @@
           "sizes": "192x192"
         }
       ]
+    },
+    {
+      "name": "Impact report",
+      "short_name": "Impact",
+      "url": "/impact",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "launch_handler": {
@@ -164,6 +175,20 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "The front page on mobile"
+    },
+    {
+      "src": "/screenshots/impact-wide.png",
+      "sizes": "1440x1000",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Live impact report"
+    },
+    {
+      "src": "/screenshots/about-wide.png",
+      "sizes": "1440x1000",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The project and press kit"
     }
   ]
 }

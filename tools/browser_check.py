@@ -239,6 +239,11 @@ class Checker:
                 # The UI hides broken images; that is not an app error.
                 if "/api/img" in entry.get("url", ""):
                     continue
+                # Media is third-party and can expire or refuse a range request.
+                # The UI has an unavailable-clip fallback for that case.
+                media_url = entry.get("url", "")
+                if any(token in media_url for token in (".mp4", ".m3u8", ".webm", "youtube.com", "youtube-nocookie.com", "vimeo.com")):
+                    continue
                 errors.append(f"log: {entry.get('text')} {entry.get('url', '')}")
         return errors
 
@@ -418,7 +423,7 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
 
     print("\n[2b] Video")
     videos = api(base, "/api/videos?limit=12", profile=profile_id)
-    youtube_item = next((item for item in videos.get("items", []) if item.get("video", {}).get("kind") == "youtube"), None)
+    youtube_item = next((item for item in videos.get("items", []) if (item.get("video") or {}).get("kind") == "youtube"), None)
     if videos.get("items"):
         checker.goto("/videos")
         checker.wait_for("Boolean(document.querySelector('.video-lead'))", 15, "watch page")
@@ -752,6 +757,42 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.ok(state["survey"].get("skipped") is True, "survey records that it was skipped")
     checker.ok(len(state["survey"].get("topics", {})) >= 3, "skip seeds sensible topics")
     checker.shot("12-after-skip")
+
+    print("\n[6b] Founder / impact pages")
+    checker.goto("/about")
+    checker.wait_for("Boolean(document.querySelector('.founder-hero'))", 15, "about page")
+    checker.ok(checker.count(".founder-stat") >= 4, "about page shows live product metrics")
+    checker.ok(checker.count(".site-footer a[href='/impact']") >= 1, "footer links to the impact report")
+    checker.shot("14-about")
+
+    checker.goto("/impact")
+    checker.wait_for("Boolean(document.querySelector('.founder-stats'))", 15, "impact page")
+    checker.ok(checker.count(".founder-stat") >= 6, "impact dashboard renders")
+    checker.ok(checker.count(".metric-row") >= 8, "source diversity charts render")
+    checker.ok(checker.count("#impact-download") == 1, "impact report is downloadable")
+    checker.shot("15-impact")
+
+    checker.goto("/classroom")
+    checker.wait_for("Boolean(document.querySelector('.lesson-steps'))", 15, "classroom page")
+    checker.ok(checker.count(".lesson-steps > div") == 5, "45-minute lesson has five steps")
+    checker.ok(checker.count(".checklist li") >= 4, "media-literacy checklist renders")
+    checker.ok(checker.count("#print-lesson") == 1, "lesson is printable")
+    checker.shot("16-classroom")
+
+    checker.goto("/roadmap")
+    checker.wait_for("Boolean(document.querySelector('.roadmap-card'))", 15, "roadmap page")
+    checker.ok(checker.count(".roadmap-card") >= 8, "public roadmap renders")
+    checker.ok(checker.count("#feedback-form") == 1, "feedback form renders")
+    checker.click("[data-vote]")
+    checker.ok(checker.wait_for("document.querySelector('[data-vote]')?.classList.contains('is-on')", 8, "roadmap vote"), "roadmap vote toggles")
+    checker.shot("17-roadmap")
+
+    print("\n[6c] Video Shorts")
+    checker.goto("/reels?mode=video")
+    checker.wait_for("Boolean(document.querySelector('.reels__tabs'))", 20, "video shorts")
+    checker.ok(checker.cdp.js("[...document.querySelectorAll('.reels__tabs button')].some((n) => n.textContent.trim() === 'Video' && n.classList.contains('is-on'))"), "Video tab is active")
+    checker.ok(checker.count(".reel__video, .reel__video-play") >= 1, "video Shorts render a player")
+    checker.shot("18-video-shorts")
 
     print("\n[7] Mobile layout")
     cdp.call("Emulation.setDeviceMetricsOverride", width=390, height=844, deviceScaleFactor=2, mobile=True)

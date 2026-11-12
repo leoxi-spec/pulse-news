@@ -18,6 +18,7 @@ import { sourcesView, sourceView } from './views/sources.js';
 import { sportsView } from './views/sports.js';
 import { reelsView } from './views/reels.js';
 import { videosView } from './views/videos.js';
+import { aboutView, impactView, classroomView, roadmapView } from './views/founder.js';
 import { accountView } from './views/account.js';
 import { privacyView, termsView } from './views/legal.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
@@ -34,6 +35,7 @@ const NAV = [
   { href: '/brief', label: 'Brief', icon: 'bolt' },
   { href: '/saved', label: 'Saved', icon: 'bookmark', mobile: true },
   { href: '/study', label: 'Study', icon: 'book', minAge: 8 },
+  { href: '/about', label: 'About', icon: 'info' },
   { href: '/profile', label: 'Profile', icon: 'user', mobile: true },
 ];
 
@@ -50,6 +52,10 @@ function registerRoutes() {
   router.add('/', homeView);
   router.add('/reels', reelsView);
   router.add('/videos', videosView);
+  router.add('/about', aboutView);
+  router.add('/impact', impactView);
+  router.add('/classroom', classroomView);
+  router.add('/roadmap', roadmapView);
   router.add('/discover', discoverView);
   router.add('/topic/:slug', topicView);
   router.add('/story/:id', storyView);

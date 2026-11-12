@@ -771,6 +771,10 @@ def _safe_video(kind: str | None, video_id: str | None, url: str | None) -> tupl
         return (kind, video_id, f"https://vimeo.com/{video_id}")
     if not url or not url.startswith(("http://", "https://")):
         return (None, None, None)
+    # Chrome/Firefox do not play HLS or DASH natively. Showing them as a
+    # broken <video> is worse than not showing a player at all.
+    if re.search(r"\.(?:m3u8|mpd)(?:\?|$)", url, re.I):
+        return (None, None, None)
     # Collapse accidental path double-slashes without touching the scheme.
     url = re.sub(r"(?<!:)//+", "/", url)
     return (kind, None, url[:1500])

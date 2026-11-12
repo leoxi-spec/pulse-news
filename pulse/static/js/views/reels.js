@@ -2,7 +2,7 @@
 // It pages through several ranked streams, appends more as you approach the
 // end, polls for fresh stories, and lets you jump to what arrived since.
 import { get } from '../api.js';
-import { html, raw, icons, toast, copyText, confetti, haptic } from '../ui.js';
+import { html, raw, icons, toast, copyText, confetti, haptic, modal } from '../ui.js';
 import { state, prefs, record, toggleSave } from '../store.js';
 import { navigate } from '../router.js';
 
@@ -10,6 +10,7 @@ const MODES = [
   ['for-you', 'For you'],
   ['latest', 'Latest'],
   ['readable', 'Readable'],
+  ['video', 'Video'],
 ];
 const TOPICS = ['world', 'tech', 'science', 'sports', 'culture', 'business', 'politics', 'health', 'climate', 'education', 'motorsport'];
 const AUTO_MS = 14000;
@@ -33,6 +34,16 @@ function setReaction(articleId, emoji) {
 }
 
 function buildStreams(mode) {
+  if (mode === 'video') {
+    return [
+      { mode: 'video', days: 60, offset: 0, done: false },
+      { mode: 'video', topic: 'sports', days: 60, offset: 0, done: false },
+      { mode: 'video', topic: 'world', days: 60, offset: 0, done: false },
+      { mode: 'video', topic: 'science', days: 60, offset: 0, done: false },
+      { mode: 'video', topic: 'tech', days: 60, offset: 0, done: false },
+      { mode: 'video', topic: 'education', days: 60, offset: 0, done: false },
+    ];
+  }
   const streams = [
     { mode, days: 7 },
     { mode: 'latest', days: 3 },
@@ -147,16 +158,25 @@ export async function reelsView(root, ctx) {
 function reelCard(item) {
   const icon = state.topicMap.get(item.topic)?.label ? (state.topicMap.get(item.topic).label.match(/[A-Za-z]/g) || ['N']).slice(0, 2).join('').toUpperCase() : 'N';
   const liked = Boolean(reactionMap()[item.id]);
+  const video = item.video;
+  const fileVideo = video?.kind === 'file';
   return html`
     <section class="reel" data-article="${item.id}">
       <div class="reel__bg reel__bg--fallback" aria-hidden="true"><span class="reel__monogram">${icon}</span><b>${item.topic_label || ''}</b></div>
       ${item.image ? html`
         <img class="reel__bg reel__bg--img" src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
+      ${fileVideo ? html`
+        <video class="reel__bg reel__video" data-reel-video src="${video.url}" poster="${item.image || ''}" muted loop playsinline preload="metadata"></video>` : ''}
+      ${video ? html`
+        <button class="reel__video-play" type="button" ${fileVideo ? 'data-reel-video-toggle' : 'data-reel-play'} aria-label="${fileVideo ? 'Turn video sound on or off' : 'Play video'}">
+          ${raw(icons.play)}<span>${fileVideo ? 'Sound' : (video.provider || 'Video')}</span>
+        </button>` : ''}
       <div class="reel__shade"></div>
 
       <div class="reel__content">
         <div class="reel__badges">
           <span class="badge badge--glass">${item.topic_label || 'News'}</span>
+          ${video ? html`<span class="badge badge--glass">Video</span>` : ''}
           ${item.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
           ${item.story?.source_count > 1 ? html`<span class="badge badge--glass">${item.story.source_count} outlets</span>` : ''}
         </div>
@@ -197,6 +217,32 @@ function loaderCard() {
         <button class="btn btn--sm btn--ghost" data-retry hidden>Check for new stories</button>
       </div>
     </section>`;
+}
+
+function openVideoModal(item) {
+  const video = item.video;
+  if (!video?.embed) return;
+  const origin = encodeURIComponent(window.location.origin);
+  const referrer = encodeURIComponent(window.location.href);
+  const wrap = document.createElement('div');
+  wrap.className = 'video-modal';
+  const iframe = document.createElement('iframe');
+  iframe.src = `${video.embed}${video.embed.includes('?') ? '&' : '?'}autoplay=1&rel=0&playsinline=1&origin=${origin}&widget_referrer=${referrer}`;
+  iframe.title = item.title;
+  iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+  iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen';
+  iframe.allowFullscreen = true;
+  wrap.appendChild(iframe);
+  if (video.url) {
+    const link = document.createElement('a');
+    link.className = 'video-modal__link';
+    link.href = video.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = `Open on ${video.provider || 'the source'}`;
+    wrap.appendChild(link);
+  }
+  modal({ title: item.title, wide: true, body: wrap });
 }
 
 function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
@@ -311,6 +357,25 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     progressFill.style.width = '100%';
   };
 
+  let activeVideo = null;
+  const syncVideo = (index) => {
+    if (activeVideo) activeVideo.pause();
+    activeVideo = null;
+    realReels().forEach((node) => node.querySelectorAll('[data-reel-video-toggle]').forEach((button) => {
+      button.classList.remove('is-on');
+      const label = button.querySelector('span');
+      if (label) label.textContent = 'Sound';
+    }));
+    const reel = realReels()[index];
+    const video = reel?.querySelector('video[data-reel-video]');
+    if (video) {
+      video.muted = true;
+      if (video.readyState >= 2) video.classList.add('is-ready');
+      video.play().catch(() => {});
+      activeVideo = video;
+    }
+  };
+
   const go = (index) => {
     if (index < 0) return;
     track.scrollTo({ top: index * track.clientHeight, behavior: 'smooth' });
@@ -336,6 +401,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     active = index;
     activeStarted = performance.now();
     realReels().forEach((reel, i) => reel.classList.toggle('is-active', i === index));
+    syncVideo(index);
     paintProgress();
     hint?.classList.add('is-gone');
     const item = items[index];
@@ -372,6 +438,27 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     reel.querySelectorAll('[data-open]').forEach((button) => button.addEventListener('click', (event) => {
       event.stopPropagation();
       navigate(`/article/${item.id}`);
+    }));
+    const reelVideo = reel.querySelector('video[data-reel-video]');
+    reelVideo?.addEventListener('loadeddata', () => reelVideo.classList.add('is-ready'), { once: true });
+    reelVideo?.addEventListener('error', (event) => {
+      event.currentTarget.style.display = 'none';
+    });
+    reel.querySelectorAll('[data-reel-video-toggle]').forEach((button) => button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const video = reel.querySelector('video[data-reel-video]');
+      if (!video) return;
+      video.muted = !video.muted;
+      if (!video.muted) video.play().catch(() => {});
+      reel.querySelectorAll('[data-reel-video-toggle]').forEach((node) => {
+        node.classList.toggle('is-on', !video.muted);
+        const label = node.querySelector('span');
+        if (label) label.textContent = video.muted ? 'Sound' : 'Sound on';
+      });
+    }));
+    reel.querySelectorAll('[data-reel-play]').forEach((button) => button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openVideoModal(item);
     }));
     reel.querySelectorAll('.reel__bg--img').forEach((img) => {
       img.addEventListener('error', () => { img.style.display = 'none'; });
@@ -547,6 +634,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   });
   refreshIndices();
   realReels()[0]?.classList.add('is-active');
+  syncVideo(0);
 
   track.addEventListener('scroll', () => hint?.classList.add('is-gone'), { passive: true, once: true });
 
@@ -634,6 +722,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     clearTimeout(autoTimer);
     clearInterval(pollTimer);
     saveDwell(true);
+    if (activeVideo) { activeVideo.pause(); activeVideo = null; }
     document.removeEventListener('keydown', onKey);
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pagehide', onUnload);
