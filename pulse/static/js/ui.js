@@ -285,7 +285,7 @@ export function errorState(node, message, retry = null) {
       <div class="empty__mark"></div>
       <h2>That didn't load</h2>
       <p>${message || 'Check your connection and try again.'}</p>
-      ${retry ? '<button class="btn btn--ghost" style="margin-top:1rem" data-retry>Try again</button>' : ''}
+      ${retry ? raw('<button class="btn btn--ghost" style="margin-top:1rem" data-retry>Try again</button>') : ''}
     </div>`;
   if (retry) node.querySelector('[data-retry]')?.addEventListener('click', retry);
 }

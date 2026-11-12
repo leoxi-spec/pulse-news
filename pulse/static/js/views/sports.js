@@ -48,7 +48,7 @@ export async function sportsView(root, ctx) {
     <div class="chip-row" style="margin:.9rem 0 .6rem" id="league-tabs">
       <button class="chip is-on" data-league="all">All sports</button>
       ${leaguesCatalog.map((league) => html`
-        <button class="chip" data-league="${league.slug}">${league.emoji} ${league.label}</button>`)}
+        <button class="chip" data-league="${league.slug}">${league.label}</button>`)}
     </div>
 
     <div class="segmented" role="tablist" style="margin-bottom:1rem" id="filters">
@@ -104,7 +104,7 @@ function renderPinnedBar(root) {
     return html`
       <span class="pin-chip pin-chip--league" data-pin-league="${slug}">
         <button class="pin-chip__body" data-filter-league="${slug}" title="Show ${league.label}">
-          <span aria-hidden="true">${league.emoji}</span>${league.label}
+          ${league.label}
         </button>
         <button class="pin-chip__x" data-unpin-league="${slug}" aria-label="Unpin ${league.label}">×</button>
       </span>`;
@@ -239,6 +239,9 @@ function renderGames(root) {
   body.innerHTML = groups.map(([league, list]) => html`
     ${currentLeague === 'all' ? html`<div class="feed__divider">${leagueLabel(league)}</div>` : ''}
     <div class="game-grid">${list.map((game) => gameCard(game))}</div>`).join('');
+  body.querySelectorAll('[data-game-stats]').forEach((button) => {
+    button.addEventListener('click', () => openGameStats(button.dataset.gameStats, button.dataset.league));
+  });
   body.querySelectorAll('[data-pin-team]').forEach((button) => {
     button.addEventListener('click', async () => {
       const teamId = button.dataset.pinTeam;
@@ -261,7 +264,7 @@ function renderGames(root) {
 
 function leagueLabel(slug) {
   const league = leaguesCatalog.find((item) => item.slug === slug);
-  return league ? `${league.emoji} ${league.label}` : slug.toUpperCase();
+  return league ? league.label : slug.toUpperCase();
 }
 
 function gameCard(game) {
@@ -296,8 +299,55 @@ function gameCard(game) {
         ${game.date && phase === 'pre' ? html`<span>${absDate(game.date)}</span>` : ''}
         ${game.venue ? html`<span>· ${game.venue}</span>` : ''}
         ${game.broadcasts?.length ? html`<span>· ${game.broadcasts.join(', ')}</span>` : ''}
+        ${phase !== 'pre' ? html`<button class="btn btn--sm btn--ghost" data-game-stats="${game.id}" data-league="${game.league}">Player stats</button>` : ''}
       </div>
     </article>`;
+}
+
+async function openGameStats(eventId, league) {
+  const body = document.createElement('div');
+  body.innerHTML = html`<p class="small muted">Loading player stats…</p>`;
+  modal({
+    title: 'Player stats',
+    wide: true,
+    body,
+    actions: [{ label: 'Close', class: 'btn--ghost' }],
+  });
+  try {
+    const data = await get(`/api/sports/${encodeURIComponent(league)}/summary/${encodeURIComponent(eventId)}`, 20);
+    const teams = data.teams || [];
+    if (!teams.length) {
+      body.innerHTML = html`<p class="small muted">Player stats are not available for this game yet. They usually appear once the game starts.</p>`;
+      return;
+    }
+    body.innerHTML = html`
+      <div class="stats-teams">
+        ${teams.map((team) => html`
+          <section class="stats-team">
+            <div class="stats-team__head"><h3>${team.name}</h3><span>${team.abbr || ''}</span></div>
+            <div class="stats-table-wrap">
+              <table class="stats-table">
+                <thead><tr><th>Player</th>${team.labels.slice(0, 6).map((label) => html`<th>${label}</th>`)}</tr></thead>
+                <tbody>
+                  ${team.athletes.map((athlete) => html`
+                    <tr>
+                      <td>
+                        <span class="stats-player">
+                          ${athlete.headshot ? html`<img src="${proxyImg(athlete.headshot)}" alt="" loading="lazy">` : html`<span class="stats-player__initials">${(athlete.name || '?').slice(0, 1)}</span>`}
+                          <span>${athlete.name}</span>
+                        </span>
+                      </td>
+                      ${athlete.stats.slice(0, 6).map((value) => html`<td>${value}</td>`)}
+                    </tr>`)}
+                </tbody>
+              </table>
+            </div>
+          </section>`)}
+      </div>
+      <p class="tiny faint" style="margin-top:.8rem">Stats from ESPN. Cached for one minute.</p>`;
+  } catch (err) {
+    body.innerHTML = html`<p class="small muted">${err.message || 'Could not load player stats.'}</p>`;
+  }
 }
 
 function openPinManager(root) {
@@ -347,7 +397,7 @@ function openPinManager(root) {
       <div class="choice-grid">
         ${leaguesCatalog.map((league) => html`
           <button class="choice ${leagueSelection.has(league.slug) ? 'is-on' : ''}" data-league-toggle="${league.slug}">
-            <span class="choice__icon">${league.emoji}</span><span>${league.label}</span>
+            <span>${league.label}</span>
           </button>`)}
       </div>
       <p class="tiny muted" style="margin:1rem 0 .35rem">Teams playing today</p>

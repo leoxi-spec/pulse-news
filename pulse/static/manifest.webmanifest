@@ -99,18 +99,25 @@
   },
   "screenshots": [
     {
+      "src": "/screenshots/welcome-wide.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "A calmer front page"
+    },
+    {
       "src": "/screenshots/home-wide.png",
       "sizes": "1440x900",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Your front page"
+      "label": "Brief, top stories and Shorts"
     },
     {
       "src": "/screenshots/onboarding-wide.png",
       "sizes": "1440x900",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Choose a reading level for your age"
+      "label": "Reading levels for every age"
     },
     {
       "src": "/screenshots/article-wide.png",
@@ -118,6 +125,13 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "Reading with photo galleries"
+    },
+    {
+      "src": "/screenshots/sports-wide.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Live scores and player stats"
     },
     {
       "src": "/screenshots/shorts-narrow.png",

@@ -243,6 +243,66 @@ def all_scoreboards(*, force: bool = False, leagues: list[str] | None = None, de
     }
 
 
+def game_summary(slug: str, event_id: str) -> dict:
+    """Player box-score leaders for one game, cached briefly."""
+    league = LEAGUE_BY_SLUG.get(slug)
+    if league is None:
+        raise ValueError(f"Unknown league {slug!r}")
+    key = f"summary:{slug}:{event_id}"
+    cached = _MEMORY.get(key)
+    if cached and minutes_since(cached[1].get("fetched_at")) * 60 < 60:
+        return cached[1]
+    row = db.query_one("SELECT payload, fetched_at FROM sports_cache WHERE key=?", (key,))
+    if row and (minutes_since(row["fetched_at"]) * 60) < 60:
+        try:
+            payload = json.loads(row["payload"])
+            _MEMORY[key] = (time.time(), payload)
+            return payload
+        except (ValueError, TypeError):
+            pass
+    url = f"{settings.espn_base}/apis/site/v2/sports/{league.path}/summary?event={event_id}"
+    try:
+        data = _client.get_json(url, timeout=12, retries=1)
+    except FetchError as exc:
+        log.warning("summary %s/%s failed: %s", slug, event_id, exc)
+        return {"event_id": event_id, "league": slug, "teams": [], "error": str(exc), "fetched_at": iso()}
+    teams = []
+    for block in (data.get("boxscore") or {}).get("players") or []:
+        team = block.get("team") or {}
+        stats = (block.get("statistics") or [{}])[0]
+        labels = [str(label) for label in (stats.get("labels") or [])]
+        athletes = []
+        for entry in (stats.get("athletes") or [])[:8]:
+            athlete = entry.get("athlete") or {}
+            name = athlete.get("displayName") or athlete.get("shortName") or ""
+            if not name:
+                continue
+            athletes.append({
+                "name": name,
+                "short": athlete.get("shortName") or name,
+                "headshot": athlete.get("headshot") or None,
+                "stats": [str(value) for value in (entry.get("stats") or [])],
+            })
+        if labels and athletes:
+            teams.append({
+                "name": team.get("displayName") or team.get("name") or "Team",
+                "abbr": team.get("abbreviation") or "",
+                "labels": labels,
+                "athletes": athletes,
+            })
+    payload = {"event_id": event_id, "league": slug, "teams": teams, "fetched_at": iso(), "error": None}
+    _MEMORY[key] = (time.time(), payload)
+    try:
+        db.execute(
+            "INSERT INTO sports_cache(key, payload, fetched_at) VALUES(?,?,?) "
+            "ON CONFLICT(key) DO UPDATE SET payload=excluded.payload, fetched_at=excluded.fetched_at",
+            (key, json.dumps(payload), iso()),
+        )
+    except Exception:
+        pass
+    return payload
+
+
 def league_scores(slug: str) -> dict:
     payload = scoreboard(slug)
     return payload

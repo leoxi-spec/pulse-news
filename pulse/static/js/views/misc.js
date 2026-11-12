@@ -1148,7 +1148,7 @@ export async function onboardingView(root, ctx) {
     const key = ONBOARD_STEPS[step];
     const selectedTopics = selectedTopicCount();
     root.innerHTML = html`
-      <div class="onboarding">
+      <div class="onboarding ${key === 'welcome' ? 'onboarding--welcome' : ''}">
         <div class="onboarding__top">
           <a class="brand" href="/" data-link><span class="brand__pulse"><span></span><span></span><span></span><span></span></span><span class="brand__name">Pulse</span></a>
           <div class="onboarding__dots" aria-label="Step ${step + 1} of ${ONBOARD_STEPS.length}">
@@ -1247,18 +1247,22 @@ export async function onboardingView(root, ctx) {
 function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
   if (key === 'welcome') {
     return html`
-      <h1>News that keeps up<br>with you.</h1>
-      <p class="onboarding__sub">${boot.catalog?.sources || 300} sources, live scores, AI overviews and a permanent archive. Two minutes of setup and the feed is yours.</p>
-      <div class="onboarding__body">
-        <label class="tiny muted" for="name" style="display:block;margin-bottom:.35rem">What should we call you?</label>
-        <input id="name" type="text" maxlength="40" placeholder="First name or nickname" value="${draft.name}" autocomplete="given-name">
-        <div class="grid-3" style="margin-top:1.2rem">
-          <div class="card card-pad"><b class="small">300+ sources</b><p class="tiny muted">Every major outlet, all topics.</p></div>
-          <div class="card card-pad"><b class="small">Overviews</b><p class="tiny muted">Know the story before you commit.</p></div>
-          <div class="card card-pad"><b class="small">Live scores</b><p class="tiny muted">NBA, NFL, football and more.</p></div>
+      <div class="welcome">
+        <div class="welcome__aura" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="welcome__kicker">Pulse</p>
+        <h1 class="welcome__title">The news,<br><em>without the noise.</em></h1>
+        <p class="welcome__sub">A personal front page for school, curiosity and the things you actually care about. Built to be read, not doomscrolled.</p>
+        <div class="welcome__metrics">
+          <div><b>${boot.catalog?.sources || 336}</b><span>sources</span></div>
+          <div><b>${(boot.topics || []).length || 20}</b><span>topics</span></div>
+          <div><b>0</b><span>ads</span></div>
         </div>
-        <p class="tiny faint" style="margin-top:1rem">Everything stays on your device. No ads, no tracking, no account required.</p>
-        ${!editing ? html`<p class="small muted" style="margin-top:.9rem">In a hurry? <button class="link" id="skip-welcome" style="background:none;border:0;font:inherit">Skip the survey</button> and start with a general feed — you can personalise it any time from Profile.</p>` : ''}
+        <div class="welcome__card">
+          <label class="tiny muted" for="name">What should we call you?</label>
+          <input id="name" type="text" maxlength="40" placeholder="First name or nickname" value="${draft.name}" autocomplete="given-name">
+          <p class="tiny faint">No account. No tracking. You can change everything later.</p>
+        </div>
+        ${!editing ? html`<p class="welcome__skip">In a hurry? <button class="link" id="skip-welcome">Skip the survey</button> and start with a general feed.</p>` : ''}
       </div>`;
   }
   if (key === 'grade') {

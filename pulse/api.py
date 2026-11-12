@@ -399,6 +399,9 @@ def handle(request: Request) -> tuple[int, dict, dict]:
         if match and method == "GET":
             return 200, _source_detail(match.group(1), profile), {}
 
+        match = re.fullmatch(r"/api/sports/([\w.]+)/summary/(\d+)", path)
+        if match and method == "GET":
+            return 200, sports.game_summary(match.group(1), match.group(2)), {}
         match = re.fullmatch(r"/api/sports/([a-z0-9.]+)", path)
         if match and method == "GET":
             return 200, sports.league_scores(match.group(1)), {}
