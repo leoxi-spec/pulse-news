@@ -18,6 +18,7 @@ import { sourcesView, sourceView } from './views/sources.js';
 import { sportsView } from './views/sports.js';
 import { reelsView } from './views/reels.js';
 import { accountView } from './views/account.js';
+import { privacyView, termsView } from './views/legal.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
 import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
@@ -60,6 +61,8 @@ function registerRoutes() {
   router.add('/source/:id', sourceView);
   router.add('/archive', archiveView);
   router.add('/account', accountView);
+  router.add('/privacy', privacyView);
+  router.add('/terms', termsView);
   router.add('/profile', profileView);
   router.add('/settings', (root, ctx) => profileView(root, { ...ctx, query: { ...ctx.query, focus: 'settings' } }));
   router.add('/onboarding', onboardingView);
@@ -268,18 +271,37 @@ function setupImageFallbacks() {
 function setupInstall() {
   const button = document.getElementById('install-btn');
   let promptEvent = null;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     promptEvent = event;
     if (button) button.hidden = false;
   });
-  button?.addEventListener('click', async () => {
-    if (!promptEvent) return;
-    promptEvent.prompt();
-    await promptEvent.userChoice;
-    promptEvent = null;
-    button.hidden = true;
-  });
+  window.pulseInstall = async () => {
+    if (promptEvent) {
+      promptEvent.prompt();
+      await promptEvent.userChoice;
+      promptEvent = null;
+      button.hidden = true;
+      return;
+    }
+    if (standalone) {
+      toast('Pulse is already installed on this device');
+      return;
+    }
+    modal({
+      title: 'Install Pulse',
+      body: html`
+        <p class="small muted">Pulse works as an app, with its own icon and offline shell.</p>
+        <div class="stack-sm" style="margin-top:.8rem">
+          <p class="small"><b>iPhone / iPad</b><br>Open this page in Safari, tap Share, then <b>Add to Home Screen</b>.</p>
+          <p class="small"><b>Android / Chrome</b><br>Open the browser menu and tap <b>Install app</b> (or Add to Home screen).</p>
+          <p class="small"><b>Desktop</b><br>Use the install icon in the address bar, or the Install button in this app.</p>
+        </div>`,
+      actions: [{ label: 'Got it', class: 'btn--primary' }],
+    });
+  };
+  button?.addEventListener('click', () => window.pulseInstall());
 }
 
 function setupServiceWorker() {
@@ -365,7 +387,8 @@ async function boot() {
   renderNav();
   router.start();
 
-  if (!data.profile?.onboarded && !location.pathname.startsWith('/onboarding') && !location.pathname.startsWith('/account')) {
+  const publicPaths = ['/onboarding', '/account', '/privacy', '/terms'];
+  if (!data.profile?.onboarded && !publicPaths.some((path) => location.pathname.startsWith(path))) {
     router.navigate('/onboarding', { replace: true });
   }
 

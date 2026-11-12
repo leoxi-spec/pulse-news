@@ -125,6 +125,19 @@ function highlight(text) {
     .replace(/\[\[|\]\]/g, '');
 }
 
+function highlightQuery(text, query) {
+  let out = highlight(text);
+  if (out.includes('<mark>')) return out;
+  const tokens = [...new Set((query || '').toLowerCase().match(/[a-z0-9']{2,}/g) || [])].slice(0, 6);
+  for (const token of tokens) {
+    const safe = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try {
+      out = out.replace(new RegExp(`\\b(${safe}[a-z']*)`, 'gi'), '<mark>$1</mark>');
+    } catch { /* ignore bad token */ }
+  }
+  return out;
+}
+
 async function runSearch(root, { q, topic, source, since, sort, offset, append }) {
   const results = root.querySelector('#results');
   const loadMore = root.querySelector('#load-more');
@@ -161,7 +174,7 @@ async function runSearch(root, { q, topic, source, since, sort, offset, append }
               ${item.paywalled ? html`<span class="tiny faint" title="Subscription">🔒</span>` : ''}
             </div>
             <h3 class="search-hit__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
-            ${item.snippet ? html`<p class="search-hit__snippet">${raw(highlight(item.snippet))}</p>` : ''}
+            ${item.snippet ? html`<p class="search-hit__snippet">${raw(highlightQuery(item.snippet, q))}</p>` : ''}
             <div class="hstack" style="gap:.5rem;margin-top:auto">
               <span class="tiny faint">${item.reading_minutes} min read${item.word_count ? ` · ${item.word_count} words` : ''}</span>
               ${item.story_id ? html`<span class="tiny faint">·</span><a class="tiny muted" style="text-decoration:underline;text-underline-offset:2px" href="/story/${item.story_id}" data-link>${item.story_source_count} outlets</a>` : ''}
@@ -946,9 +959,12 @@ export async function profileView(root, ctx) {
           Pulse ${boot.app?.version || ''} · ${compactNumber(boot.stats?.articles)} articles · ${boot.catalog?.sources} sources · ${boot.feed_health?.healthy}/${boot.feed_health?.total} feeds healthy<br>
           Server time ${absDate(boot.app?.server_time)}. Scores by ESPN. Headlines belong to their publishers.
         </p>
-        <div class="hstack" style="margin-top:.7rem">
+        <div class="hstack" style="margin-top:.7rem;flex-wrap:wrap">
           <button class="btn btn--sm btn--ghost" id="open-legend">Key to symbols</button>
+          <button class="btn btn--sm btn--ghost" id="install-app">Install app</button>
           <a class="btn btn--sm btn--ghost" href="/research" data-link>Research desk</a>
+          <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Privacy</a>
+          <a class="btn btn--sm btn--ghost" href="/terms" data-link>Terms</a>
         </div>
       </div>
     </div>`;
@@ -972,6 +988,8 @@ function bindProfile(root, p, today, profile) {
     });
   });
   root.querySelectorAll('[data-toggle]').forEach((button) => {
+    const label = button.closest('.settings-row')?.querySelector('.settings-row__label')?.textContent?.trim();
+    if (label) button.setAttribute('aria-label', label);
     button.addEventListener('click', async () => {
       const key = button.dataset.toggle;
       const value = !(p[key]);
@@ -1070,6 +1088,7 @@ function bindProfile(root, p, today, profile) {
   });
   root.querySelector('#edit-interests')?.addEventListener('click', () => navigate('/onboarding?edit=1'));
   root.querySelector('#open-legend')?.addEventListener('click', () => openLegend());
+  root.querySelector('#install-app')?.addEventListener('click', () => window.pulseInstall?.());
   root.querySelector('#export')?.addEventListener('click', async () => {
     try {
       const data = await get('/api/profile/export', 0, true);

@@ -94,15 +94,20 @@ function articleMarkup(a, p) {
         <button class="btn" data-act="share">${raw(icons.share)} Share</button>
         <button class="btn" data-act="cite">${raw(icons.quote)} Cite</button>
         <button class="btn" data-act="quiz">${raw(icons.bolt)} Quiz</button>
-        <button class="btn" data-act="notes">${raw(icons.note)} Notes</button>
         <button class="btn" data-act="listen" aria-pressed="false" title="Read this story aloud">${raw(icons.sound)} Listen</button>
         <span class="spacer"></span>
         <button class="btn" data-act="focus" title="Distraction-free reading">${raw(icons.eye)} Focus</button>
-        <button class="btn" data-act="font" title="Reading font">${raw(icons.text)}</button>
-        <button class="btn" data-act="text-smaller" title="Smaller text" aria-label="Smaller text">A−</button>
-        <button class="btn" data-act="text-larger" title="Larger text" aria-label="Larger text">A+</button>
-        <button class="btn" data-act="print" title="Print or save as PDF">${raw(icons.printer)} Print</button>
-        <a class="btn article__source-btn" href="${a.read_url}" target="_blank" rel="noopener noreferrer" title="Open at ${source.name}">${raw(icons.external)} Source</a>
+        <details class="action-more">
+          <summary class="btn" aria-label="More reading actions">${raw(icons.filter)} More</summary>
+          <div class="action-menu">
+            <button class="btn" data-act="notes">${raw(icons.note)} Notes</button>
+            <button class="btn" data-act="print">${raw(icons.printer)} Print / PDF</button>
+            <button class="btn" data-act="font">${raw(icons.text)} Reading font</button>
+            <button class="btn" data-act="text-smaller">A− Smaller text</button>
+            <button class="btn" data-act="text-larger">A+ Larger text</button>
+            <a class="btn" href="${a.read_url}" target="_blank" rel="noopener noreferrer">${raw(icons.external)} Open at ${source.name}</a>
+          </div>
+        </details>
       </div>
       <div class="reaction-bar" id="reaction-bar" aria-label="React to this story"></div>
 
@@ -595,6 +600,7 @@ function bindGallery(root, article) {
   if (!images.length) return;
   let layer = null;
   let index = 0;
+  let previousFocus = null;
 
   const close = () => {
     if (!layer) return;
@@ -602,6 +608,7 @@ function bindGallery(root, article) {
     layer = null;
     document.body.classList.remove('no-scroll');
     document.removeEventListener('keydown', onKey);
+    if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
   };
 
   const paint = () => {
@@ -619,9 +626,13 @@ function bindGallery(root, article) {
   };
 
   const open = (start) => {
+    previousFocus = document.activeElement;
     index = Math.max(0, Math.min(images.length - 1, start));
     layer = document.createElement('div');
     layer.className = 'lightbox';
+    layer.setAttribute('role', 'dialog');
+    layer.setAttribute('aria-modal', 'true');
+    layer.setAttribute('aria-label', 'Article photos');
     layer.innerHTML = html`
       <div class="lightbox__bar">
         <span class="lightbox__brand">${raw(icons.camera)} Photos</span>
@@ -629,12 +640,14 @@ function bindGallery(root, article) {
         <button class="lightbox__close" data-close aria-label="Close photos">${raw(icons.close)}</button>
       </div>
       <button class="lightbox__nav lightbox__nav--prev" data-prev aria-label="Previous photo">${raw(icons.chevron)}</button>
-      <img src="${images[index]}" alt="">
+      <img src="${images[index]}" alt="Photo ${index + 1} of ${images.length} from the article">
       <button class="lightbox__nav lightbox__nav--next" data-next aria-label="Next photo">${raw(icons.chevron)}</button>
       <p class="lightbox__hint">Swipe or use ← → · Esc to close</p>`;
     document.body.append(layer);
     document.body.classList.add('no-scroll');
     paint();
+    layer.tabIndex = -1;
+    layer.querySelector('[data-close]')?.focus();
     layer.querySelector('[data-close]').addEventListener('click', close);
     layer.querySelector('[data-prev]').addEventListener('click', () => { if (index > 0) { index -= 1; paint(); } });
     layer.querySelector('[data-next]').addEventListener('click', () => { if (index < images.length - 1) { index += 1; paint(); } });

@@ -51,6 +51,21 @@ class AuthTests(unittest.TestCase):
         self.assertTrue(auth.users_csv().startswith(b"email,name,admin"))
         self.assertIn(b"ada@example.com", auth.users_csv())
 
+    def test_under_13_cannot_create_account(self):
+        kid = profiles.create("Kid")
+        profiles.update(kid["id"], survey={"age": 10})
+        with self.assertRaises(auth.AuthError):
+            auth.signup("kid@example.com", "correct horse 9", "Kid", kid["id"])
+
+    def test_delete_account_removes_user_and_profile(self):
+        result = auth.signup("delete@example.com", "correct horse 9", "Del", None)
+        user = result["account"]
+        with self.assertRaises(auth.AuthError):
+            auth.delete_account(user["id"], "wrong password")
+        auth.delete_account(user["id"], "correct horse 9")
+        self.assertIsNone(auth._by_email("delete@example.com"))
+        self.assertIsNone(auth.session_user(FakeRequest(result["token"])))
+
     def test_logout_clears_session(self):
         result = auth.signup("logout@example.com", "correct horse 9", "Log", None)
         request = FakeRequest(result["token"])

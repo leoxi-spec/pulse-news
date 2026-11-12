@@ -708,6 +708,7 @@ def strip_boilerplate(text: str) -> str:
     cleaned = _strip_leading_widgets(text)
     cleaned = _PHOTO_CREDIT.sub("", cleaned.strip())
     cleaned = _WIDGET_JUNK.sub(" ", cleaned)
+    cleaned = _SUBSCRIPTION_CTA.sub(" ", cleaned)
     cleaned = _DATE_STAMP.sub(" ", cleaned)
     cleaned = _strip_byline(cleaned)
     kept = []
@@ -905,6 +906,11 @@ _TRAILING_CTA = re.compile(
     r"(https?://\S+)?[^.]*$",
     re.I,
 )
+_SUBSCRIPTION_CTA = re.compile(
+    r"(?:^|\s)(?:access|join|subscribe|sign up|already a subscriber|log in to continue|click here)"
+    r"[^.]{0,240}(?:subscriber|subscription|newsletter|premium|\bbeat\b|features)[^.]*\.",
+    re.I,
+)
 _WIDGET_JUNK = re.compile(
     r"(add\s+\S+\s+as\s+(a\s+)?preferred source|preferred source|advertisement|sponsored content)",
     re.I,
@@ -932,6 +938,7 @@ def clean_summary(text: str, limit: int = 520) -> str:
     plain = _DATE_STAMP.sub(" ", plain)
     plain = _strip_byline(plain)
     plain = _TRAILING_CTA.sub("", plain).strip()
+    plain = _SUBSCRIPTION_CTA.sub(" ", plain).strip()
     plain = re.sub(r"\s{2,}", " ", plain)
     if len(plain) > limit:
         plain = truncate_words(plain, limit // 6)

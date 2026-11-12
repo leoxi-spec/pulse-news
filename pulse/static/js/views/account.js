@@ -1,6 +1,6 @@
 // Email accounts: signup, login, the signed-in dashboard, and the admin user list.
 import { get, post } from '../api.js';
-import { html, raw, icons, toast, timeAgo } from '../ui.js';
+import { html, raw, icons, toast, timeAgo, modal } from '../ui.js';
 import { state, setProfile, setAccount } from '../store.js';
 import { navigate } from '../router.js';
 import { sectionHead } from '../components.js';
@@ -14,7 +14,8 @@ function dateLabel(value) {
 
 export async function accountView(root, ctx) {
   const account = state.account;
-  root.innerHTML = account ? dashboard(account) : authPage();
+  const age = Number(state.profile?.survey?.age || 13);
+  root.innerHTML = account ? dashboard(account) : authPage(age);
   if (account) {
     bindDashboard(root, account);
     if (account.is_admin) loadUsers(root);
@@ -23,7 +24,8 @@ export async function accountView(root, ctx) {
   }
 }
 
-function authPage() {
+function authPage(age = 13) {
+  const canCreate = age >= 13;
   return html`
     <div class="account">
       <div class="account__hero">
@@ -33,7 +35,7 @@ function authPage() {
       </div>
 
       <div class="account__grid">
-        <form class="card card-pad-lg account__form" data-signup-form>
+        ${canCreate ? html`<form class="card card-pad-lg account__form" data-signup-form>
           <div class="account__form-head">
             <span class="account__icon">✨</span>
             <div><h2>Create an account</h2><p class="tiny muted">The first account automatically becomes the admin.</p></div>
@@ -46,7 +48,15 @@ function authPage() {
           <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
           <button class="btn btn--primary btn--block" type="submit">Create account ${raw(icons.chevron)}</button>
           <p class="account__fine">Stored on this server only. No ads, no tracking, no verification email. This build has no mail server, so pick a password you’ll remember.</p>
-        </form>
+        </form>` : html`
+        <div class="card card-pad-lg account__form">
+          <div class="account__form-head">
+            <span class="account__icon">🧸</span>
+            <div><h2>Accounts are for 13+</h2><p class="tiny muted">Younger readers keep using Pulse as a guest on this device.</p></div>
+          </div>
+          <p class="small muted">Guest mode still keeps your streak, saves and reading history on this device. Email accounts are limited to ages 13 and up for privacy reasons.</p>
+          <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Read the privacy note</a>
+        </div>`}
 
         <form class="card card-pad-lg account__form" data-login-form>
           <div class="account__form-head">
@@ -68,7 +78,7 @@ function bindAuth(root, ctx) {
   const signup = root.querySelector('[data-signup-form]');
   const login = root.querySelector('[data-login-form]');
 
-  signup.addEventListener('submit', async (event) => {
+  signup?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = signup.querySelector('button');
     button.disabled = true;
@@ -148,6 +158,15 @@ function dashboard(account) {
         </div>
       </div>
 
+      <div class="card card-pad-lg account__danger">
+        <div class="between" style="gap:1rem">
+          <div><h2 style="font-size:1rem">Delete account</h2><p class="tiny muted">Remove your email, profile, saves, notes and reading history from this server. The shared news archive stays.</p></div>
+          <button class="btn btn--sm btn--danger" data-delete-account>Delete account</button>
+        </div>
+      </div>
+
+      <p class="account__legal"><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · <a href="mailto:support@pulse.local">Contact</a></p>
+
       ${account.is_admin ? html`
         <section class="section">
           <div class="section-head" style="margin-top:1.5rem">
@@ -160,6 +179,41 @@ function dashboard(account) {
 }
 
 function bindDashboard(root, account) {
+  root.querySelector('[data-delete-account]')?.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'password';
+    input.autocomplete = 'current-password';
+    input.placeholder = 'Your password';
+    input.setAttribute('aria-label', 'Password');
+    const body = document.createElement('div');
+    body.innerHTML = html`<p class="small muted">This removes your account, email, profile, saves and reading history. It cannot be undone.</p>`;
+    body.append(input);
+    const { close } = modal({
+      title: 'Delete your account?',
+      body,
+      actions: [
+        { label: 'Cancel', class: 'btn--ghost' },
+        {
+          label: 'Delete forever',
+          class: 'btn--danger',
+          onClick: async () => {
+            try {
+              const result = await post('/api/auth/delete', { password: input.value });
+              setAccount(null);
+              if (result.profile) setProfile(result.profile);
+              toast('Account deleted');
+              close();
+              navigate('/', { replace: true });
+              return true;
+            } catch (err) {
+              toast(err.message || 'Could not delete the account.', { type: 'bad' });
+              return false;
+            }
+          },
+        },
+      ],
+    });
+  });
   root.querySelector('[data-logout]')?.addEventListener('click', async () => {
     try {
       const result = await post('/api/auth/logout', {});

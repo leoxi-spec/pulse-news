@@ -150,6 +150,7 @@ export function toastProgress(progress) {
 // -------------------------------------------------------------------- modal
 export function modal({ title, body, actions = [], wide = false, onClose = null }) {
   const root = document.getElementById('modal-root');
+  const previousFocus = document.activeElement;
   const wrapper = el('div', { class: `modal ${wide ? 'modal--wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title || 'Dialog' });
   wrapper.innerHTML = html`
     <div class="modal__head">
@@ -179,9 +180,22 @@ export function modal({ title, body, actions = [], wide = false, onClose = null 
     root.innerHTML = '';
     document.body.classList.remove('no-scroll');
     document.removeEventListener('keydown', onKey);
+    if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
     onClose?.();
   };
-  const onKey = (event) => { if (event.key === 'Escape') close(); };
+  const focusable = () => [...wrapper.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((node) => node.offsetParent !== null);
+  const onKey = (event) => {
+    if (event.key === 'Escape') { close(); return; }
+    if (event.key !== 'Tab') return;
+    const nodes = focusable();
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  };
   document.addEventListener('keydown', onKey);
   $('[data-close]', wrapper).addEventListener('click', close);
   wrapper.addEventListener('click', (event) => { if (event.target === wrapper) close(); });

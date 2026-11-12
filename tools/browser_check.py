@@ -665,6 +665,13 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.ok(True, "logout returns to the guest state")
     checker.shot("05b-account")
 
+    checker.goto("/privacy")
+    checker.wait_for("Boolean(document.querySelector('.legal h1'))", 10, "privacy page")
+    checker.ok(checker.text(".legal h1") == "Privacy", "privacy policy renders")
+    checker.goto("/terms")
+    checker.wait_for("Boolean(document.querySelector('.legal h1'))", 10, "terms page")
+    checker.ok(checker.text(".legal h1") == "Terms", "terms page renders")
+
     print("\n[6] Onboarding skip path")
     cdp.call("Page.navigate", url=f"{base}/?profile={skip_profile}")
     time.sleep(0.5)

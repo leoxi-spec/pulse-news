@@ -163,6 +163,10 @@ def signup(email: str, password: str, name: str, profile_id: str | None, remote:
     password_hash, salt = _hash(password)
 
     profile = profiles.get(profile_id) if profile_id else None
+    if profile:
+        age = int(profile["survey"].get("age") or 13)
+        if age < 13:
+            raise AuthError(403, "Email accounts are for ages 13 and up. Younger readers can keep using Pulse as a guest.")
     if profile and db.query_one("SELECT 1 FROM users WHERE profile_id=?", (profile["id"],)):
         profile = None
     if profile is None:
@@ -196,6 +200,18 @@ def login(email: str, password: str, remote: str = "") -> dict:
     token = _create_session(user["id"])
     user = _by_email(email)
     return {"account": public(user), "profile": profile, "token": token}
+
+
+def delete_account(user_id: str, password: str) -> str | None:
+    user = db.query_one("SELECT * FROM users WHERE id=?", (user_id,))
+    if not user or not _verify(password or "", user["password_hash"], user["salt"]):
+        raise AuthError(401, "Password is incorrect.")
+    profile_id = user["profile_id"]
+    db.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
+    db.execute("DELETE FROM users WHERE id=?", (user_id,))
+    if profile_id:
+        profiles.delete(profile_id)
+    return profile_id
 
 
 def logout(request) -> None:

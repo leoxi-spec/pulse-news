@@ -8,7 +8,7 @@ import { open as openPalette, mountHomeSearch } from '../palette.js';
 import { dailySection, bindDaily, loadDaily } from '../daily.js';
 
 const DEFAULT_SECTIONS = [
-  'brief', 'shorts', 'daily', 'top', 'for-you', 'picks', 'my-sports',
+  'brief', 'top', 'shorts', 'for-you', 'daily', 'picks', 'my-sports',
   'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
 ];
 
@@ -69,10 +69,10 @@ function activeSections() {
     return valid;
   }
   if (younger) {
-    return ['brief', 'shorts', 'daily', 'top', 'for-you', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
+    return ['brief', 'top', 'shorts', 'for-you', 'daily', 'topic:science', 'topic:culture', 'topic:sports', 'topic:motorsport'];
   }
   if (olderKid) {
-    return ['brief', 'shorts', 'daily', 'top', 'for-you', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
+    return ['brief', 'top', 'shorts', 'for-you', 'daily', 'topic:science', 'topic:world', 'topic:sports', 'topic:culture', 'longreads'];
   }
   const withInterests = [...DEFAULT_SECTIONS];
   for (const slug of followedTopics()) {
@@ -351,7 +351,8 @@ function shortsSection(data) {
   return sectionWrap('shorts', head, html`
     <div class="shorts-home">
       <a class="shorts-home__lead" href="/reels?start=${lead.id}" data-link>
-        ${lead.image ? html`<img src="${lead.image}" alt="" loading="lazy">` : html`<span class="shorts-home__fallback">📰</span>`}
+        <span class="shorts-home__fallback"><i>${state.topicMap.get(lead.topic)?.icon || '📰'}</i><b>${lead.topic_label || 'News'}</b></span>
+        ${lead.image ? html`<img src="${lead.image}" alt="" loading="lazy">` : ''}
         <span class="shorts-home__shade"></span>
         <span class="shorts-home__play" aria-hidden="true">▶</span>
         <span class="shorts-home__copy">
@@ -363,7 +364,8 @@ function shortsSection(data) {
       <div class="shorts-home__side">
         ${items.slice(1, 4).map((item) => html`
           <a class="shorts-home__tile" href="/reels?start=${item.id}" data-link>
-            ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : html`<span class="shorts-home__fallback">📰</span>`}
+            <span class="shorts-home__tile-fallback">${state.topicMap.get(item.topic)?.icon || '📰'}</span>
+            ${item.image ? html`<img src="${item.image}" alt="" loading="lazy">` : ''}
             <span class="shorts-home__tile-shade"></span>
             <b>${item.title}</b>
             <i>${item.reading_minutes} min</i>

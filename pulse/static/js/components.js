@@ -228,6 +228,7 @@ export function topCard(item) {
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
         </div>
         <h3 class="top-card__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+        ${item.preview ? html`<p class="top-card__preview">${item.preview}</p>` : ''}
         <div class="top-card__meta">
           ${accessPill(item)}
           <span class="faint">·</span>

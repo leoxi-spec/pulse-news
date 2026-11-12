@@ -132,6 +132,19 @@ def handle(request: Request) -> tuple[int, dict, dict]:
                 "Set-Profile": guest["id"],
                 "Set-Cookie": auth.clear_cookie(secure=_secure_request(request)),
             }
+        if path == "/api/auth/delete" and method == "POST":
+            if not request.account:
+                raise ApiError(401, "Sign in first")
+            payload = request.json()
+            try:
+                auth.delete_account(request.account["id"], str(payload.get("password", "")))
+            except auth.AuthError as exc:
+                raise ApiError(exc.status, exc.message) from exc
+            guest = profiles.create()
+            return 200, {"ok": True, "profile": guest}, {
+                "Set-Profile": guest["id"],
+                "Set-Cookie": auth.clear_cookie(secure=_secure_request(request)),
+            }
         if path == "/api/auth/me" and method == "GET":
             return 200, {"account": auth.public(request.account)}, {}
         if path == "/api/admin/users" and method == "GET":
