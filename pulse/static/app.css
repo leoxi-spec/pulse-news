@@ -2903,3 +2903,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .video-modal iframe, .video-modal video { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: var(--r-md); background: #000; }
 .video-modal__link { align-self: flex-start; font-size: .8rem; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 .video-modal__link:hover { color: var(--accent); }
+
+.video-unavailable { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .45rem; min-height: 260px; padding: 1.5rem; text-align: center; background: var(--surface-2); color: var(--muted); }
+.video-unavailable b { color: var(--text); font-size: 1rem; }
+.video-unavailable span { font-size: .82rem; }
+.video-unavailable .btn { margin-top: .5rem; }

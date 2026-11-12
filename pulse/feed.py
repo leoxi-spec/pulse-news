@@ -259,11 +259,12 @@ def video_payload(row) -> dict | None:
             "kind": "vimeo",
             "id": video_id,
             "url": url or f"https://vimeo.com/{video_id}",
-            "embed": f"https://player.vimeo.com/video/{video_id}",
+            "embed": f"https://player.vimeo.com/video/{video_id}?dnt=1",
             "thumbnail": None,
             "provider": "Vimeo",
         }
     if kind == "file" and url:
+        url = str(url).replace("\\/", "/")
         return {"kind": "file", "id": None, "url": url, "embed": None, "thumbnail": None, "provider": "Video"}
     return None
 

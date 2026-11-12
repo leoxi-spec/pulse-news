@@ -206,8 +206,10 @@ export async function homeView(root, ctx) {
   // Load everything first, then paint once. This stops the page from shifting
   // under your finger while you scroll through sections.
   const entries = await Promise.all(sections.map(async (id) => {
-    const slow = id === 'sports' || id === 'my-sports';
-    return [id, await loadSection(id, slow ? 600 : 3000).catch(() => null)];
+    // Scores have their own late-fill slot; Today is data-heavy on a cold
+    // cache, so give it a little longer than the ordinary rows.
+    const timeout = id === 'sports' || id === 'my-sports' ? 600 : id === 'daily' ? 7000 : 3000;
+    return [id, await loadSection(id, timeout).catch(() => null)];
   }));
   const data = new Map(entries);
   const container = root.querySelector('#home-sections');
@@ -223,11 +225,25 @@ export async function homeView(root, ctx) {
     if (data.get(id)) continue;
     fillSportsSection(root, id);
   }
+  // Any other section that missed its first-paint deadline gets a skeleton
+  // now and a patient retry, so a cold cache never removes a whole row.
+  for (const id of sections) {
+    if (id === 'sports' || id === 'my-sports') continue;
+    if (data.get(id)) continue;
+    fillSection(root, id);
+  }
 }
 
 // ------------------------------------------------------------------ sections
 function sectionMarkup(id, data) {
   const meta = sectionMeta(id);
+  if (id === 'daily' && !data) {
+    return sectionWrap(
+      'daily',
+      sectionHead('Today', '', { sub: 'loading your board…' }),
+      html`<div class="daily-grid">${Array.from({ length: 4 }).map(() => html`<div class="skeleton" style="height:150px;border-radius:16px"></div>`)}</div>`,
+    );
+  }
   if (id === 'brief') return briefSection(data);
   if (id === 'shorts') return shortsSection(data);
   if (id === 'watch') return watchSection(data);
@@ -285,7 +301,8 @@ function watchSection(data) {
 function topSection(data) {
   const items = (data?.items || []).slice(0, 3);
   const head = sectionHead('Top Stories', html`<a href="/?stream=top" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'what the most outlets are covering' });
-  if (!items.length) return sectionWrap('top', head, emptyState({ icon: '📰', title: 'No top stories yet', text: 'The next refresh will fill this in.' }));
+  if (!data) return sectionWrap('top', head, skeletonFeed(1));
+  if (!items.length) return sectionWrap('top', head, emptyState({ title: 'No top stories yet', text: 'The next refresh will fill this in.' }));
   return sectionWrap('top', head, html`<div class="top-grid">${items.map((item) => topCard(item))}</div>`);
 }
 
@@ -330,9 +347,12 @@ function forYouSection(data, mode, items, hasMore, offset) {
           <button type="button" role="tab" aria-selected="${mode === id}" class="${mode === id ? 'is-on' : ''}" data-mode="${id}">${label}</button>`)}
       </div>
     </div>`;
+  if (!data && items === undefined) {
+    return sectionWrap('for-you', head, skeletonFeed(3));
+  }
   if (!list.length) {
     return sectionWrap('for-you', head, emptyState({
-      icon: '📡', title: 'Nothing in this stream yet',
+      title: 'Nothing in this stream yet',
       text: 'Try another tab, or search the whole archive.',
       action: '<button class="btn btn--primary" data-open-search>Search news</button>',
     }));
@@ -370,6 +390,9 @@ function savedSection(data) {
 
 function shortsSection(data) {
   const items = (data?.items || []).slice(0, 4);
+  if (!data) {
+    return sectionWrap('shorts', sectionHead('Pulse Shorts', '', { sub: 'loading…' }), html`<div class="skeleton" style="height:210px;border-radius:18px"></div>`);
+  }
   if (!items.length) return '';
   const lead = items[0];
   const head = sectionHead('Pulse Shorts', html`<a href="/reels" data-link>Open Shorts ${raw(icons.chevron)}</a>`, { sub: 'full-screen stories · watch time tunes For you' });
@@ -434,6 +457,20 @@ function mySportsSection(data) {
     { sub: (prefs().pinned_teams || []).map((team) => team.abbr || team.name).slice(0, 4).join(' · ') || `${pinnedLeagues.size} leagues` });
   if (!games.length) return sectionWrap('my-sports', head, html`<div class="card card-pad"><p class="small muted">No games for your pinned teams today.</p></div>`);
   return sectionWrap('my-sports', head, html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`);
+}
+
+async function fillSection(root, id) {
+  const shell = root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
+  if (!shell) return;
+  const data = await loadSection(id, 12000).catch(() => null);
+  if (!data) return;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = sectionMarkup(id, data);
+  const replacement = wrapper.firstElementChild;
+  const current = root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
+  if (replacement && current) current.replaceWith(replacement);
+  bindSectionActions(root, [id], new Map([[id, data]]));
+  if (id === 'daily') bindDaily(root, data);
 }
 
 async function fillSportsSection(root, id) {

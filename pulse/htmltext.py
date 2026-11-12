@@ -405,6 +405,7 @@ def video_from_markup(markup: str, base_url: str = "") -> tuple[str | None, str 
 
     for raw in candidates:
         value = html_lib.unescape(raw).strip().strip('"\'')
+        value = value.replace("\\/", "/")
         if not value or value.startswith(("data:", "blob:", "javascript:")):
             continue
         if value.startswith("//"):

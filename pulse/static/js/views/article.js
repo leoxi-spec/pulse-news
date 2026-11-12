@@ -195,7 +195,17 @@ function renderVideo(a) {
     </figure>`;
 }
 
-function bindVideo(root) {
+function bindVideo(root, article) {
+  root.querySelectorAll('.article__video video').forEach((video) => {
+    const showUnavailable = () => {
+      const figure = video.closest('.article__video');
+      if (!figure) return;
+      const link = article.read_url || article.url;
+      figure.innerHTML = `<div class="video-unavailable"><b>This clip is unavailable</b><span>The publisher's video file did not load.</span><a class="btn btn--sm" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Open the story</a></div>`;
+    };
+    if (video.error) showUnavailable();
+    else video.addEventListener('error', showUnavailable, { once: true });
+  });
   root.querySelectorAll('[data-video-play]').forEach((button) => {
     button.addEventListener('click', () => {
       const figure = button.closest('[data-video-embed]');
@@ -217,6 +227,14 @@ function bindVideo(root) {
 }
 
 function renderAccessBanner(a) {
+  if (a.video && !(a.blocks || []).length) {
+    return html`
+      <div class="reader-banner reader-banner--full">
+        <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
+        <div><b>Video story</b><span>Watch the clip above. The publisher's text description is below; the full article may live on their site.</span></div>
+        <a class="btn btn--sm btn--ghost" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Open original ${raw(icons.external)}</a>
+      </div>`;
+  }
   const access = accessInfo(a);
   if (access.kind === 'full') {
     return html`
@@ -264,6 +282,14 @@ function renderBlocks(a, blocks) {
 }
 
 function renderNoBody(a) {
+  if (a.video) {
+    return html`
+      <div class="paywall">
+        <h3>Watch the video above</h3>
+        <p>This is a video story. Pulse has the clip and the publisher's description; the full article, if there is one, is at ${a.source.name}.</p>
+        <a class="btn btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Open at ${a.source.name} ${raw(icons.external)}</a>
+      </div>`;
+  }
   if (a.paywalled) {
     return html`
       <div class="paywall">
@@ -722,7 +748,7 @@ function bindGallery(root, article) {
 
 function bindArticle(root, article) {
   bindGallery(root, article);
-  bindVideo(root);
+  bindVideo(root, article);
   const prose = root.querySelector('#prose');
 
   root.querySelectorAll('[data-act]').forEach((button) => {

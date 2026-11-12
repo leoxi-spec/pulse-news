@@ -54,6 +54,14 @@ class VideoParsingTests(unittest.TestCase):
         self.assertEqual((kind, video_id), ("youtube", "dQw4w9WgXcQ"))
         self.assertIn("watch?v=", url)
 
+    def test_json_escaped_video_url_is_repaired(self):
+        kind, video_id, url = htmltext.video_from_markup(
+            r'<meta property="og:video" content="https:\/\/cdn.example.com\/videos\/clip.mp4">'
+        )
+        self.assertEqual(kind, "file")
+        self.assertIsNone(video_id)
+        self.assertEqual(url, "https://cdn.example.com/videos/clip.mp4")
+
     def test_direct_mp4_is_recognised(self):
         kind, video_id, url = htmltext.video_from_markup(
             '<video src="https://cdn.example.com/clip.mp4" poster="/x.jpg"></video>'

@@ -303,6 +303,13 @@ class Database:
             for column in ("video_url", "video_id", "video_kind"):
                 if column not in columns:
                     conn.execute(f"ALTER TABLE articles ADD COLUMN {column} TEXT")
+            # JSON-LD sometimes stores escaped slashes (https:\/\/...); repair
+            # them once so the browser receives a real URL.
+            conn.execute(
+                "UPDATE articles SET video_url = REPLACE(video_url, ?, '/') "
+                "WHERE instr(video_url, ?) > 0",
+                ("\\/", "\\/"),
+            )
             conn.execute(
                 "INSERT INTO meta(key, value) VALUES('schema_version', ?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",

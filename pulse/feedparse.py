@@ -339,6 +339,7 @@ def _video_from_entry(entry: ET.Element, link: str = "") -> tuple[str | None, st
                 return ("youtube", value, f"https://www.youtube.com/watch?v={value}")
 
     for value in candidates + [link]:
+        value = value.replace("\\/", "/")
         yt = htmltext.youtube_id(value)
         if yt:
             return ("youtube", yt, f"https://www.youtube.com/watch?v={yt}")
@@ -346,6 +347,7 @@ def _video_from_entry(entry: ET.Element, link: str = "") -> tuple[str | None, st
         if vm:
             return ("vimeo", vm, f"https://vimeo.com/{vm}")
     for value in candidates:
+        value = value.replace("\\/", "/")
         if value.startswith("http") and re.search(r"\.(?:mp4|webm|m3u8|mov|m4v)(?:\?|$)", value, re.I):
             return ("file", None, value)
     return (None, None, None)

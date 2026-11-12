@@ -759,6 +759,8 @@ def _video_summary(text: str) -> str:
 
 
 def _safe_video(kind: str | None, video_id: str | None, url: str | None) -> tuple[str | None, str | None, str | None]:
+    if url:
+        url = str(url).replace("\\/", "/").strip()
     if kind not in ("youtube", "vimeo", "file"):
         return (None, None, None)
     if kind in ("youtube", "vimeo"):
@@ -769,6 +771,8 @@ def _safe_video(kind: str | None, video_id: str | None, url: str | None) -> tupl
         return (kind, video_id, f"https://vimeo.com/{video_id}")
     if not url or not url.startswith(("http://", "https://")):
         return (None, None, None)
+    # Collapse accidental path double-slashes without touching the scheme.
+    url = re.sub(r"(?<!:)//+", "/", url)
     return (kind, None, url[:1500])
 
 

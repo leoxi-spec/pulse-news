@@ -436,14 +436,19 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
         else:
             checker.ok(False, "video player opens")
         checker.click(".modal [data-close]")
+        checker.wait_for("Boolean(document.querySelector('.video-lead img')?.complete && document.querySelector('.video-lead img')?.naturalWidth)", 8, "watch cover")
         checker.shot("02b-watch")
+        video_item = youtube_item or videos["items"][0]
+        checker.goto(f"/article/{video_item['id']}")
+        checker.wait_for("Boolean(document.querySelector('.article__video'))", 15, "article video")
+        checker.ok(checker.count(".article__video") == 1, "article shows the video player")
         if youtube_item:
-            checker.goto(f"/article/{youtube_item['id']}")
-            checker.wait_for("Boolean(document.querySelector('.article__video'))", 15, "article video")
-            checker.ok(checker.count(".article__video") == 1, "article shows the video player")
             checker.click("[data-video-play]")
             checker.ok(checker.wait_for("Boolean(document.querySelector('.article__video iframe'))", 12, "article video embed"), "article video embeds on play")
-            checker.shot("02c-article-video")
+            checker.cdp.js("document.querySelectorAll('.article__video iframe').forEach((node) => node.remove())")
+        else:
+            checker.ok(checker.count(".article__video video") == 1, "direct article video renders")
+        checker.shot("02c-article-video")
     else:
         checker.ok(False, "video stream has items", "no videos ingested")
 

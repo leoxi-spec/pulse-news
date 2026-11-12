@@ -24,6 +24,20 @@ function playerBody(item) {
     node.playsInline = true;
     node.src = video.url;
     if (item.image) node.poster = item.image;
+    const showUnavailable = () => {
+      wrap.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'video-unavailable';
+      box.innerHTML = '<b>This clip is unavailable</b><span>The publisher\'s video file did not load.</span>';
+      const link = document.createElement('a');
+      link.className = 'btn btn--sm';
+      link.href = `/article/${item.id}`;
+      link.textContent = 'Open the story';
+      box.appendChild(link);
+      wrap.appendChild(box);
+    };
+    if (node.error) showUnavailable();
+    else node.addEventListener('error', showUnavailable, { once: true });
     wrap.appendChild(node);
   } else if (video.embed) {
     const origin = encodeURIComponent(window.location.origin);
