@@ -268,6 +268,22 @@ function setupImageFallbacks() {
   }, true);
 }
 
+function setupChrome() {
+  const appbar = document.getElementById('appbar');
+  const onScroll = () => appbar?.classList.toggle('is-scrolled', window.scrollY > 8);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  const markImages = () => {
+    document.querySelectorAll('img:not(.img-loaded)').forEach((img) => {
+      if (img.complete && img.naturalWidth) img.classList.add('img-loaded');
+      else img.addEventListener('load', () => img.classList.add('img-loaded'), { once: true });
+    });
+  };
+  markImages();
+  const view = document.getElementById('view');
+  if (view) new MutationObserver(markImages).observe(view, { childList: true, subtree: true });
+}
+
 function setupInstall() {
   const button = document.getElementById('install-btn');
   let promptEvent = null;
@@ -363,6 +379,7 @@ async function boot() {
   setupImageFallbacks();
   setupInstall();
   bindShell();
+  setupChrome();
   registerRoutes();
 
   const bootEl = document.getElementById('boot');

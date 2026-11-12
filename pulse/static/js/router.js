@@ -66,6 +66,9 @@ export async function render(url = window.location.pathname + window.location.se
     console.error('route failed', path, err);
     errorState(view, err?.message || 'This page failed to load.', () => render(url));
   }
+  view.classList.remove('page-enter');
+  void view.offsetWidth;
+  view.classList.add('page-enter');
   const main = document.getElementById('main');
   if (main && !restoreScroll) main.focus({ preventScroll: true });
 }

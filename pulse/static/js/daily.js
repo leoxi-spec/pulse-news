@@ -47,10 +47,19 @@ const DEFAULTS_BY_BAND = {
   senior: ['challenge', 'top3', 'longread', 'most', 'quiz', 'numbers', 'tip', 'streak', 'fact', 'detective'],
 };
 
+const OLD_DEFAULT_WIDGETS = ['challenge', 'word', 'poll', 'quiz', 'top3', 'photo', 'journal', 'streak'];
+
 function widgetOrder() {
   const saved = Array.isArray(prefs().widgets) ? prefs().widgets : [];
   const valid = saved.filter((id) => WIDGETS.some((widget) => widget.id === id));
-  if (valid.length) return valid;
+  if (valid.length) {
+    if (!prefs().widgets_v2 && valid.join('|') === OLD_DEFAULT_WIDGETS.join('|')) {
+      savePrefs({ widgets: DEFAULT_WIDGETS, widgets_v2: true }).catch(() => {});
+      return [...DEFAULT_WIDGETS];
+    }
+    if (!prefs().widgets_v2) savePrefs({ widgets_v2: true }).catch(() => {});
+    return valid;
+  }
   const band = ageBand(state.profile?.survey?.age || 13);
   return DEFAULTS_BY_BAND[band.id] || DEFAULT_WIDGETS;
 }
