@@ -51,6 +51,20 @@ class AuthTests(unittest.TestCase):
         self.assertTrue(auth.users_csv().startswith(b"email,name,admin"))
         self.assertIn(b"ada@example.com", auth.users_csv())
 
+    def test_profile_name_photo_and_data_follow_the_account(self):
+        profile = profiles.create("Guest")
+        avatar = "data:image/jpeg;base64," + "A" * 120
+        profiles.update(profile["id"], name="Ada Lovelace", prefs={"avatar": avatar, "theme": "forest"})
+        result = auth.signup("ada@example.com", "correct horse 9", "Ada Lovelace", profile["id"])
+        self.assertEqual(result["profile"]["name"], "Ada Lovelace")
+        self.assertEqual(result["profile"]["prefs"]["avatar"], avatar)
+        auth.logout(FakeRequest(result["token"]))
+        login = auth.login("ada@example.com", "correct horse 9")
+        self.assertEqual(login["profile"]["id"], profile["id"])
+        self.assertEqual(login["profile"]["name"], "Ada Lovelace")
+        self.assertEqual(login["profile"]["prefs"]["avatar"], avatar)
+        self.assertEqual(login["profile"]["prefs"]["theme"], "forest")
+
     def test_under_13_cannot_create_account(self):
         kid = profiles.create("Kid")
         profiles.update(kid["id"], survey={"age": 10})

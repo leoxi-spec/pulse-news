@@ -1,7 +1,7 @@
 // Email accounts: signup, login, the signed-in dashboard, and the admin user list.
 import { get, post } from '../api.js';
 import { html, raw, icons, toast, timeAgo, modal } from '../ui.js';
-import { state, setProfile, setAccount } from '../store.js';
+import { state, prefs, profileInitials, setProfile, setAccount } from '../store.js';
 import { navigate } from '../router.js';
 import { sectionHead } from '../components.js';
 
@@ -37,7 +37,7 @@ function authPage(age = 13) {
       <div class="account__grid">
         ${canCreate ? html`<form class="card card-pad-lg account__form" data-signup-form>
           <div class="account__form-head">
-            <span class="account__icon">✨</span>
+            <span class="account__icon">NEW</span>
             <div><h2>Create an account</h2><p class="tiny muted">The first account automatically becomes the admin.</p></div>
           </div>
           <label class="account__label" for="signup-name">Name</label>
@@ -51,7 +51,7 @@ function authPage(age = 13) {
         </form>` : html`
         <div class="card card-pad-lg account__form">
           <div class="account__form-head">
-            <span class="account__icon">🧸</span>
+            <span class="account__icon">13+</span>
             <div><h2>Accounts are for 13+</h2><p class="tiny muted">Younger readers keep using Pulse as a guest on this device.</p></div>
           </div>
           <p class="small muted">Guest mode still keeps your streak, saves and reading history on this device. Email accounts are limited to ages 13 and up for privacy reasons.</p>
@@ -60,7 +60,7 @@ function authPage(age = 13) {
 
         <form class="card card-pad-lg account__form" data-login-form>
           <div class="account__form-head">
-            <span class="account__icon">🔑</span>
+            <span class="account__icon">IN</span>
             <div><h2>Sign in</h2><p class="tiny muted">Welcome back — your streak is waiting.</p></div>
           </div>
           <label class="account__label" for="login-email">Email</label>
@@ -120,19 +120,21 @@ function bindAuth(root, ctx) {
 }
 
 function dashboard(account) {
+  const displayName = state.profile?.name || account.name || 'Your account';
+  const photo = prefs().avatar || '';
   return html`
     <div class="account">
       <div class="account__hero">
         <p class="eyebrow">Pulse account</p>
-        <h1>${account.name || 'Your account'}</h1>
+        <h1>${displayName}</h1>
         <p class="page-sub">${account.is_admin ? 'You are the admin for this Pulse server.' : 'Your reading history is attached to this account.'}</p>
       </div>
 
       <div class="account__grid">
         <div class="card card-pad-lg">
           <div class="account__form-head">
-            <span class="account__avatar">${(account.name || account.email || '?').slice(0, 1).toUpperCase()}</span>
-            <div><h2>${account.email}</h2><p class="tiny muted">${account.is_admin ? 'Admin' : 'Reader'} · joined ${dateLabel(account.created_at)}</p></div>
+            <span class="account__avatar ${photo ? 'account__avatar--photo' : ''}" ${photo ? html`style="background-image:url('${photo}')"` : ''}>${photo ? '' : profileInitials()}</span>
+            <div><h2>${displayName}</h2><p class="tiny muted">${account.email} · ${account.is_admin ? 'Admin' : 'Reader'} · joined ${dateLabel(account.created_at)}</p></div>
           </div>
           <div class="account__stats">
             <div><b>${state.profile?.level || 1}</b><span>level</span></div>
@@ -142,6 +144,7 @@ function dashboard(account) {
           </div>
           <div class="hstack" style="margin-top:1rem;flex-wrap:wrap">
             <a class="btn btn--sm btn--ghost" href="/profile" data-link>${raw(icons.user)} Profile & settings</a>
+            <a class="btn btn--sm btn--ghost" href="/account" data-link>Account &amp; sync</a>
             <button class="btn btn--sm btn--ghost" data-logout>Sign out</button>
           </div>
           <p class="account__fine">This account is stored in the server’s SQLite file. Every new signup is recorded with its email and join date.</p>

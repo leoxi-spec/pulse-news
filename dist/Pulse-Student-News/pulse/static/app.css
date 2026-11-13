@@ -3722,3 +3722,29 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
 .top-grid--1 { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 980px) { .top-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .top-grid--2, .top-grid--1 { grid-template-columns: 1fr; } }
+
+/* Arcade Plus */
+.arcade-toolbar { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-top: 1rem; }
+.arcade-difficulty { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.arcade-difficulty > span { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); margin-right: .2rem; }
+.arcade-toolbar > .chip { display: inline-flex; align-items: center; gap: .3rem; }
+.arcade-toolbar .chip svg { width: .8rem; height: .8rem; }
+.arcade-daily {
+  display: flex; align-items: center; gap: .55rem; flex-wrap: wrap;
+  margin-top: .7rem; padding: .55rem .7rem; border-radius: 10px;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+.arcade-daily .eyebrow { color: var(--accent); }
+.arcade-daily b { font-size: .82rem; }
+.arcade-daily .btn { margin-left: auto; }
+.arcade-achievements { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .7rem; }
+.arcade-achievement { font-size: .62rem; padding: .22rem .45rem; border-radius: 999px; border: 1px solid var(--line); color: var(--faint); }
+.arcade-achievement.is-on { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.arcade-stars { display: inline-flex; gap: 2px; margin-left: .3rem; vertical-align: middle; }
+.arcade-stars i { width: 5px; height: 5px; border-radius: 50%; background: var(--surface-3); display: block; }
+.arcade-stars i.is-on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.arcade-stage.arcade-shake { animation: arcadeShake .38s ease; }
+@keyframes arcadeShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+@media (prefers-reduced-motion: reduce) { .arcade-stage.arcade-shake { animation: none; } }
+
+.account__avatar--photo { background-size: cover; background-position: center; color: transparent; text-indent: -9999px; overflow: hidden; }

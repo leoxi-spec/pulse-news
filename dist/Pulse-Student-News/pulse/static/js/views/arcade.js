@@ -1,5 +1,6 @@
 // Pulse Arcade: fifteen small, self-contained games. No external engines.
 import { html, raw, icons, modal, toast, confetti } from '../ui.js';
+import { record } from '../store.js';
 
 const W = 480;
 const H = 320;
@@ -28,6 +29,53 @@ const GAMES = [
 
 const GENRES = ['All', 'Arcade', 'Puzzle', 'Word', 'Reflex', 'Memory'];
 const STORE_KEY = 'pulse.arcade';
+const SETTINGS_KEY = 'pulse.arcade.settings';
+const STAR_LEVELS = {
+  flappy: [5, 10, 20], snake: [50, 100, 200], breakout: [100, 250, 500],
+  pong: [10, 14, 20], stack: [50, 100, 200], asteroid: [20, 50, 100],
+  bubble: [50, 100, 200], runner: [30, 60, 120], '2048': [256, 512, 2048],
+  memory: [400, 700, 900], simon: [5, 10, 15], ttt: [100, 300, 600],
+  mines: [400, 700, 1000], word: [100, 250, 500], reaction: [15, 30, 45],
+};
+const SETTINGS_DEFAULT = { difficulty: 'normal', sound: true };
+let audio = null;
+
+function readSettings() {
+  try { return { ...SETTINGS_DEFAULT, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {}) }; } catch { return { ...SETTINGS_DEFAULT }; }
+}
+function saveSettings(next) {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  window.__pulseArcadeDifficulty = next.difficulty;
+}
+function starsFor(id, score) {
+  const levels = STAR_LEVELS[id] || [100, 500, 1000];
+  return levels.reduce((total, threshold) => total + (Number(score) >= threshold ? 1 : 0), 0);
+}
+function starMarkup(stars) {
+  return html`<span class="arcade-stars" aria-label="${stars} of 3 stars">${[0, 1, 2].map((i) => html`<i class="${i < stars ? 'is-on' : ''}"></i>`)}</span>`;
+}
+function beep(freq = 520, duration = .08, type = 'sine') {
+  const settings = readSettings();
+  if (!settings.sound) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    audio = audio || new AudioCtx();
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(.035, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + duration);
+    osc.connect(gain); gain.connect(audio.destination);
+    osc.start(); osc.stop(audio.currentTime + duration);
+  } catch { /* audio is optional */ }
+}
+function dailyGame() {
+  const day = new Date().toISOString().slice(0, 10);
+  let hash = 0;
+  for (const char of day) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+  return GAMES[Math.abs(hash) % GAMES.length];
+}
 
 function readStore() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch { return {}; }
@@ -46,10 +94,16 @@ function recordScore(id, score) {
   const previous = Number(store[id]?.best || 0);
   const value = Math.max(0, Math.round(Number(score) || 0));
   const newBest = value > previous;
-  store[id] = { best: newBest ? value : previous, plays: Number(store[id]?.plays || 0) + 1, last: value };
+  const stars = starsFor(id, newBest ? value : Math.max(previous, value));
+  store[id] = { best: newBest ? value : previous, plays: Number(store[id]?.plays || 0) + 1, last: value, stars: Math.max(Number(store[id]?.stars || 0), stars) };
   writeStore(store);
-  if (newBest) toast(`New best: ${value.toLocaleString()}`);
-  return { best: store[id].best, newBest, plays: store[id].plays };
+  beep(newBest ? 760 : 440, newBest ? .16 : .08, 'triangle');
+  if (newBest) toast(`New best: ${value.toLocaleString()} · ${stars}/3 stars`);
+  if (stars >= 3) confetti(18);
+  document.querySelector('.arcade-stage')?.classList.add('arcade-shake');
+  setTimeout(() => document.querySelector('.arcade-stage')?.classList.remove('arcade-shake'), 420);
+  record('arcade', { value, meta: { game: id, stars } }).catch(() => {});
+  return { best: store[id].best, newBest, plays: store[id].plays, stars: store[id].stars };
 }
 
 function point(event, canvas) {
@@ -73,7 +127,8 @@ function loop(update, draw) {
   let raf = 0;
   let last = 0;
   const frame = (now) => {
-    const dt = Math.min(2.4, Math.max(0.3, (now - last) / 16.67)) || 1;
+    const speed = window.__pulseArcadeDifficulty === 'chill' ? .72 : window.__pulseArcadeDifficulty === 'turbo' ? 1.28 : 1;
+    const dt = (Math.min(2.4, Math.max(0.3, (now - last) / 16.67)) || 1) * speed;
     last = now;
     update(dt);
     draw();
@@ -824,6 +879,15 @@ export function arcadeView(root, ctx) {
   const plays = Object.values(store).reduce((sum, row) => sum + Number(row?.plays || 0), 0);
   const best = Object.values(store).reduce((sum, row) => sum + Number(row?.best || 0), 0);
   const shown = genre === 'All' ? GAMES : GAMES.filter((game) => game.genre === genre);
+  const settings = readSettings();
+  window.__pulseArcadeDifficulty = settings.difficulty;
+  const daily = dailyGame();
+  const achievements = [
+    { label: 'First game', on: plays > 0 },
+    { label: 'Three-star club', on: Object.values(store).some((row) => Number(row?.stars) >= 3) },
+    { label: 'Arcade regular', on: plays >= 10 },
+    { label: 'Full house', on: Object.keys(store).length >= 15 },
+  ];
   root.innerHTML = html`
     <section class="arcade-hero">
       <p class="eyebrow">Arcade · take a brain break</p>
@@ -834,6 +898,21 @@ export function arcadeView(root, ctx) {
         <div><b>${plays}</b><span>plays</span></div>
         <div><b>${best.toLocaleString()}</b><span>best total</span></div>
       </div>
+      <div class="arcade-toolbar">
+        <div class="arcade-difficulty"><span>Difficulty</span>
+          ${[['chill', 'Chill'], ['normal', 'Normal'], ['turbo', 'Turbo']].map(([id, label]) => html`<button class="chip ${settings.difficulty === id ? 'is-on' : ''}" data-difficulty="${id}">${label}</button>`)}
+        </div>
+        <button class="chip ${settings.sound ? 'is-on' : ''}" data-arcade-sound>${raw(icons.sound)} Sound ${settings.sound ? 'on' : 'off'}</button>
+      </div>
+      <div class="arcade-daily">
+        <span class="eyebrow">Daily challenge</span>
+        <b>${daily.title}</b>
+        <span class="tiny muted">Get at least two stars today.</span>
+        <button class="btn btn--sm btn--primary" data-daily="${daily.id}">Play daily</button>
+      </div>
+      <div class="arcade-achievements">
+        ${achievements.map((item) => html`<span class="arcade-achievement ${item.on ? 'is-on' : ''}">${item.label}</span>`)}
+      </div>
     </section>
     <div class="chip-row arcade-filters">
       ${GENRES.map((filter) => html`<button class="chip ${genre === filter ? 'is-on' : ''}" data-genre="${filter}">${filter}</button>`)}
@@ -841,18 +920,30 @@ export function arcadeView(root, ctx) {
     <div class="arcade-grid">
       ${shown.map((game) => html`
         <article class="arcade-card" data-game="${game.id}" style="--game:${game.color}">
-          <div class="arcade-card__top"><span>${game.genre}</span><span class="arcade-card__best">${bestOf(game.id) ? `Best ${bestOf(game.id).toLocaleString()}` : 'New'}</span></div>
+          <div class="arcade-card__top"><span>${game.genre}</span><span class="arcade-card__best">${bestOf(game.id) ? `Best ${bestOf(game.id).toLocaleString()}` : 'New'} ${starMarkup(starCount(game.id))}</span></div>
           <div class="arcade-card__art" aria-hidden="true"><i></i><i></i><i></i><i></i><b>${game.title.split(' ').map((w) => w[0]).join('').slice(0, 3)}</b></div>
           <h2>${game.title}</h2>
           <p>${game.blurb}</p>
           <div class="arcade-card__foot"><span>${game.controls}</span><button class="btn btn--sm btn--primary" data-play="${game.id}">${raw(icons.play)} Play</button></div>
         </article>`)}
     </div>
-    <p class="tiny faint arcade-note">All games run locally. High scores stay in this browser. Built for keyboard, mouse and touch.</p>`;
+    <p class="tiny faint arcade-note">All games run locally. High scores, stars, difficulty and sound stay in this browser. Built for keyboard, mouse and touch.</p>`;
 
+  function starCount(id) { return Number(readStore()[id]?.stars || starsFor(id, bestOf(id))); }
   root.querySelectorAll('[data-genre]').forEach((button) => button.addEventListener('click', () => {
     arcadeView(root, { query: { genre: button.dataset.genre } });
   }));
+  root.querySelectorAll('[data-difficulty]').forEach((button) => button.addEventListener('click', () => {
+    saveSettings({ ...readSettings(), difficulty: button.dataset.difficulty });
+    root.querySelectorAll('[data-difficulty]').forEach((node) => node.classList.toggle('is-on', node === button));
+    toast(`Arcade difficulty: ${button.textContent.trim()}`);
+  }));
+  root.querySelector('[data-arcade-sound]')?.addEventListener('click', (event) => {
+    const next = { ...readSettings(), sound: !readSettings().sound };
+    saveSettings(next);
+    event.currentTarget.classList.toggle('is-on', next.sound);
+    event.currentTarget.innerHTML = `${raw(icons.sound)} Sound ${next.sound ? 'on' : 'off'}`;
+  });
   root.querySelectorAll('[data-play], [data-game]').forEach((node) => node.addEventListener('click', (event) => {
     if (event.target.closest('[data-genre]')) return;
     const game = GAMES.find((item) => item.id === (node.dataset.play || node.dataset.game));

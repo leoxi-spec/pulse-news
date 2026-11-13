@@ -66,7 +66,7 @@ function articleMarkup(a, p) {
   return html`
     <div id="read-progress" style="position:fixed;top:0;left:0;height:3px;width:0;background:var(--grad);z-index:70;transition:width .1s linear"></div>
     <article class="article" data-article-id="${a.id}">
-      <a class="article__back" href="javascript:history.back()">${raw(icons.chevron)} Back</a>
+      <button class="article__back" type="button" data-act="back">${raw(icons.chevron)} Back</button>
       <div class="article__kicker">
         <span class="badge badge--topic">${a.topic_label}</span>
         ${a.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
@@ -754,6 +754,11 @@ function bindArticle(root, article) {
   root.querySelectorAll('[data-act]').forEach((button) => {
     button.addEventListener('click', () => {
       const act = button.dataset.act;
+      if (act === 'back') {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = '/';
+        return;
+      }
       if (act === 'save') return onSave(button, article);
       if (act === 'share') return onShare(article);
       if (act === 'cite') return onCite(article);

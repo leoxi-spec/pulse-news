@@ -972,6 +972,7 @@ export async function profileView(root, ctx) {
           <a class="btn btn--sm btn--ghost" href="/impact" data-link>Impact</a>
           <a class="btn btn--sm btn--ghost" href="/classroom" data-link>Classroom</a>
           <a class="btn btn--sm btn--ghost" href="/arcade" data-link>Arcade</a>
+          <a class="btn btn--sm btn--ghost" href="/account" data-link>Account &amp; sync</a>
           <a class="btn btn--sm btn--ghost" href="/roadmap" data-link>Roadmap &amp; feedback</a>
           <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Privacy</a>
           <a class="btn btn--sm btn--ghost" href="/terms" data-link>Terms</a>

@@ -224,6 +224,11 @@ def link_profile(user_id: str, profile_id: str) -> None:
     db.execute("UPDATE users SET profile_id=? WHERE id=?", (profile_id, user_id))
 
 
+def rename(user_id: str, name: str) -> None:
+    name = " ".join(str(name or "").split())[:80] or "Student"
+    db.execute("UPDATE users SET name=? WHERE id=?", (name, user_id))
+
+
 def all_users() -> list[dict]:
     rows = db.query(
         """SELECT u.id, u.email, u.name, u.is_admin, u.profile_id, u.created_at, u.last_login_at,

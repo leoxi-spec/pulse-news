@@ -174,6 +174,8 @@ def handle(request: Request) -> tuple[int, dict, dict]:
                 prefs=payload.get("prefs"),
                 onboarded=payload.get("onboarded"),
             )
+            if request.account and payload.get("name") is not None:
+                auth.rename(request.account["id"], updated.get("name") or "Student")
             return 200, {"profile": updated}, {}
         if path == "/api/profile" and method == "GET":
             return 200, {"profile": profiles.get(profile["id"])}, {}

@@ -58,6 +58,7 @@ const NAV = [
       { href: '/classroom', label: 'Classroom', icon: 'book', hint: 'A 45-minute lesson' },
       { href: '/roadmap', label: 'Roadmap', icon: 'note', hint: 'Vote and send feedback' },
       { href: '/profile', label: 'Profile & settings', icon: 'user', hint: 'Photo, themes and data' },
+      { href: '/account', label: 'Account & sync', icon: 'user', hint: 'Keep progress across browsers' },
     ],
   },
 ];

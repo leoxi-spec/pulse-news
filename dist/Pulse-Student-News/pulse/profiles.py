@@ -107,6 +107,7 @@ _XP = {
     "streak_day": 10,
     "search": 1,
     "challenge_complete": 25,
+    "arcade": 6,
 }
 
 BADGES = (
