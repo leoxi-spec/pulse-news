@@ -31,6 +31,7 @@ let particles = [];
 let animation = 'none';
 let raf = 0;
 let splashes = [];
+let flash = 0;
 let lastFrame = 0;
 let width = 0;
 let height = 0;
@@ -82,12 +83,13 @@ function seed() {
   splashes = [];
   if (!spec) return;
   for (let i = 0; i < spec.count; i += 1) {
-    const rain = animation === 'rain';
+    const rain = ['rain', 'heavy-rain', 'drizzle', 'thunder', 'storm'].includes(animation);
+    const heavy = animation === 'heavy-rain' || animation === 'storm';
     particles.push({
       x: Math.random() * width,
       y: Math.random() * height,
       vx: rain ? -0.55 - Math.random() * 0.9 : (Math.random() - 0.5) * 0.8,
-      vy: rain ? 2.8 + Math.random() * 4.2 : spec.speed * (0.4 + Math.random() * 0.9),
+      vy: rain ? (heavy ? 4.2 + Math.random() * 4 : animation === 'drizzle' ? 1.1 + Math.random() * 1.6 : 2.8 + Math.random() * 4.2) : spec.speed * (0.4 + Math.random() * 0.9),
       size: rain ? 0.8 + Math.random() * 1.3 : 1 + Math.random() * 2.6,
       life: Math.random() * Math.PI * 2,
       speed: 0.4 + Math.random() * 0.8,
@@ -205,10 +207,83 @@ function drawAurora(p, spec) {
   ctx.globalAlpha = 1;
 }
 
+Object.assign(DEFAULTS, {
+  thunder: { count: 120, speed: 4.2, color: 'rgba(185,205,255,.68)' },
+  lightning: { count: 9, speed: 0.8, color: 'rgba(230,240,255,.95)' },
+  'heavy-rain': { count: 230, speed: 4.6, color: 'rgba(170,205,255,.72)' },
+  drizzle: { count: 95, speed: 1.5, color: 'rgba(185,215,255,.48)' },
+  hail: { count: 70, speed: 3.8, color: 'rgba(235,248,255,.9)' },
+  sleet: { count: 105, speed: 2.8, color: 'rgba(215,235,255,.7)' },
+  snowstorm: { count: 150, speed: 1.5, color: 'rgba(255,255,255,.88)' },
+  fog: { count: 14, speed: 0.12, color: 'rgba(205,220,240,.14)' },
+  mist: { count: 24, speed: 0.08, color: 'rgba(220,235,250,.12)' },
+  wind: { count: 32, speed: 1.3, color: 'rgba(210,230,250,.28)' },
+  clouds: { count: 11, speed: 0.12, color: 'rgba(235,245,255,.12)' },
+  'sun-rays': { count: 13, speed: 0.04, color: 'rgba(255,221,130,.16)' },
+  heat: { count: 28, speed: 0.35, color: 'rgba(255,190,120,.12)' },
+  ripples: { count: 16, speed: 0.35, color: 'rgba(170,225,255,.42)' },
+  storm: { count: 150, speed: 4.4, color: 'rgba(180,200,255,.65)' },
+  rainbow: { count: 9, speed: 0.1, color: 'rgba(255,255,255,.14)' },
+  dust: { count: 65, speed: 0.4, color: 'rgba(235,215,170,.35)' },
+  ash: { count: 70, speed: 0.6, color: 'rgba(205,205,205,.45)' },
+  embers: { count: 55, speed: 0.5, color: 'rgba(255,155,70,.75)' },
+  bokeh: { count: 22, speed: 0.16, color: 'rgba(255,220,190,.12)' },
+});
+
+function drawThunder(p, spec) { drawRain(p, spec); }
+function drawLightning(p, spec) {
+  ctx.strokeStyle = spec.color; ctx.lineWidth = 1.4; ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  for (let i = 0; i < 4; i += 1) ctx.lineTo(p.x + (Math.random() - .5) * 16, p.y + 18 + i * 18);
+  ctx.stroke();
+}
+function drawHeavyRain(p, spec) { drawRain(p, spec); }
+function drawDrizzle(p, spec) {
+  ctx.strokeStyle = spec.color; ctx.lineWidth = .7; ctx.beginPath();
+  ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.vx * 2, p.y + 8 + p.size * 3); ctx.stroke();
+}
+function drawHail(p, spec) {
+  ctx.strokeStyle = spec.color; ctx.lineWidth = 1; ctx.beginPath();
+  ctx.arc(p.x, p.y, p.size * 1.1, 0, Math.PI * 2); ctx.stroke();
+}
+function drawSleet(p, spec) { drawDrizzle(p, spec); drawHail({ ...p, y: p.y + 5, size: p.size * .7 }, spec); }
+function drawSnowstorm(p, spec) { drawSnow(p, spec); ctx.strokeStyle = spec.color; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 3, p.y - 8); ctx.stroke(); }
+function drawFog(p, spec) { ctx.fillStyle = spec.color; ctx.fillRect(0, p.y, width, 30 + p.size * 6); }
+function drawMist(p, spec) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 18, 0, Math.PI * 2); ctx.fill(); }
+function drawWind(p, spec) {
+  ctx.strokeStyle = spec.color; ctx.lineWidth = .8; ctx.beginPath();
+  ctx.moveTo(p.x, p.y); ctx.bezierCurveTo(p.x + 18, p.y - 8, p.x + 34, p.y + 8, p.x + 54, p.y); ctx.stroke();
+}
+function drawClouds(p, spec) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.size * 18, p.size * 7, 0, 0, Math.PI * 2); ctx.fill(); }
+function drawSunRays(p, spec) {
+  const grad = ctx.createLinearGradient(width / 2, 0, width / 2 + p.x, height);
+  grad.addColorStop(0, spec.color); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad; ctx.beginPath();
+  ctx.moveTo(width / 2 - 8, 0); ctx.lineTo(width / 2 + 8, 0); ctx.lineTo(p.x + 35, height); ctx.lineTo(p.x - 35, height);
+  ctx.closePath(); ctx.fill();
+}
+function drawHeat(p, spec) { ctx.strokeStyle = spec.color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, height); ctx.bezierCurveTo(p.x - 5, height * .6, p.x + 5, height * .3, p.x, 0); ctx.stroke(); }
+function drawRipples(p, spec) { ctx.strokeStyle = spec.color; ctx.globalAlpha = Math.max(0, 1 - p.life); ctx.beginPath(); ctx.ellipse(p.x, p.y, 4 + p.life * 30, 1 + p.life * 7, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+function drawRainbow(p, spec) {
+  const colors = ['#ff6b6b', '#ffbd5c', '#63e6a6', '#5d8cff', '#a67cff'];
+  ctx.globalAlpha = .18; ctx.lineWidth = 8 + p.size * 3;
+  colors.forEach((color, i) => { ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(p.x, p.y, 90 + i * 13, Math.PI, Math.PI * 2); ctx.stroke(); });
+  ctx.globalAlpha = 1;
+}
+function drawDust(p, spec) { ctx.fillStyle = spec.color; ctx.fillRect(p.x, p.y, p.size, p.size); }
+function drawAsh(p, spec) { drawDust(p, spec); }
+function drawEmbers(p, spec) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2); ctx.fill(); }
+function drawBokeh(p, spec) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 9, 0, Math.PI * 2); ctx.fill(); }
+
 const DRAW = {
   rain: drawRain, snow: drawSnow, meteors: drawMeteor, birds: drawBird,
   bubbles: drawBubble, stars: drawStar, leaves: drawLeaf,
   fireflies: drawFirefly, petals: drawPetal, aurora: drawAurora,
+  thunder: drawThunder, lightning: drawLightning, 'heavy-rain': drawHeavyRain,
+  drizzle: drawDrizzle, hail: drawHail, sleet: drawSleet, snowstorm: drawSnowstorm,
+  fog: drawFog, mist: drawMist, wind: drawWind, clouds: drawClouds,
+  'sun-rays': drawSunRays, heat: drawHeat, ripples: drawRipples, storm: drawThunder,
+  rainbow: drawRainbow, dust: drawDust, ash: drawAsh, embers: drawEmbers, bokeh: drawBokeh,
 };
 
 function frame(now) {
@@ -224,7 +299,7 @@ function frame(now) {
 
   for (const p of particles) {
     p.life += 0.02 * p.speed;
-    if (animation === 'rain') {
+    if (['rain', 'heavy-rain', 'drizzle', 'thunder', 'storm'].includes(animation)) {
       p.x += p.vx * 1.8 * dt;
       p.y += p.vy * 1.8 * dt;
       if (p.y > height + 35) {
@@ -234,6 +309,18 @@ function frame(now) {
         p.y = -25;
         p.x = Math.random() * (width + 80) - 20;
       }
+    } else if (animation === 'embers') {
+      p.y -= (1 + p.speed) * dt;
+      p.x += Math.sin(p.life) * .35;
+    } else if (animation === 'wind' || animation === 'clouds') {
+      p.x += (animation === 'clouds' ? 1.4 : 3.2) * p.speed * dt;
+      p.y += Math.sin(p.life) * .18;
+    } else if (animation === 'fog' || animation === 'mist') {
+      p.x += .18 * dt;
+      p.y += Math.sin(p.life) * .08;
+    } else if (animation === 'ripples') {
+      p.life += .018 * dt;
+      if (p.life > 1) { p.life = 0; p.x = Math.random() * width; p.y = height - 4; }
     } else if (animation === 'meteors') {
       p.x += 4.2 * p.speed * dt;
       p.y += 2.0 * p.speed * dt;
@@ -252,6 +339,7 @@ function frame(now) {
 
     if (p.y > height + 30) { p.y = -30; p.x = Math.random() * width; }
     if (p.y < -40) { p.y = height + 20; p.x = Math.random() * width; }
+    if (animation === 'ripples' && p.life === 0) p.y = height - 4;
     if (p.x > width + 40) p.x = -30;
     if (p.x < -40) p.x = width + 30;
 
@@ -269,6 +357,14 @@ function frame(now) {
     }
     ctx.globalAlpha = 1;
     splashes = splashes.filter((splash) => splash.life < 1);
+  }
+  if (animation === 'thunder' || animation === 'storm') {
+    if (Math.random() < .006) flash = 1;
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(220,230,255,${flash * .18})`;
+      ctx.fillRect(0, 0, width, height);
+      flash = Math.max(0, flash - .06 * dt);
+    }
   }
   raf = requestAnimationFrame(frame);
 }
@@ -393,7 +489,7 @@ export function currentNoise() {
 // ------------------------------------------------------------------- wiring
 export function applyAmbient() {
   const p = prefs();
-  setAnimation(p.animation || 'theme');
+  setAnimation(p.weather_theme ? (document.documentElement.dataset.weatherAnimation || p.animation || 'theme') : (p.animation || 'theme'));
   if (p.noise && p.noise !== 'off' && currentNoise() !== p.noise) {
     // Autoplay is often blocked; only resume if audio was already unlocked.
     if (audio && audio.state === 'running') startNoise(p.noise, p.noise_volume);

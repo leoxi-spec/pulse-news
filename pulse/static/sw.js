@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v27';
+const VERSION = 'pulse-v28';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -23,6 +23,9 @@ const SHELL = [
   '/js/views/keyword.js',
   '/js/views/arcade.js',
   '/js/voice.js',
+  '/js/weather.js',
+  '/js/ambient.js',
+  '/js/daily.js',
   '/js/views/sports.js',
   '/js/views/sources.js',
   '/manifest.webmanifest',
@@ -41,6 +44,7 @@ const CACHEABLE_API = [
   '/api/archive',
   '/api/topics',
   '/api/brief',
+  '/api/weather',
 ];
 
 self.addEventListener('message', (event) => {

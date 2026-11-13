@@ -566,17 +566,19 @@ function game2048(stage, game) {
 function memory(stage, game) {
   const h = domShell(stage, game, 'Click two cards. Match all eight pairs.');
   const pairs = ['CLIMATE', 'SPACE', 'SPORTS', 'TECH', 'MUSIC', 'HEALTH', 'WORLD', 'MONEY'];
-  let cards, open, moves, score, lock;
+  let cards, open, moves, score, lock, started, timer;
   const reset = () => {
     cards = [...pairs, ...pairs].sort(() => Math.random() - .5).map((word) => ({ word, flipped: false, done: false }));
-    open = []; moves = 0; score = 0; lock = false; h.setScore(0); paint();
+    open = []; moves = 0; score = 0; lock = false; started = performance.now(); h.setScore(0); paint();
+    clearInterval(timer);
+    timer = setInterval(() => { const el = h.board.querySelector('[data-memory-time]'); if (el) el.textContent = `${Math.floor((performance.now() - started) / 1000)}s`; }, 500);
   };
   const paint = () => {
     h.board.innerHTML = html`<div class="memory-grid">${cards.map((card, i) => html`
       <button class="memory-card ${card.flipped || card.done ? 'is-open' : ''} ${card.done ? 'is-done' : ''}" data-card="${i}" ${card.done ? 'disabled' : ''}>
         <span>${card.flipped || card.done ? card.word : '?'}</span>
       </button>`)}</div>
-      <p class="tiny muted" style="text-align:center;margin-top:.5rem">Moves ${moves}</p>`;
+      <p class="tiny muted" style="text-align:center;margin-top:.5rem">Moves ${moves} · <span data-memory-time>0s</span></p>`;
     h.board.querySelectorAll('[data-card]').forEach((button) => button.addEventListener('click', () => flip(Number(button.dataset.card))));
   };
   const flip = (index) => {
@@ -587,7 +589,7 @@ function memory(stage, game) {
     const [a, b] = open;
     if (cards[a].word === cards[b].word) {
       cards[a].done = true; cards[b].done = true; open = [];
-      if (cards.every((c) => c.done)) { score = Math.max(40, 1000 - moves * 30); h.record(score); confetti(20); }
+      if (cards.every((c) => c.done)) { clearInterval(timer); score = Math.max(40, 1000 - moves * 30); h.record(score); confetti(20); }
       paint();
     } else {
       lock = true;
@@ -595,7 +597,7 @@ function memory(stage, game) {
     }
   };
   reset(); h.onRestart = reset; h.restart.addEventListener('click', reset);
-  return () => {};
+  return () => clearInterval(timer);
 }
 
 function simon(stage, game) {
@@ -678,7 +680,7 @@ function tictactoe(stage, game) {
 
 function mines(stage, game) {
   const h = domShell(stage, game, 'Click to reveal. Right-click or Flag mode to mark mines.');
-  let cells, over, flags, revealed, flagMode;
+  let cells, over, flags, revealed, flagMode, started, timer;
   const reset = () => {
     cells = Array.from({ length: 64 }, (_, i) => ({ i, mine: false, open: false, flag: false, near: 0 }));
     let placed = 0;
@@ -693,13 +695,15 @@ function mines(stage, game) {
       }
       cell.near = near;
     }
-    over = false; flags = 0; revealed = 0; flagMode = false; h.setScore(0); paint();
+    over = false; flags = 0; revealed = 0; flagMode = false; started = performance.now(); h.setScore(0); paint();
+    clearInterval(timer);
+    timer = setInterval(() => { const el = h.board.querySelector('[data-mines-time]'); if (el && !over) el.textContent = `${Math.floor((performance.now() - started) / 1000)}s`; }, 500);
   };
   const reveal = (index) => {
     if (over) return;
     const cell = cells[index];
     if (cell.open || cell.flag) return;
-    if (cell.mine) { over = true; cells.forEach((c) => { if (c.mine) c.open = true; }); h.record(revealed); paint(); return; }
+    if (cell.mine) { over = true; clearInterval(timer); cells.forEach((c) => { if (c.mine) c.open = true; }); h.record(revealed); paint(); return; }
     const stack = [cell];
     while (stack.length) {
       const c = stack.pop(); if (c.open || c.flag) continue;
@@ -712,11 +716,11 @@ function mines(stage, game) {
         }
       }
     }
-    if (revealed >= 54) { over = true; h.record(1000); confetti(20); }
+    if (revealed >= 54) { over = true; clearInterval(timer); h.record(1000); confetti(20); }
     paint();
   };
   const paint = () => {
-    h.board.innerHTML = html`<div class="mines-head"><span class="tiny muted">Flags ${flags}/10</span><button class="btn btn--sm ${flagMode ? 'btn--primary' : 'btn--ghost'}" data-flag>${flagMode ? 'Flag mode on' : 'Flag mode'}</button></div>
+    h.board.innerHTML = html`<div class="mines-head"><span class="tiny muted">Flags ${flags}/10 · <span data-mines-time>0s</span></span><button class="btn btn--sm ${flagMode ? 'btn--primary' : 'btn--ghost'}" data-flag>${flagMode ? 'Flag mode on' : 'Flag mode'}</button></div>
       <div class="mines-grid">${cells.map((cell) => html`<button class="mines-cell ${cell.open ? 'is-open' : ''} ${cell.mine && cell.open ? 'is-mine' : ''} n${cell.near}" data-mine="${cell.i}" ${cell.open ? 'disabled' : ''}>${cell.flag ? 'F' : cell.open ? (cell.mine ? 'X' : (cell.near || '')) : ''}</button>`)}</div>`;
     h.board.querySelector('[data-flag]')?.addEventListener('click', () => { flagMode = !flagMode; paint(); });
     h.board.querySelectorAll('[data-mine]').forEach((button) => {
@@ -729,7 +733,7 @@ function mines(stage, game) {
     });
   };
   reset(); h.onRestart = reset; h.restart.addEventListener('click', reset);
-  return () => {};
+  return () => clearInterval(timer);
 }
 
 function word(stage, game) {
@@ -761,21 +765,36 @@ function reaction(stage, game) {
   let score, left, target, over, timer, started;
   const reset = () => {
     score = 0; left = 30; target = -1; over = false; started = performance.now(); h.setScore(0);
-    h.board.innerHTML = html`<div class="reaction-wrap"><div class="reaction-grid">${Array.from({ length: 9 }).map((_, i) => html`<button class="reaction-cell" data-react="${i}" aria-label="Target ${i + 1}"></button>`)}</div><p class="tiny muted">30 seconds</p></div>`;
+    h.board.innerHTML = html`<div class="reaction-wrap"><div class="reaction-grid">${Array.from({ length: 9 }).map((_, i) => html`<button class="reaction-cell" data-react="${i}" aria-label="Target ${i + 1}"></button>`)}</div><p class="tiny muted"><span data-reaction-timer>30s left</span> · <span data-reaction-last>waiting</span></p></div>`;
     h.board.querySelectorAll('[data-react]').forEach((button) => button.addEventListener('click', () => hit(Number(button.dataset.react), button)));
     move();
     clearInterval(timer);
-    timer = setInterval(() => { left -= 1; if (left <= 0) { left = 0; over = true; clearInterval(timer); h.record(score); h.board.querySelector('.reaction-wrap')?.insertAdjacentHTML('beforeend', '<p class="tiny muted">Time. Restart to play again.</p>'); } }, 1000);
+    timer = setInterval(() => {
+      left -= 1;
+      const timerEl = h.board.querySelector('[data-reaction-timer]');
+      if (timerEl) timerEl.textContent = `${left}s left`;
+      if (left <= 0) {
+        left = 0;
+        over = true;
+        clearInterval(timer);
+        h.record(score);
+        h.board.querySelector('.reaction-wrap')?.insertAdjacentHTML('beforeend', '<p class="tiny muted">Time. Restart to play again.</p>');
+      }
+    }, 1000);
   };
   const move = () => {
     if (over) return;
     const next = Math.floor(Math.random() * 9);
     target = next === target ? (next + 1) % 9 : next;
     h.board.querySelectorAll('[data-react]').forEach((button, i) => button.classList.toggle('is-target', i === target));
+    window.__pulseReactionAt = performance.now();
   };
   const hit = (index, button) => {
     if (over || index !== target) return;
     score += 1; h.setScore(score); button.classList.add('is-hit');
+    const last = h.board.querySelector('[data-reaction-last]');
+    if (last) last.textContent = `${Math.round(performance.now() - (window.__pulseReactionAt || performance.now()))} ms`;
+    window.__pulseReactionAt = performance.now();
     setTimeout(() => button.classList.remove('is-hit'), 140);
     move();
   };

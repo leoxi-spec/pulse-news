@@ -3571,3 +3571,95 @@ body[data-band="senior"] .mcard__summary { display: none; }
   .appnav .nav-group__trigger span, .nav-group__chev { display: none; }
   .nav-group__trigger { padding: .5rem .6rem; }
 }
+
+/* ==========================================================================
+   LIVE TORONTO WEATHER THEMES
+   ========================================================================== */
+html[data-weather-theme="clear-day"] {
+  --bg: #fff7e5; --surface: #fffdf6; --surface-2: #fff1d2; --surface-3: #ffe3ae;
+  --text: #241a0c; --text-2: #4b3820; --muted: #7b6344; --faint: #a58a66;
+  --line: #ead6b6; --line-soft: #f2e5cf; --accent: #e8890c; --accent-2: #e85d2a;
+  --grad: linear-gradient(120deg, #f5a623, #ef6c35); --grad-soft: linear-gradient(135deg, #fff3d3, #ffe0c3);
+  --good: #2f8f62; --live: #d94a4a; --accent-soft: rgba(232, 137, 12, .14); color-scheme: light;
+}
+html[data-weather-theme="clear-night"] {
+  --bg: #07101f; --surface: #0c1729; --surface-2: #111f36; --surface-3: #192a47;
+  --text: #edf4ff; --text-2: #c4d3ea; --muted: #8fa4c4; --faint: #647b9c;
+  --line: #1d2e49; --line-soft: #16263d; --accent: #72a8ff; --accent-2: #b58cff;
+  --grad: linear-gradient(120deg, #5d8cff, #b58cff); --grad-soft: linear-gradient(135deg, #0b1a31, #17284a);
+  --good: #5be0b0; --live: #ff6577; --accent-soft: rgba(114, 168, 255, .14); color-scheme: dark;
+}
+html[data-weather-theme="partly-cloudy"] {
+  --bg: #eef4fb; --surface: #f8fbff; --surface-2: #e5eef8; --surface-3: #d6e3f1;
+  --text: #172535; --text-2: #34506a; --muted: #5d7892; --faint: #89a0b6;
+  --line: #cfddea; --line-soft: #e0eaf3; --accent: #4b7fb5; --accent-2: #8b78c9;
+  --grad: linear-gradient(120deg, #5d8cff, #a48ae8); --grad-soft: linear-gradient(135deg, #edf5fd, #e7e2fa);
+  --good: #2c8c68; --live: #d05252; --accent-soft: rgba(75, 127, 181, .13); color-scheme: light;
+}
+html[data-weather-theme="cloudy"] {
+  --bg: #e9edf1; --surface: #f5f7f9; --surface-2: #dfe5ea; --surface-3: #d0d8df;
+  --text: #202a32; --text-2: #3d4b57; --muted: #64737f; --faint: #8a98a3;
+  --line: #cbd4db; --line-soft: #dde4e9; --accent: #5c7183; --accent-2: #7f8fa8;
+  --grad: linear-gradient(120deg, #64798a, #8a9bb2); --grad-soft: linear-gradient(135deg, #edf1f4, #dfe5eb);
+  --good: #3d8a6b; --live: #c55454; --accent-soft: rgba(92, 113, 131, .13); color-scheme: light;
+}
+html[data-weather-theme="fog"] {
+  --bg: #dfe5e4; --surface: #f1f4f3; --surface-2: #d9e1df; --surface-3: #c9d3d0;
+  --text: #1e2926; --text-2: #3b4a46; --muted: #64736e; --faint: #87948f;
+  --line: #c4cfcb; --line-soft: #d8dfdc; --accent: #5f8178; --accent-2: #839b95;
+  --grad: linear-gradient(120deg, #789a90, #a7b8b2); --grad-soft: linear-gradient(135deg, #eef3f1, #dfe7e4);
+  --good: #367f63; --live: #b95b5b; --accent-soft: rgba(95, 129, 120, .14); color-scheme: light;
+}
+html[data-weather-theme="drizzle"] {
+  --bg: #e8f2f4; --surface: #f4fbfc; --surface-2: #dcebed; --surface-3: #cbe0e3;
+  --text: #13282c; --text-2: #2e4e54; --muted: #59777d; --faint: #7f999e;
+  --line: #c5dade; --line-soft: #d9e8ea; --accent: #2f8896; --accent-2: #4d9f9a;
+  --grad: linear-gradient(120deg, #3a9eac, #6ab9b1); --grad-soft: linear-gradient(135deg, #eef9fa, #dff0ef);
+  --good: #2b876c; --live: #c95a5a; --accent-soft: rgba(47, 136, 150, .13); color-scheme: light;
+}
+html[data-weather-theme="rain"] {
+  --bg: #e3edf4; --surface: #f2f8fc; --surface-2: #d5e4ee; --surface-3: #c2d7e6;
+  --text: #132433; --text-2: #2e4a60; --muted: #56738a; --faint: #7893a8;
+  --line: #bfd4e2; --line-soft: #d5e3ed; --accent: #2d7397; --accent-2: #527fbd;
+  --grad: linear-gradient(120deg, #357fa8, #6f9ad6); --grad-soft: linear-gradient(135deg, #edf7fd, #dcebf5);
+  --good: #2c846b; --live: #c35353; --accent-soft: rgba(45, 115, 151, .13); color-scheme: light;
+}
+html[data-weather-theme="heavy-rain"] {
+  --bg: #162330; --surface: #1d2d3d; --surface-2: #25394d; --surface-3: #30485f;
+  --text: #edf5fb; --text-2: #c6d7e4; --muted: #8fa6b9; --faint: #6c8498;
+  --line: #334a5f; --line-soft: #283d50; --accent: #65a8d8; --accent-2: #7b8fe8;
+  --grad: linear-gradient(120deg, #4b91c4, #7b8fe8); --grad-soft: linear-gradient(135deg, #1a2c3d, #243b50);
+  --good: #54c8a4; --live: #ff6577; --accent-soft: rgba(101, 168, 216, .15); color-scheme: dark;
+}
+html[data-weather-theme="snow"] {
+  --bg: #eef6fb; --surface: #fbfdff; --surface-2: #e3eff8; --surface-3: #d4e6f3;
+  --text: #172b3b; --text-2: #37566e; --muted: #5d7c94; --faint: #899fb2;
+  --line: #cfe2ef; --line-soft: #e1edf5; --accent: #4e8fb9; --accent-2: #8d9fd8;
+  --grad: linear-gradient(120deg, #5ba4cc, #9aaee6); --grad-soft: linear-gradient(135deg, #f3faff, #e4f1fa);
+  --good: #2f8a72; --live: #c75b62; --accent-soft: rgba(78, 143, 185, .13); color-scheme: light;
+}
+html[data-weather-theme="thunderstorm"] {
+  --bg: #10111c; --surface: #191b2b; --surface-2: #23263a; --surface-3: #30344c;
+  --text: #f1f0ff; --text-2: #cecbe8; --muted: #9a95b9; --faint: #736e91;
+  --line: #323551; --line-soft: #272a42; --accent: #c7b7ff; --accent-2: #ffd166;
+  --grad: linear-gradient(120deg, #8f7bff, #ffd166); --grad-soft: linear-gradient(135deg, #1a1b2d, #2a2740);
+  --good: #66d6b1; --live: #ff6577; --accent-soft: rgba(199, 183, 255, .14); color-scheme: dark;
+}
+
+.weather-strip {
+  display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+  flex-wrap: wrap; padding: .55rem .75rem; margin: .2rem 0 .7rem;
+  border: 1px solid var(--line); border-radius: 11px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+.weather-strip__main { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+.weather-strip__place { display: inline-flex; align-items: center; gap: .28rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.weather-strip__place svg { width: .8rem; height: .8rem; }
+.weather-strip__main b { font-size: 1.25rem; letter-spacing: -.04em; }
+.weather-strip__main > span:last-child { font-size: .78rem; color: var(--muted); }
+.weather-strip__side { display: flex; align-items: baseline; gap: .65rem; font-size: .7rem; color: var(--faint); }
+.weather-strip__side span:first-child { color: var(--text); font-weight: 750; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .weather-strip__side span:last-child { display: none; } }
+
+/* Keep nav items at their natural width so the live badge never sits on a label. */
+.appnav > a, .appnav > .nav-group { flex: none; }

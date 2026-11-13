@@ -44,6 +44,7 @@ DEFAULT_PREFS: dict = {
     "mood": "balanced",
     "mode": "auto",
     "animation": "theme",
+    "weather_theme": False,
     "noise": "off",
     "noise_volume": 0.35,
     "compact_cards": False,
@@ -86,6 +87,9 @@ THEMES = (
 ANIMATIONS = (
     "theme", "none", "rain", "snow", "meteors", "birds", "bubbles", "stars",
     "leaves", "fireflies", "petals", "aurora",
+    "thunder", "lightning", "heavy-rain", "drizzle", "hail", "sleet",
+    "snowstorm", "fog", "mist", "wind", "clouds", "sun-rays", "heat",
+    "ripples", "storm", "rainbow", "dust", "ash", "embers", "bokeh",
 )
 NOISES = ("off", "white", "pink", "brown", "rain", "waves", "wind")
 FONTS = ("sans", "serif", "dyslexic")
@@ -277,7 +281,8 @@ def sanitise_prefs(prefs: dict) -> dict:
     clean["text_size"] = max(0, min(4, int(clean.get("text_size", 1))))
     clean["daily_goal"] = max(1, min(30, int(clean.get("daily_goal", 5))))
     for key in ("reduce_motion", "high_contrast", "show_images", "ai_overview", "hide_paywalled",
-                "notify_breaking", "autoplay_sports", "show_reading_streak", "sidebar_slim"):
+                "notify_breaking", "autoplay_sports", "show_reading_streak", "sidebar_slim",
+                "weather_theme"):
         if key in prefs:
             clean[key] = bool(prefs[key])
     try:

@@ -40,6 +40,7 @@ classes who still wants to understand what's happening. That means:
 | **Video, everywhere** | Publisher clips and 30 official YouTube newsroom, league, space and learning channels. A dedicated **Watch** page, video Shorts, badges on cards and a privacy-friendly player on every story. |
 | **Five editions** | Junior, Kids, Tween, Teen and Senior each change type scale, card density, home rows and available tools — visibly different, not just a label. |
 | **Five listening voices** | Nova, Atlas, Luna, Sage and Orion choose the best installed English voice, with rate/pitch tuned for news. |
+| **Live weather** | Toronto weather theme with live temperature, local time and ten condition palettes, powered by Open-Meteo. |
 | **Arcade** | Fifteen local mini-games — Flappy Pulse, Snake, Breakout, Pong, Stack, Asteroid, Bubble Pop, Runner, 2048, Memory, Simon, Tic-Tac-Toe, Mines, Word Scramble and Reaction Grid. |
 | **Profile photos** | Upload, centre-crop and store a local avatar; it appears in the app bar and profile. |
 | **Motion** | Rain drops with wind and splashes, snow, meteors, birds, stars, fireflies, petals, leaves, bubbles and aurora — plus animated founder diagrams and scroll reveals. |
@@ -266,6 +267,7 @@ GET    /api/bootstrap                 catalogue, profile, AI/ingest status
 GET    /api/feed?mode=for-you|top|breaking|latest|longreads&topic=&offset=
 GET    /api/videos                    video-first stream (topic, offset, limit)
 GET    /api/keyword                   keyword feed across the whole archive
+GET    /api/weather                   live Toronto weather for the weather theme
 GET    /api/impact                    live product, diversity and usage metrics
 GET    /api/impact/report             downloadable Markdown impact report
 GET    /api/press-kit                 downloadable Markdown press kit

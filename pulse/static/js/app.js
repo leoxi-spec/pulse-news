@@ -27,6 +27,7 @@ import { searchView, savedView, briefView, studyView, profileView, onboardingVie
 import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
 import { applyAmbient } from './ambient.js';
+import { initWeather } from './weather.js';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
@@ -491,6 +492,7 @@ async function boot() {
   }
   setBoot(data);
   applyAmbient();
+  initWeather().catch(() => {});
   document.getElementById('shell').hidden = false;
   if (bootEl) bootEl.remove();
   document.body.dataset.ready = '1';

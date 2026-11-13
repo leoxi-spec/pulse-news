@@ -6,6 +6,7 @@ import { html, raw, icons, toast, compactNumber, modal } from '../ui.js';
 import { topCard, rowsHtml, scoreMini, sectionHead, emptyState, skeletonFeed, videoCard } from '../components.js';
 import { open as openPalette, mountHomeSearch } from '../palette.js';
 import { dailySection, bindDaily, loadDaily } from '../daily.js';
+import { mountWeather, weatherWidget } from '../weather.js';
 
 const DEFAULT_SECTIONS = [
   'brief', 'daily', 'top', 'shorts', 'watch', 'for-you', 'picks', 'my-sports',
@@ -190,6 +191,7 @@ export async function homeView(root, ctx) {
     </div>
 
     ${bandRibbon()}
+    ${weatherWidget()}
 
     <button class="home-search" id="home-search" type="button">
       ${raw(icons.search)}
@@ -226,6 +228,7 @@ export async function homeView(root, ctx) {
 
   mountHomeSearch(root.querySelector('#home-search'));
   root.querySelector('#home-search').addEventListener('click', () => openPalette());
+  mountWeather(root);
   root.querySelector('#customize-sections').addEventListener('click', () => openCustomizer(root, ctx));
   root.querySelector('#add-section').addEventListener('click', () => openCustomizer(root, ctx));
   bindRefresh(root, sections);

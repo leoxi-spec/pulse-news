@@ -16,7 +16,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import ai, auth, citations, daily, feed, impact, ingest, profiles, rank, search, sports, stories
+from . import ai, auth, citations, daily, feed, impact, ingest, profiles, rank, search, sports, stories, weather
 from .config import APP_NAME, APP_TAGLINE, APP_VERSION, settings
 from .db import db
 from .httpclient import FetchError, FetchResult, HttpClient, validate_url
@@ -211,6 +211,8 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             days = request.int_param("days", 3, minimum=1, maximum=365)
             payload = feed.feed_page(profile, mode=mode, topic=topic, source=source, offset=offset, limit=limit, days=days)
             return 200, payload, {}
+        if path == "/api/weather" and method == "GET":
+            return 200, weather.current(), {}
         if path == "/api/impact" and method == "GET":
             return 200, impact.metrics(profile), {}
         if path == "/api/impact/report" and method == "GET":

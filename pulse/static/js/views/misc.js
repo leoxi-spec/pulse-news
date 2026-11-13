@@ -13,6 +13,7 @@ import { openLegend } from '../legend.js';
 import { openWidgetEditor, WIDGET_COUNT, DEFAULT_WIDGET_IDS } from '../daily.js';
 import { chooseAnimation, chooseNoise, setNoiseVolume } from '../ambient.js';
 import { applyVoice, currentVoiceId, openVoicePicker, voiceProfile } from '../voice.js';
+import { mountWeather, weatherWidget } from '../weather.js';
 
 // ---------------------------------------------------------------- search
 export async function searchView(root, ctx) {
@@ -799,7 +800,13 @@ export async function profileView(root, ctx) {
           </div>
         </div>
         <div class="settings-row">
-          <div><div class="settings-row__label">Listening voice</div><div class="settings-row__hint">Five profiles for Listen. Pulse uses the most natural voice installed on this device.</div></div>
+          <div><div class="settings-row__label">Live Toronto weather</div><div class="settings-row__hint">Copies Toronto’s current condition, temperature and local time as a colour theme. Updates every 10 minutes from Open-Meteo.</div></div>
+          <button class="switch ${p.weather_theme ? 'is-on' : ''}" data-toggle="weather_theme" aria-pressed="${Boolean(p.weather_theme)}"></button>
+        </div>
+        ${weatherWidget()}
+        <p class="tiny faint" style="margin:-.35rem 0 .8rem;line-height:1.5">10 live palettes: clear day, clear night, partly cloudy, cloudy, fog, drizzle, rain, heavy rain, snow and thunderstorm. Each brings its own colours and weather animation.</p>
+        <div class="settings-row" style="display:block">
+          <div style="margin-bottom:.55rem"><div class="settings-row__label">Listening voice</div><div class="settings-row__hint">Five profiles for Listen. Pulse uses the most natural voice installed on this device.</div></div>
           <button class="btn btn--sm btn--ghost" id="open-voice">${voiceProfile(currentVoiceId()).label}</button>
         </div>
         <div class="settings-row">
@@ -872,7 +879,7 @@ export async function profileView(root, ctx) {
         <div class="settings-row" style="display:block">
           <div style="margin-bottom:.55rem"><div class="settings-row__label">Background animation</div><div class="settings-row__hint">Pick a little weather for the page. “Theme” follows your palette.</div></div>
           <div class="ambience-grid">
-            ${[['theme','Theme'],['rain','Rain'],['snow','Snow'],['meteors','Meteors'],['birds','Birds'],['stars','Stars'],['fireflies','Fireflies'],['petals','Petals'],['leaves','Leaves'],['bubbles','Bubbles'],['aurora','Aurora'],['none','Off']].map(([id,label]) => html`
+            ${[['theme','Theme'],['rain','Rain'],['heavy-rain','Heavy rain'],['drizzle','Drizzle'],['thunder','Thunder'],['lightning','Lightning'],['hail','Hail'],['sleet','Sleet'],['snow','Snow'],['snowstorm','Snowstorm'],['fog','Fog'],['mist','Mist'],['wind','Wind'],['clouds','Clouds'],['sun-rays','Sun rays'],['heat','Heat'],['ripples','Ripples'],['storm','Storm'],['rainbow','Rainbow'],['dust','Dust'],['ash','Ash'],['embers','Embers'],['bokeh','Bokeh'],['meteors','Meteors'],['birds','Birds'],['stars','Stars'],['fireflies','Fireflies'],['petals','Petals'],['leaves','Leaves'],['bubbles','Bubbles'],['aurora','Aurora'],['none','Off']].map(([id,label]) => html`
               <button class="chip ${p.animation === id ? 'is-on' : ''}" data-setting-anim="${id}">${label}</button>`)}
           </div>
         </div>
@@ -1135,6 +1142,7 @@ function bindProfile(root, p, today, profile) {
       profileView(root, {});
     } catch (err) { toast(err.message, { type: 'bad' }); }
   });
+  mountWeather(root);
   root.querySelector('#open-legend')?.addEventListener('click', () => openLegend());
   root.querySelector('#open-voice')?.addEventListener('click', () => openVoicePicker({
     onSelect: () => {
