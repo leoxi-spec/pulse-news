@@ -3523,3 +3523,11 @@ body[data-band="senior"] .mcard__summary { display: none; }
   .reaction-cell { width: 62px; height: 62px; }
   .arcade-board { min-height: 280px; padding: .5rem; overflow-x: auto; }
 }
+
+/* A larger brand mark in the app bar; the PWA icon uses the same proportions. */
+.brand__pulse { height: 1.75rem; gap: 2.5px; }
+.brand__pulse span { width: 4px; }
+.brand__pulse span:nth-child(1) { height: 12px; }
+.brand__pulse span:nth-child(2) { height: 24px; }
+.brand__pulse span:nth-child(3) { height: 17px; }
+.brand__pulse span:nth-child(4) { height: 27px; }

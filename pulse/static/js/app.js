@@ -31,14 +31,11 @@ import { applyAmbient } from './ambient.js';
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
   { href: '/reels', label: 'Shorts', icon: 'play', mobile: true },
-  { href: '/videos', label: 'Videos', icon: 'play' },
   { href: '/discover', label: 'Discover', icon: 'compass', mobile: true },
   { href: '/sports', label: 'Scores', icon: 'trophy' },
   { href: '/brief', label: 'Brief', icon: 'bolt' },
   { href: '/saved', label: 'Saved', icon: 'bookmark', mobile: true },
   { href: '/study', label: 'Study', icon: 'book', minAge: 8 },
-  { href: '/about', label: 'About', icon: 'info' },
-  { href: '/profile', label: 'Profile', icon: 'user', mobile: true },
 ];
 
 const BOTTOM = [

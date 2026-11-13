@@ -35,13 +35,13 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     inset = int(size * padding)
     tile = (inset, inset, size - inset, size - inset)
     radius = int((tile[2] - tile[0]) * 0.23)
-    bars = [0.22, 0.46, 0.72, 0.52, 0.3]  # relative heights of the pulse
-    bar_w = max(2, int(size * 0.055))
-    gap = max(2, int(size * 0.035))
+    bars = [0.34, 0.62, 0.92, 0.72, 0.46]  # relative heights of the pulse
+    bar_w = max(2, int(size * 0.082))
+    gap = max(2, int(size * 0.05))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = (size - total_w) // 2
-    baseline = int(size * 0.62)
-    max_bar = int(size * 0.34)
+    baseline = int(size * 0.71)
+    max_bar = int(size * 0.46)
 
     for y in range(size):
         row = bytearray()
@@ -97,12 +97,12 @@ def main() -> None:
     <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff" transform="translate(-1.5,-2)">
-    <rect x="15" y="33" width="5" height="12" rx="2.5"/>
-    <rect x="23" y="24" width="5" height="28" rx="2.5"/>
-    <rect x="31" y="16" width="5" height="36" rx="2.5"/>
-    <rect x="39" y="26" width="5" height="26" rx="2.5"/>
-    <rect x="47" y="34" width="5" height="11" rx="2.5"/>
+  <g fill="#fff">
+    <rect x="12.6" y="35.4" width="5.2" height="10" rx="2.6"/>
+    <rect x="21" y="27.1" width="5.2" height="18.3" rx="2.6"/>
+    <rect x="29.5" y="18.3" width="5.2" height="27.1" rx="2.6"/>
+    <rect x="37.9" y="24.2" width="5.2" height="21.2" rx="2.6"/>
+    <rect x="46.3" y="31.9" width="5.2" height="13.5" rx="2.6"/>
   </g>
 </svg>
 """,
