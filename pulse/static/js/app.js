@@ -30,12 +30,35 @@ import { applyAmbient } from './ambient.js';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
-  { href: '/reels', label: 'Shorts', icon: 'play', mobile: true },
+  {
+    label: 'Watch', icon: 'play',
+    items: [
+      { href: '/reels', label: 'Shorts', icon: 'play', hint: 'Full-screen swipeable stories' },
+      { href: '/videos', label: 'Videos', icon: 'play', hint: 'Newsroom clips and YouTube' },
+      { href: '/arcade', label: 'Arcade', icon: 'game', hint: 'Fifteen brain-break games' },
+    ],
+  },
   { href: '/discover', label: 'Discover', icon: 'compass', mobile: true },
   { href: '/sports', label: 'Scores', icon: 'trophy' },
-  { href: '/brief', label: 'Brief', icon: 'bolt' },
-  { href: '/saved', label: 'Saved', icon: 'bookmark', mobile: true },
-  { href: '/study', label: 'Study', icon: 'book', minAge: 8 },
+  {
+    label: 'Read', icon: 'book',
+    items: [
+      { href: '/brief', label: 'Brief', icon: 'bolt', hint: 'The day in five stories' },
+      { href: '/saved', label: 'Saved', icon: 'bookmark', hint: 'Your library and citations' },
+      { href: '/study', label: 'Study', icon: 'book', hint: 'Quizzes, glossary and focus', minAge: 8 },
+      { href: '/research', label: 'Research', icon: 'quote', hint: 'Citations and bibliography' },
+    ],
+  },
+  {
+    label: 'Project', icon: 'info',
+    items: [
+      { href: '/about', label: 'About', icon: 'info', hint: 'The story and press kit' },
+      { href: '/impact', label: 'Impact', icon: 'sparkle', hint: 'Live product and reading data' },
+      { href: '/classroom', label: 'Classroom', icon: 'book', hint: 'A 45-minute lesson' },
+      { href: '/roadmap', label: 'Roadmap', icon: 'note', hint: 'Vote and send feedback' },
+      { href: '/profile', label: 'Profile & settings', icon: 'user', hint: 'Photo, themes and data' },
+    ],
+  },
 ];
 
 const BOTTOM = [
@@ -82,23 +105,65 @@ function currentPath() {
   return window.location.pathname;
 }
 
+function activeNav(href, path) {
+  return href === '/' ? path === '/' : path.startsWith(href);
+}
+
+function closeNavMenus() {
+  document.querySelectorAll('.nav-group.is-open').forEach((group) => {
+    group.classList.remove('is-open');
+    group.querySelector('.nav-group__trigger')?.setAttribute('aria-expanded', 'false');
+  });
+}
+
 function renderNav() {
   const path = currentPath();
-  const isActive = (href) => (href === '/' ? path === '/' : path.startsWith(href));
   const nav = document.getElementById('nav');
   const navAge = Number(state.profile?.survey?.age || 13);
   const visibleNav = NAV.filter((item) => !item.minAge || navAge >= item.minAge);
   if (nav) {
-    nav.innerHTML = visibleNav.map((item) => html`
-      <a class="${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link title="${item.label}">
-        ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
-        ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
-      </a>`);
+    nav.innerHTML = visibleNav.map((item) => {
+      if (!item.items) {
+        return html`
+          <a class="${activeNav(item.href, path) ? 'is-active' : ''}" href="${item.href}" data-link title="${item.label}">
+            ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
+            ${item.href === '/sports' && state.liveCount ? html`<span class="nav__badge nav__badge--live">${state.liveCount}</span>` : ''}
+          </a>`;
+      }
+      const children = item.items.filter((child) => !child.minAge || navAge >= child.minAge);
+      const active = children.some((child) => activeNav(child.href, path));
+      return html`
+        <div class="nav-group ${active ? 'is-active' : ''}" data-nav-group>
+          <button class="nav-group__trigger" type="button" aria-haspopup="true" aria-expanded="false">
+            ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
+            <svg class="nav-group__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="nav-menu" role="menu">
+            <div class="nav-menu__head">${item.label}</div>
+            ${children.map((child) => html`
+              <a class="nav-menu__item ${activeNav(child.href, path) ? 'is-active' : ''}" href="${child.href}" data-link role="menuitem">
+                <span class="nav-menu__icon">${raw(icons[child.icon] || icons.home)}</span>
+                <span><b>${child.label}</b><small>${child.hint}</small></span>
+              </a>`)}
+          </div>
+        </div>`;
+    }).join('');
+    nav.querySelectorAll('[data-nav-group]').forEach((group) => {
+      const trigger = group.querySelector('.nav-group__trigger');
+      trigger?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const open = !group.classList.contains('is-open');
+        closeNavMenus();
+        group.classList.toggle('is-open', open);
+        trigger.setAttribute('aria-expanded', String(open));
+      });
+      group.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeNavMenus));
+    });
   }
   const bottom = document.getElementById('bottom-nav');
   if (bottom) {
     bottom.innerHTML = BOTTOM.map((item) => html`
-      <a class="bottom-nav__item ${isActive(item.href) ? 'is-active' : ''}" href="${item.href}" data-link>
+      <a class="bottom-nav__item ${activeNav(item.href, path) ? 'is-active' : ''}" href="${item.href}" data-link>
         ${raw(icons[item.icon] || icons.home)}<span>${item.label}</span>
       </a>`).join('');
   }
@@ -112,6 +177,12 @@ function renderNav() {
 }
 
 function bindShell() {
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-nav-group]')) closeNavMenus();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeNavMenus();
+  });
   const mini = document.getElementById('search-mini');
   mini?.addEventListener('submit', (event) => {
     event.preventDefault();
