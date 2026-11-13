@@ -290,6 +290,9 @@ def sanitise_prefs(prefs: dict) -> dict:
         if value and value not in widgets:
             widgets.append(value)
     clean["widgets"] = widgets[:60]
+    avatar = str(prefs.get("avatar") or "")
+    if avatar.startswith("data:image/") and len(avatar) <= 400_000:
+        clean["avatar"] = avatar
     clean["notify_topics"] = [t for t in (prefs.get("notify_topics") or []) if t in TOPIC_SLUGS][:8]
     clean["sports_leagues"] = [str(s)[:20] for s in (prefs.get("sports_leagues") or [])][:12]
     clean["teams"] = [str(t)[:40] for t in (prefs.get("teams") or [])][:12]

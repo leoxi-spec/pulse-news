@@ -201,6 +201,7 @@ export async function homeView(root, ctx) {
       <div class="chip-row" id="quick-links">
         <a class="chip chip--shorts" href="/reels" data-link>${raw(icons.play)} Shorts</a>
         <a class="chip" href="/videos" data-link>${raw(icons.play)} Watch</a>
+        <a class="chip" href="/arcade" data-link>${raw(icons.game)} Arcade</a>
         ${followedTopics().filter((slug) => !kidHidden?.has(slug)).slice(0, 5).map((slug) => html`
           <a class="chip" href="/topic/${slug}" data-link>${topicLabel(slug)}</a>`)}
         ${followedTopics().includes('motorsport') ? '' : html`

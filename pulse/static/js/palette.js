@@ -18,6 +18,7 @@ const ACTIONS = [
   { id: 'about', label: 'About the project', hint: 'Story, principles, press kit', icon: 'info', path: '/about' },
   { id: 'impact', label: 'Impact report', hint: 'Live product and reading metrics', icon: 'sparkle', path: '/impact' },
   { id: 'classroom', label: 'Classroom toolkit', hint: 'A 45-minute news literacy lesson', icon: 'book', path: '/classroom' },
+  { id: 'arcade', label: 'Arcade', hint: 'Fifteen small games and brain breaks', icon: 'game', path: '/arcade' },
   { id: 'roadmap', label: 'Roadmap & feedback', hint: 'Vote and send product feedback', icon: 'note', path: '/roadmap' },
   { id: 'profile', label: 'Profile & settings', hint: 'Themes, goals, AI, data', icon: 'user', path: '/profile' },
   { id: 'random', label: 'Surprise me', hint: 'Open a random story from the archive', icon: 'sparkle' },

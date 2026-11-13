@@ -40,7 +40,7 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     gap = max(2, int(size * 0.035))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = (size - total_w) // 2
-    baseline = int(size * 0.66)
+    baseline = int(size * 0.62)
     max_bar = int(size * 0.34)
 
     for y in range(size):
@@ -97,7 +97,7 @@ def main() -> None:
     <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff">
+  <g fill="#fff" transform="translate(-1.5,-2)">
     <rect x="15" y="33" width="5" height="12" rx="2.5"/>
     <rect x="23" y="24" width="5" height="28" rx="2.5"/>
     <rect x="31" y="16" width="5" height="36" rx="2.5"/>

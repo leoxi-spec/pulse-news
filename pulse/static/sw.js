@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v24';
+const VERSION = 'pulse-v26';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -17,6 +17,12 @@ const SHELL = [
   '/js/views/article.js',
   '/js/views/discover.js',
   '/js/views/misc.js',
+  '/js/views/videos.js',
+  '/js/views/reels.js',
+  '/js/views/founder.js',
+  '/js/views/keyword.js',
+  '/js/views/arcade.js',
+  '/js/voice.js',
   '/js/views/sports.js',
   '/js/views/sources.js',
   '/manifest.webmanifest',

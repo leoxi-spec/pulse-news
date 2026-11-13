@@ -1,6 +1,6 @@
 {
   "id": "/",
-  "name": "Pulse — student news",
+  "name": "Pulse — Student News",
   "short_name": "Pulse",
   "description": "A personalised news app for students and teens: 360+ sources, video from newsrooms and YouTube, live scores, AI overviews, a permanent searchable archive, study tools and zero ads.",
   "start_url": "/",
@@ -114,6 +114,17 @@
           "sizes": "192x192"
         }
       ]
+    },
+    {
+      "name": "Pulse Arcade",
+      "short_name": "Arcade",
+      "url": "/arcade",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "launch_handler": {
@@ -189,6 +200,13 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "The project and press kit"
+    },
+    {
+      "src": "/screenshots/arcade-wide.png",
+      "sizes": "1440x1000",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Pulse Arcade"
     }
   ]
 }

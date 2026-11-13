@@ -20,6 +20,7 @@ import { reelsView } from './views/reels.js';
 import { videosView } from './views/videos.js';
 import { aboutView, impactView, classroomView, roadmapView } from './views/founder.js';
 import { keywordView } from './views/keyword.js';
+import { arcadeView } from './views/arcade.js';
 import { accountView } from './views/account.js';
 import { privacyView, termsView } from './views/legal.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
@@ -63,6 +64,7 @@ function registerRoutes() {
   router.add('/article/:id', articleView);
   router.add('/search', searchView);
   router.add('/keyword', keywordView);
+  router.add('/arcade', arcadeView);
   router.add('/saved', savedView);
   router.add('/brief', briefView);
   router.add('/study', studyView);
@@ -104,7 +106,12 @@ function renderNav() {
       </a>`).join('');
   }
   const avatar = document.getElementById('avatar');
-  if (avatar) avatar.textContent = profileInitials();
+  if (avatar) {
+    const photo = prefs().avatar;
+    avatar.classList.toggle('avatar--photo', Boolean(photo));
+    avatar.textContent = photo ? '' : profileInitials();
+    avatar.style.backgroundImage = photo ? `url("${photo}")` : '';
+  }
 }
 
 function bindShell() {
@@ -343,7 +350,8 @@ function setupServiceWorker() {
       window.location.reload();
     });
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      registration.update().catch(() => {});
+      const check = () => registration.update().catch(() => {});
+      check();
       if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' });
       registration.addEventListener('updatefound', () => {
         const worker = registration.installing;
@@ -357,6 +365,12 @@ function setupServiceWorker() {
           }
         });
       });
+      // Installed apps stay open for days. Check on focus and every 15 minutes
+      // so a new build does not wait for a full browser restart.
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+      window.addEventListener('focus', check);
+      setInterval(check, 15 * 60 * 1000);
+      setTimeout(() => sessionStorage.removeItem('pulse.sw-reloaded'), 10000);
     }).catch((err) => console.warn('sw registration failed', err));
   });
 }
@@ -375,7 +389,7 @@ registerAction('toggle-save', async (button) => {
 });
 
 on('profile', () => { renderNav(); applyAmbient(); });
-on('prefs', () => applyAmbient());
+on('prefs', () => { applyAmbient(); renderNav(); });
 on('save', ({ id, saved }) => {
   document.querySelectorAll(`[data-action="toggle-save"][data-id="${id}"]`).forEach((button) => {
     button.classList.toggle('is-on', saved);

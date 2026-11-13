@@ -25,7 +25,7 @@ export function privacyView(root) {
     <section><h2>What is stored</h2>
       <ul>
         <li><b>Reading data:</b> which stories you open, how long you spend, saves, notes, highlights, searches, topics you follow and your reading goal.</li>
-        <li><b>Profile:</b> the name you choose, age band, interests, theme and accessibility settings.</li>
+        <li><b>Profile:</b> the name you choose, age band, interests, theme, accessibility settings and an optional profile photo (resized on your device and stored with the profile).</li>
         <li><b>Feedback:</b> if you vote on the roadmap or send a product note, the item, message, category and any optional email you provide are stored on this server.</li>
         <li><b>Email account (optional):</b> your email address, a PBKDF2 password hash, account creation time, last sign-in time and the linked profile id. Your password itself is never stored.</li>
         <li><b>Session cookie:</b> a random token so you stay signed in for up to 30 days.</li>

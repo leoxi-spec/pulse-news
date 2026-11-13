@@ -312,6 +312,7 @@ export const icons = {
   text: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg>',
   camera: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4Z"/><circle cx="12" cy="13" r="3.2"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>',
+  game: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="11" rx="4"/><path d="M7 11v5M4.5 13.5h5M15 12h.01M18 15h.01"/></svg>',
   heart: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.5-7 9-7 9Z"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>',

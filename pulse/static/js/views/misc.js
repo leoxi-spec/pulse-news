@@ -672,14 +672,18 @@ export async function profileView(root, ctx) {
     : '—';
   const topWeekTopic = stats.week_topics?.[0]?.topic;
 
+  const avatarPhoto = p.avatar || '';
   root.innerHTML = html`
     <div class="card card-pad-lg">
       <div class="profile-head">
-        <div class="avatar" aria-hidden="true">${profileInitials()}</div>
+        <div class="avatar ${avatarPhoto ? 'avatar--photo' : ''}" ${avatarPhoto ? html`style="background-image:url('${esc(avatarPhoto)}')"` : ''} aria-hidden="true">${avatarPhoto ? '' : profileInitials()}</div>
         <div style="flex:1;min-width:0">
-          <div class="hstack" style="gap:.5rem">
+          <div class="hstack" style="gap:.5rem;flex-wrap:wrap">
             <h1 class="profile-head__name">${profile.name || 'Student'}</h1>
-            <button class="btn btn--sm btn--ghost" id="edit-name">Edit</button>
+            <button class="btn btn--sm btn--ghost" id="edit-name">Edit name</button>
+            <button class="btn btn--sm btn--ghost" id="avatar-upload">${avatarPhoto ? 'Change photo' : 'Add photo'}</button>
+            ${avatarPhoto ? html`<button class="btn btn--sm btn--ghost" id="avatar-remove">Remove photo</button>` : ''}
+            <input type="file" id="avatar-file" accept="image/png,image/jpeg,image/webp" hidden>
           </div>
           <p class="tiny muted">Level ${level.level} · ${level.title} · ${number(level.xp)} XP</p>
         </div>
@@ -958,6 +962,7 @@ export async function profileView(root, ctx) {
           <a class="btn btn--sm btn--ghost" href="/about" data-link>About the project</a>
           <a class="btn btn--sm btn--ghost" href="/impact" data-link>Impact</a>
           <a class="btn btn--sm btn--ghost" href="/classroom" data-link>Classroom</a>
+          <a class="btn btn--sm btn--ghost" href="/arcade" data-link>Arcade</a>
           <a class="btn btn--sm btn--ghost" href="/roadmap" data-link>Roadmap &amp; feedback</a>
           <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Privacy</a>
           <a class="btn btn--sm btn--ghost" href="/terms" data-link>Terms</a>
@@ -969,6 +974,32 @@ export async function profileView(root, ctx) {
   if (ctx?.query?.focus === 'settings') {
     setTimeout(() => root.querySelector('#settings')?.scrollIntoView({ behavior: 'smooth' }), 60);
   }
+}
+
+function resizeAvatar(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const side = Math.min(image.naturalWidth, image.naturalHeight);
+        const sx = Math.max(0, (image.naturalWidth - side) / 2);
+        const sy = Math.max(0, (image.naturalHeight - side) / 2);
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, sx, sy, side, side, 0, 0, 256, 256);
+        resolve(canvas.toDataURL('image/jpeg', 0.86));
+      } catch (err) {
+        reject(err);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that image.')); };
+    image.src = url;
+  });
 }
 
 function bindProfile(root, p, today, profile) {
@@ -1083,6 +1114,27 @@ function bindProfile(root, p, today, profile) {
     void close;
   });
   root.querySelector('#edit-interests')?.addEventListener('click', () => navigate('/onboarding?edit=1'));
+  const avatarFile = root.querySelector('#avatar-file');
+  root.querySelector('#avatar-upload')?.addEventListener('click', () => avatarFile?.click());
+  avatarFile?.addEventListener('change', async () => {
+    const file = avatarFile.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast('Choose an image file.', { type: 'bad' }); return; }
+    if (file.size > 8 * 1024 * 1024) { toast('Pick an image under 8 MB.', { type: 'bad' }); return; }
+    try {
+      const data = await resizeAvatar(file);
+      await savePrefs({ avatar: data });
+      toast('Profile photo updated');
+      profileView(root, {});
+    } catch (err) { toast(err.message || 'Could not read that image.', { type: 'bad' }); }
+  });
+  root.querySelector('#avatar-remove')?.addEventListener('click', async () => {
+    try {
+      await savePrefs({ avatar: '' });
+      toast('Profile photo removed');
+      profileView(root, {});
+    } catch (err) { toast(err.message, { type: 'bad' }); }
+  });
   root.querySelector('#open-legend')?.addEventListener('click', () => openLegend());
   root.querySelector('#open-voice')?.addEventListener('click', () => openVoicePicker({
     onSelect: () => {

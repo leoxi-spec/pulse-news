@@ -40,6 +40,8 @@ classes who still wants to understand what's happening. That means:
 | **Video, everywhere** | Publisher clips and 30 official YouTube newsroom, league, space and learning channels. A dedicated **Watch** page, video Shorts, badges on cards and a privacy-friendly player on every story. |
 | **Five editions** | Junior, Kids, Tween, Teen and Senior each change type scale, card density, home rows and available tools — visibly different, not just a label. |
 | **Five listening voices** | Nova, Atlas, Luna, Sage and Orion choose the best installed English voice, with rate/pitch tuned for news. |
+| **Arcade** | Fifteen local mini-games — Flappy Pulse, Snake, Breakout, Pong, Stack, Asteroid, Bubble Pop, Runner, 2048, Memory, Simon, Tic-Tac-Toe, Mines, Word Scramble and Reaction Grid. |
+| **Profile photos** | Upload, centre-crop and store a local avatar; it appears in the app bar and profile. |
 | **Motion** | Rain drops with wind and splashes, snow, meteors, birds, stars, fireflies, petals, leaves, bubbles and aurora — plus animated founder diagrams and scroll reveals. |
 | **Founder toolkit** | `/impact` live product dashboard with downloadable report, `/about` press kit, `/classroom` 45-minute media-literacy lesson, `/roadmap` public feature voting and local feedback. |
 | **Story clustering** | Ten outlets covering one event become one card with a "9 outlets covering" badge and a compare-coverage view. |
