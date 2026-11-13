@@ -79,9 +79,9 @@ function ensureRoot() {
     else if (event.key === 'ArrowUp') { event.preventDefault(); move(-1); }
     else if (event.key === 'Enter') {
       event.preventDefault();
-      const selected = items[active];
-      if (selected) activate(selected);
-      else if (input.value.trim()) goSearch();
+      // Enter on a typed query always opens the keyword landing.
+      if (input.value.trim()) goSearch();
+      else if (items[active]) activate(items[active]);
     } else if (event.key === 'Escape') {
       event.preventDefault();
       close();

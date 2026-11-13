@@ -37,7 +37,7 @@ CONDITIONS = {
 
 ANIMATIONS = {
     "clear-day": "sun-rays",
-    "clear-night": "stars",
+    "clear-night": "night-sky",
     "partly-cloudy": "clouds",
     "cloudy": "clouds",
     "fog": "fog",

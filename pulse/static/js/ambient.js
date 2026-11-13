@@ -93,6 +93,7 @@ function seed() {
       size: rain ? 0.8 + Math.random() * 1.3 : 1 + Math.random() * 2.6,
       life: Math.random() * Math.PI * 2,
       speed: 0.4 + Math.random() * 0.8,
+      meteor: animation === 'night-sky' && i < 6,
     });
   }
 }
@@ -228,6 +229,7 @@ Object.assign(DEFAULTS, {
   ash: { count: 70, speed: 0.6, color: 'rgba(205,205,205,.45)' },
   embers: { count: 55, speed: 0.5, color: 'rgba(255,155,70,.75)' },
   bokeh: { count: 22, speed: 0.16, color: 'rgba(255,220,190,.12)' },
+  'night-sky': { count: 95, speed: 0.15, color: 'rgba(255,255,255,.86)' },
 });
 
 function drawThunder(p, spec) { drawRain(p, spec); }
@@ -274,6 +276,16 @@ function drawDust(p, spec) { ctx.fillStyle = spec.color; ctx.fillRect(p.x, p.y, 
 function drawAsh(p, spec) { drawDust(p, spec); }
 function drawEmbers(p, spec) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2); ctx.fill(); }
 function drawBokeh(p, spec) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 9, 0, Math.PI * 2); ctx.fill(); }
+function drawNightSky(p, spec) {
+  if (p.meteor) {
+    const len = 42 + p.size * 20;
+    const grad = ctx.createLinearGradient(p.x, p.y, p.x - len, p.y - len * .4);
+    grad.addColorStop(0, 'rgba(255,255,255,.9)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.strokeStyle = grad; ctx.lineWidth = 1.3; ctx.beginPath();
+    ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - len, p.y - len * .4); ctx.stroke();
+  } else drawStar(p, spec);
+}
 
 const DRAW = {
   rain: drawRain, snow: drawSnow, meteors: drawMeteor, birds: drawBird,
@@ -284,6 +296,7 @@ const DRAW = {
   fog: drawFog, mist: drawMist, wind: drawWind, clouds: drawClouds,
   'sun-rays': drawSunRays, heat: drawHeat, ripples: drawRipples, storm: drawThunder,
   rainbow: drawRainbow, dust: drawDust, ash: drawAsh, embers: drawEmbers, bokeh: drawBokeh,
+  'night-sky': drawNightSky,
 };
 
 function frame(now) {
@@ -299,7 +312,10 @@ function frame(now) {
 
   for (const p of particles) {
     p.life += 0.02 * p.speed;
-    if (['rain', 'heavy-rain', 'drizzle', 'thunder', 'storm'].includes(animation)) {
+    if (animation === 'night-sky' && p.meteor) {
+      p.x += 2.4 * dt; p.y += 1.0 * dt;
+      if (p.x > width + 60 || p.y > height + 40) { p.x = Math.random() * width * .8; p.y = -30; }
+    } else if (['rain', 'heavy-rain', 'drizzle', 'thunder', 'storm'].includes(animation)) {
       p.x += p.vx * 1.8 * dt;
       p.y += p.vy * 1.8 * dt;
       if (p.y > height + 35) {

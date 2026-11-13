@@ -89,7 +89,7 @@ ANIMATIONS = (
     "leaves", "fireflies", "petals", "aurora",
     "thunder", "lightning", "heavy-rain", "drizzle", "hail", "sleet",
     "snowstorm", "fog", "mist", "wind", "clouds", "sun-rays", "heat",
-    "ripples", "storm", "rainbow", "dust", "ash", "embers", "bokeh",
+    "ripples", "storm", "rainbow", "dust", "ash", "embers", "bokeh", "night-sky",
 )
 NOISES = ("off", "white", "pink", "brown", "rain", "waves", "wind")
 FONTS = ("sans", "serif", "dyslexic")

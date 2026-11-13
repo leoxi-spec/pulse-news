@@ -47,7 +47,7 @@ function header(q, total, earliest) {
   return html`
     <div class="keyword-head">
       <div>
-        <a class="article__back" href="/search?q=${encodeURIComponent(q)}" data-link>${raw(icons.chevron)} Search</a>
+        <button class="article__back" type="button" data-keyword-back>${raw(icons.chevron)} Back</button>
         <p class="eyebrow">Keyword archive</p>
         <h1>“${q}”</h1>
         <p class="page-sub">Every article Pulse has fetched about this keyword — current reporting and the archive behind it.</p>
@@ -107,6 +107,10 @@ export async function keywordView(root, ctx) {
     <div id="keyword-load-more" class="section"></div>`;
 
   const bindForm = () => {
+    root.querySelector('[data-keyword-back]')?.addEventListener('click', () => {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = '/';
+    });
     root.querySelector('#keyword-form')?.addEventListener('submit', (event) => {
       event.preventDefault();
       const value = event.currentTarget.querySelector('input').value.trim();

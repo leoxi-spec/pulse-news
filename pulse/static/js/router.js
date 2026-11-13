@@ -49,7 +49,7 @@ export async function render(url = window.location.pathname + window.location.se
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   document.body.classList.toggle('onboarding-mode', path === '/onboarding');
   document.body.classList.toggle('reels-mode', path === '/reels');
-  document.title = 'Pulse — news that keeps up with you';
+  document.title = 'Pulse — Student News';
 
   // Move to the top *before* rendering. Doing it after the async handler used
   // to yank the viewport back down while you were already scrolling a
