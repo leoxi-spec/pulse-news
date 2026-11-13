@@ -3748,3 +3748,8 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
 @media (prefers-reduced-motion: reduce) { .arcade-stage.arcade-shake { animation: none; } }
 
 .account__avatar--photo { background-size: cover; background-position: center; color: transparent; text-indent: -9999px; overflow: hidden; }
+
+.reading-mix { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; margin: .2rem 0 .65rem; font-size: .64rem; color: var(--muted); }
+.reading-mix__label { text-transform: uppercase; letter-spacing: .09em; color: var(--faint); font-weight: 750; margin-right: .15rem; }
+.reading-mix__item { border: 1px solid var(--line); border-radius: 999px; padding: .16rem .45rem; background: var(--surface); }
+.reading-mix__item b { color: var(--accent); margin-left: .12rem; }

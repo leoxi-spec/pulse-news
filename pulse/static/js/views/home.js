@@ -389,7 +389,13 @@ function forYouSection(data, mode, items, hasMore, offset) {
       action: '<button class="btn btn--primary" data-open-search>Search news</button>',
     }));
   }
+  const mix = data?.reading_mix || [];
   const body = html`
+    ${mix.length ? html`
+      <div class="reading-mix" aria-label="Your reading mix">
+        <span class="reading-mix__label">Your reading mix</span>
+        ${mix.map((row) => html`<span class="reading-mix__item">${row.label} <b>${row.percent}%</b></span>`)}
+      </div>` : ''}
     <div id="for-you-list">${rowsHtml(list, { lead: true, seed: mode })}</div>
     <div class="feed-more">
       ${more ? html`<button class="btn btn--ghost" data-load-more="${startOffset}">Load more stories</button>` : html`<p class="tiny faint">You're caught up. The archive keeps growing — search it any time.</p>`}
@@ -421,7 +427,9 @@ function savedSection(data) {
 }
 
 function shortsSection(data) {
-  const items = (data?.items || []).slice(0, 4);
+  const pool = data?.items || [];
+  const withImages = pool.filter((item) => item.image);
+  const items = (withImages.length >= 2 ? withImages : pool).slice(0, 4);
   if (!data) {
     return sectionWrap('shorts', sectionHead('Pulse Shorts', '', { sub: 'loading…' }), html`<div class="skeleton" style="height:210px;border-radius:18px"></div>`);
   }

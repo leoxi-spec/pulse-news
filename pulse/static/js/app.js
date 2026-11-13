@@ -409,6 +409,28 @@ function setupInstall() {
   button?.addEventListener('click', () => window.pulseInstall());
 }
 
+function setupVersionWatch() {
+  const current = state.boot?.app?.version;
+  if (!current) return;
+  let announced = false;
+  const check = async () => {
+    try {
+      const data = await get('/api/health', 0, true);
+      if (data.app?.version && data.app.version !== current && !announced) {
+        announced = true;
+        toast(`Pulse ${data.app.version} is ready. Reload to update — no reinstall needed.`, {
+          duration: 10000,
+          actionLabel: 'Reload',
+          onAction: () => window.location.reload(),
+        });
+        navigator.serviceWorker?.getRegistration().then((reg) => reg?.update()).catch(() => {});
+      }
+    } catch { /* server unavailable */ }
+  };
+  setInterval(check, 60_000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+}
+
 function setupServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   window.addEventListener('load', () => {
@@ -476,6 +498,7 @@ async function boot() {
   setupInstall();
   bindShell();
   setupChrome();
+  setupVersionWatch();
   registerRoutes();
 
   const bootEl = document.getElementById('boot');

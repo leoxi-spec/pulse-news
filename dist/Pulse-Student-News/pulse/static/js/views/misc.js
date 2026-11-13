@@ -966,6 +966,7 @@ export async function profileView(root, ctx) {
         </p>
         <div class="hstack" style="margin-top:.7rem;flex-wrap:wrap">
           <button class="btn btn--sm btn--ghost" id="open-legend">Reading key</button>
+          <button class="btn btn--sm btn--ghost" id="refresh-app">Refresh app</button>
           <button class="btn btn--sm btn--ghost" id="install-app">Install app</button>
           <a class="btn btn--sm btn--ghost" href="/research" data-link>Research desk</a>
           <a class="btn btn--sm btn--ghost" href="/about" data-link>About the project</a>
@@ -1146,6 +1147,13 @@ function bindProfile(root, p, today, profile) {
     } catch (err) { toast(err.message, { type: 'bad' }); }
   });
   mountWeather(root);
+  root.querySelector('#refresh-app')?.addEventListener('click', async () => {
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      await registration?.update();
+    } catch { /* ignore */ }
+    window.location.reload();
+  });
   root.querySelector('#open-legend')?.addEventListener('click', () => openLegend());
   root.querySelector('#open-voice')?.addEventListener('click', () => openVoicePicker({
     onSelect: () => {

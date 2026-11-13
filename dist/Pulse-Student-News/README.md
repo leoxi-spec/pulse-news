@@ -306,7 +306,7 @@ server serves a small token login page before anything else. If `PULSE_ACCESS_TO
 ## Testing
 
 ```bash
-python3 -m unittest discover -s tests -v     # 133 tests, no network required
+python3 -m unittest discover -s tests -v     # 135 tests, no network required
 python3 tools/verify_catalog.py              # catalogue integrity
 python3 tools/verify_catalog.py --live       # fetch every feed (slow)
 python3 tools/check_js.py                    # syntax-check the ES modules

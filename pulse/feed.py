@@ -357,6 +357,11 @@ def feed_page(
         "next_offset": offset + limit if offset + limit < total else None,
         "generated_at": iso(),
         "archive_days": days,
+        "reading_mix": [
+            {"topic": topic, "label": TOPIC_LABELS.get(topic, topic.title()), "percent": round(percent * 100)}
+            for topic, percent in sorted(model.topic_mix.items(), key=lambda item: item[1], reverse=True)[:6]
+            if percent >= 0.02
+        ] if mode == "for-you" else [],
     }
 
 

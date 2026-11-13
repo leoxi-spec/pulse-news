@@ -53,6 +53,7 @@ class ProfileModel:
     read_ids: set[int] = field(default_factory=set)
     saved_ids: set[int] = field(default_factory=set)
     dwell_topics: dict[str, float] = field(default_factory=dict)
+    topic_mix: dict[str, float] = field(default_factory=dict)
     region: str = ""
     reading_pref: str = "medium"
     daily_goal: int = 5
@@ -134,6 +135,21 @@ def build_model(profile_id: str, survey: dict | None = None, prefs: dict | None 
         if row["kind"] in ("view", "open", "read") and row["article_id"]:
             model.read_ids.add(int(row["article_id"]))
 
+    # The percentage of this reader's news that belongs to each topic. This is
+    # used as a quota for the For you feed, not just a soft score bonus.
+    read_rows = db.query(
+        """SELECT topic, COUNT(*) AS n FROM events
+           WHERE profile_id=? AND kind='read' AND topic IS NOT NULL AND created_at >= ?
+           GROUP BY topic ORDER BY n DESC""",
+        (profile_id, since),
+    )
+    read_total = sum(int(row["n"] or 0) for row in read_rows)
+    if read_total >= 5:
+        model.topic_mix = {
+            row["topic"]: int(row["n"] or 0) / read_total
+            for row in read_rows if row["topic"]
+        }
+
     # Keywords from saved + liked stories.
     keyword_rows = db.query(
         """
@@ -188,6 +204,7 @@ def score(row, model: ProfileModel) -> tuple[float, list[str]]:
 
     weight = model.topic_weight(topic)
     value = weight * 7.0
+    value += model.topic_mix.get(topic, 0.0) * 2.8
     if topic in model.followed_topics:
         reasons.append(f"You follow {TOPIC_LABELS.get(topic, topic.title())}")
     elif model.dwell_topics.get(topic, 0) >= 12:
@@ -263,8 +280,59 @@ def score(row, model: ProfileModel) -> tuple[float, list[str]]:
     return value, reasons[:3]
 
 
-def diversify(rows: list, *, limit: int, per_topic: int = 5, per_source: int = 3, window: int = 24) -> list:
-    """Keep the top of the feed varied: no single outlet or topic monopolises."""
+def diversify(rows: list, *, limit: int, per_topic: int = 5, per_source: int = 3, window: int = 24, mix: dict[str, float] | None = None) -> list:
+    """Keep the top of the feed varied, following the reader's topic mix."""
+    if mix:
+        # Select quotas from the reader's actual reading percentages, then fill
+        # any remainder from the score order. This makes a 50% sports reader
+        # see roughly 50% sports cards instead of an all-sports wall.
+        topics = [topic for topic, _ in sorted(mix.items(), key=lambda item: item[1], reverse=True)]
+        quotas = {topic: max(1, round(mix[topic] * limit)) for topic in topics}
+        while sum(quotas.values()) > limit:
+            largest = max(quotas, key=quotas.get)
+            if quotas[largest] <= 1:
+                break
+            quotas[largest] -= 1
+        chosen = []
+        chosen_ids = set()
+        source_counts = {}
+        story_seen = set()
+        index_of = {id(row): index for index, row in enumerate(rows)}
+        for topic in topics:
+            picked = 0
+            for row in rows:
+                if picked >= quotas[topic]:
+                    break
+                if id(row) in chosen_ids or row["primary_topic"] != topic:
+                    continue
+                story_id = row["story_id"]
+                if story_id and story_id in story_seen:
+                    continue
+                if source_counts.get(row["source_id"], 0) >= per_source:
+                    continue
+                chosen.append(row)
+                chosen_ids.add(id(row))
+                picked += 1
+                source_counts[row["source_id"]] = source_counts.get(row["source_id"], 0) + 1
+                if story_id:
+                    story_seen.add(story_id)
+        for row in rows:
+            if len(chosen) >= limit:
+                break
+            if id(row) in chosen_ids:
+                continue
+            story_id = row["story_id"]
+            if story_id and story_id in story_seen:
+                continue
+            if source_counts.get(row["source_id"], 0) >= per_source:
+                continue
+            chosen.append(row)
+            chosen_ids.add(id(row))
+            source_counts[row["source_id"]] = source_counts.get(row["source_id"], 0) + 1
+            if story_id:
+                story_seen.add(story_id)
+        return sorted(chosen, key=lambda row: index_of.get(id(row), 10**9))
+
     chosen = []
     deferred = []
     topic_counts: dict[str, int] = {}
@@ -307,7 +375,7 @@ def rank(rows: list, model: ProfileModel, *, limit: int = 40, diversity: bool = 
     scored.sort(key=lambda item: item[1], reverse=True)
     if not diversity:
         return scored[:limit]
-    selected_rows = diversify([item[0] for item in scored], limit=limit)
+    selected_rows = diversify([item[0] for item in scored], limit=limit, mix=model.topic_mix or None)
     by_id = {item[0]["id"]: item for item in scored}
     return [by_id[row["id"]] for row in selected_rows if row["id"] in by_id]
 
