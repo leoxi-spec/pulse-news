@@ -61,6 +61,16 @@ function founderHero(kicker, title, sub, actions = '') {
       <h1>${title}</h1>
       <p class="founder-hero__sub">${sub}</p>
       ${actions ? html`<div class="founder-actions">${raw(actions)}</div>` : ''}
+      <div class="founder-orbit" aria-hidden="true">
+        <span class="founder-orbit__ring founder-orbit__ring--a"></span>
+        <span class="founder-orbit__ring founder-orbit__ring--b"></span>
+        <span class="founder-orbit__ring founder-orbit__ring--c"></span>
+        <span class="founder-orbit__core">Pulse</span>
+        <span class="founder-orbit__node" style="--x:82%;--y:18%">sources</span>
+        <span class="founder-orbit__node" style="--x:12%;--y:34%">video</span>
+        <span class="founder-orbit__node" style="--x:78%;--y:74%">archive</span>
+        <span class="founder-orbit__node" style="--x:24%;--y:82%">classroom</span>
+      </div>
     </section>`;
 }
 
@@ -79,6 +89,54 @@ async function loadImpact(root, retry) {
     errorState(root, err.message, retry);
     return null;
   }
+}
+
+function pipeline() {
+  return html`
+    <div class="pipeline">
+      <div class="pipeline__node"><b>Feeds</b><span>488 feeds</span></div>
+      <span class="pipeline__arrow" aria-hidden="true"></span>
+      <div class="pipeline__node"><b>Extract</b><span>body + video</span></div>
+      <span class="pipeline__arrow" aria-hidden="true"></span>
+      <div class="pipeline__node"><b>Cluster</b><span>one story</span></div>
+      <span class="pipeline__arrow" aria-hidden="true"></span>
+      <div class="pipeline__node"><b>Rank</b><span>for this reader</span></div>
+      <span class="pipeline__arrow" aria-hidden="true"></span>
+      <div class="pipeline__node"><b>Reader</b><span>brief + archive</span></div>
+    </div>
+    <div class="pipeline__base"><span>SQLite + FTS5, append-only archive</span><span>no ads · no trackers · local-first</span></div>`;
+}
+
+function ring(value, label, detail = '') {
+  return html`
+    <div class="impact-ring" style="--value:${Math.max(0, Math.min(100, Number(value) || 0))}">
+      <div class="impact-ring__disc"><b>${value}%</b><span>${label}</span></div>
+      ${detail ? html`<small>${detail}</small>` : ''}
+    </div>`;
+}
+
+function bindFounderMotion(root) {
+  const nodes = root.querySelectorAll('.founder-stat, .founder-card, .principle, .timeline__row, .roadmap-card, .lesson-steps > div, .metric-row, .impact-ring');
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    nodes.forEach((node) => node.classList.add('is-in'));
+    return;
+  }
+  if (!('IntersectionObserver' in window)) {
+    nodes.forEach((node) => node.classList.add('is-in'));
+    return;
+  }
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  nodes.forEach((node, index) => {
+    node.style.setProperty('--delay', `${Math.min(index * 35, 260)}ms`);
+    observer.observe(node);
+  });
 }
 
 // ---------------------------------------------------------------- impact
@@ -111,6 +169,11 @@ export async function impactView(root) {
       ${statCard(compactNumber(videos), 'videos', 'publisher + YouTube')}
       ${statCard(compactNumber(p.readable), 'full-text stories', 'readable in-app')}
       ${statCard(compactNumber(u.server?.minutes || 0), 'minutes read', `across this server · you: ${u.minutes || 0}`)}
+    </div>
+    <div class="impact-ring-row">
+      ${ring(100, 'privacy', 'no ads, no trackers')}
+      ${ring(Math.round((p.feeds_ok / Math.max(1, p.feeds_total)) * 100), 'feed health', `${p.feeds_ok}/${p.feeds_total} live`)}
+      ${ring(100, 'local', 'archive you own')}
     </div>
     ${caveat()}
 
@@ -163,7 +226,6 @@ export async function impactView(root) {
       <div class="founder-card founder-card--wide">
         <p class="small muted">The report is generated from the same SQLite database the app serves. It counts rows, sources, topics, videos, full-text extraction and this profile’s own reading events. Re-run it any time with the button at the top of this page.</p>
         <div class="hstack" style="flex-wrap:wrap;margin-top:.8rem">
-          <button class="btn btn--sm btn--ghost" id="impact-download-2">${raw(icons.book)} Download report</button>
           <a class="btn btn--sm btn--ghost" href="/roadmap" data-link>${raw(icons.sparkle)} Roadmap and feedback</a>
           <a class="btn btn--sm btn--ghost" href="/classroom" data-link>${raw(icons.book)} Classroom toolkit</a>
         </div>
@@ -178,8 +240,8 @@ export async function impactView(root) {
     } catch (err) { toast(err.message, { type: 'bad' }); }
   };
   root.querySelector('#impact-download')?.addEventListener('click', downloadReport);
-  root.querySelector('#impact-download-2')?.addEventListener('click', downloadReport);
   root.querySelector('#impact-print')?.addEventListener('click', () => window.print());
+  bindFounderMotion(root);
 }
 
 // ----------------------------------------------------------------- about
@@ -226,6 +288,11 @@ export async function aboutView(root) {
     </div>
 
     <section class="founder-section">
+      <div class="section-head"><h2>The system, end to end</h2><span class="tiny muted">one machine, no cloud bill</span></div>
+      ${pipeline()}
+    </section>
+
+    <section class="founder-section">
       <div class="section-head"><h2>Product principles</h2><span class="tiny muted">what I said no to</span></div>
       <div class="principle-grid">
         ${PRINCIPLES.map(([title, text]) => html`<article class="principle"><h3>${title}</h3><p>${text}</p></article>`)}
@@ -266,21 +333,19 @@ export async function aboutView(root) {
         <h2>Use the project</h2>
         <p class="small muted">Read the impact report, try a classroom lesson, vote on the roadmap, or send feedback. The press kit is a one-page summary you can share with a teacher, a newsroom or an admissions interviewer.</p>
         <div class="hstack" style="flex-wrap:wrap;margin-top:.8rem">
-          <a class="btn btn--primary" href="/impact" data-link>Impact report</a>
-          <a class="btn" href="/classroom" data-link>Classroom toolkit</a>
-          <a class="btn" href="/roadmap" data-link>Roadmap and feedback</a>
-          <button class="btn" id="press-kit-2">${raw(icons.book)} Press kit</button>
+          <a class="btn btn--primary" href="/roadmap" data-link>Roadmap and feedback</a>
         </div>
       </div>
     </section>`;
 
-  root.querySelectorAll('#press-kit, #press-kit-2').forEach((button) => button.addEventListener('click', async () => {
+  root.querySelector('#press-kit')?.addEventListener('click', async () => {
     try {
       const kit = await get('/api/press-kit', 20);
       download(kit.filename || 'pulse-press-kit.md', kit.markdown);
       toast('Press kit downloaded');
     } catch (err) { toast(err.message, { type: 'bad' }); }
-  }));
+  });
+  bindFounderMotion(root);
 }
 
 // ------------------------------------------------------------- classroom
@@ -342,13 +407,12 @@ export async function classroomView(root) {
         <h2>Run a pilot</h2>
         <p class="small muted">Try the lesson with one class, then send feedback through the roadmap. The next build is prioritised around teacher and student responses, not vanity metrics.</p>
         <div class="hstack" style="flex-wrap:wrap;margin-top:.8rem">
-          <a class="btn btn--primary" href="/roadmap" data-link>Send pilot feedback</a>
-          <button class="btn" id="print-lesson-2">${raw(icons.printer)} Print lesson</button>
           <a class="btn" href="/about" data-link>About the project</a>
         </div>
       </div>
     </section>`;
-  root.querySelectorAll('#print-lesson, #print-lesson-2').forEach((button) => button.addEventListener('click', () => window.print()));
+  root.querySelector('#print-lesson')?.addEventListener('click', () => window.print());
+  bindFounderMotion(root);
 }
 
 // --------------------------------------------------------------- roadmap
@@ -453,4 +517,5 @@ export async function roadmapView(root) {
       button.disabled = false;
     }
   });
+  bindFounderMotion(root);
 }

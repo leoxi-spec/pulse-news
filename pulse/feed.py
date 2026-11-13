@@ -438,6 +438,85 @@ def video_feed(
     }
 
 
+def keyword_page(
+    profile: dict,
+    query: str,
+    *,
+    offset: int = 0,
+    limit: int = 24,
+    sort: str = "relevance",
+) -> dict:
+    """A feed-style archive page for one keyword.
+
+    Search ranks/filters; the result ids are hydrated through the normal card
+    query so keyword pages get the same images, labels and video metadata as
+    every other feed.
+    """
+    from collections import Counter
+    from . import search as search_module
+
+    result = search_module.search(query, sort=sort, limit=limit, offset=offset)
+    ids = [int(row["id"]) for row in result.get("results", [])]
+    if not ids:
+        return {
+            "query": query,
+            "items": [],
+            "total": 0,
+            "offset": offset,
+            "limit": limit,
+            "has_more": False,
+            "next_offset": None,
+            "sort": sort,
+            "generated_at": iso(),
+            "facets": {"topics": [], "sources": []},
+        }
+    placeholders = ",".join("?" for _ in ids)
+    base = _CANDIDATE_SQL[: _CANDIDATE_SQL.index("WHERE")]
+    rows = db.query(
+        base + f"WHERE a.id IN ({placeholders})",
+        tuple(ids),
+    )
+    by_id = {int(row["id"]): row for row in rows}
+    model = rank.build_model(profile["id"], profile["survey"], profile["prefs"])
+    saved_ids = {int(r["article_id"]) for r in db.query("SELECT article_id FROM saves WHERE profile_id=?", (profile["id"],))}
+    read_ids = {
+        int(r["article_id"]) for r in db.query(
+            "SELECT DISTINCT article_id FROM events WHERE profile_id=? AND kind='read' AND article_id IS NOT NULL",
+            (profile["id"],),
+        )
+    }
+    items = [
+        card(by_id[article_id], model=model, saved_ids=saved_ids, read_ids=read_ids)
+        for article_id in ids
+        if article_id in by_id
+    ]
+    topic_counts = Counter(item["topic"] for item in items)
+    source_counts = Counter((item["source"]["id"], item["source"]["name"]) for item in items)
+    facets = {
+        "topics": [
+            {"id": topic, "label": TOPIC_LABELS.get(topic, topic), "count": count}
+            for topic, count in topic_counts.most_common(5)
+        ],
+        "sources": [
+            {"id": source_id, "name": name, "count": count}
+            for (source_id, name), count in source_counts.most_common(5)
+        ],
+    }
+    total = int(result.get("total", 0) or 0)
+    return {
+        "query": query,
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + limit < total,
+        "next_offset": offset + limit if offset + limit < total else None,
+        "sort": sort,
+        "generated_at": iso(),
+        "facets": facets,
+    }
+
+
 def article_detail(article_id: int, profile: dict) -> dict | None:
     row = db.query_one(
         """

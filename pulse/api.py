@@ -274,6 +274,18 @@ def handle(request: Request) -> tuple[int, dict, dict]:
                 "collections": profiles.collections(profile["id"]),
                 "collection": collection,
             }, {}
+        if path == "/api/keyword" and method == "GET":
+            query = (request.query.get("q") or "").strip()
+            if not query:
+                raise ApiError(400, "Add a keyword to browse.")
+            sort = request.query.get("sort") or "relevance"
+            if sort not in ("relevance", "newest", "latest"):
+                sort = "relevance"
+            if sort == "latest":
+                sort = "newest"
+            offset = request.int_param("offset", 0, minimum=0, maximum=5000)
+            limit = request.int_param("limit", 24, minimum=1, maximum=60)
+            return 200, feed.keyword_page(profile, query, offset=offset, limit=limit, sort=sort), {}
         if path == "/api/search" and method == "GET":
             query = request.query.get("q", "")
             result = search.search(

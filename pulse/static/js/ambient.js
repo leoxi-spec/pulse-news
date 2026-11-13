@@ -13,7 +13,7 @@ const THEME_ANIMATIONS = {
 };
 
 const DEFAULTS = {
-  rain: { count: 90, speed: 0.9, color: 'rgba(160,200,255,.55)' },
+  rain: { count: 150, speed: 2.6, color: 'rgba(170,210,255,.62)' },
   snow: { count: 70, speed: 0.35, color: 'rgba(255,255,255,.8)' },
   meteors: { count: 9, speed: 1.1, color: 'rgba(255,220,150,.9)' },
   birds: { count: 12, speed: 0.35, color: 'rgba(255,255,255,.55)' },
@@ -30,6 +30,7 @@ let ctx = null;
 let particles = [];
 let animation = 'none';
 let raf = 0;
+let splashes = [];
 let lastFrame = 0;
 let width = 0;
 let height = 0;
@@ -78,14 +79,16 @@ function ensureCanvas() {
 function seed() {
   const spec = DEFAULTS[animation];
   particles = [];
+  splashes = [];
   if (!spec) return;
   for (let i = 0; i < spec.count; i += 1) {
+    const rain = animation === 'rain';
     particles.push({
       x: Math.random() * width,
       y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.8,
-      vy: spec.speed * (0.4 + Math.random() * 0.9),
-      size: 1 + Math.random() * 2.6,
+      vx: rain ? -0.55 - Math.random() * 0.9 : (Math.random() - 0.5) * 0.8,
+      vy: rain ? 2.8 + Math.random() * 4.2 : spec.speed * (0.4 + Math.random() * 0.9),
+      size: rain ? 0.8 + Math.random() * 1.3 : 1 + Math.random() * 2.6,
       life: Math.random() * Math.PI * 2,
       speed: 0.4 + Math.random() * 0.8,
     });
@@ -93,13 +96,20 @@ function seed() {
 }
 
 function drawRain(p, spec) {
-  const len = 10 + p.size * 7;
+  const len = 15 + p.vy * 5.5;
   ctx.strokeStyle = spec.color;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 0.8 + p.size * 0.35;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(p.x, p.y);
-  ctx.lineTo(p.x - 1.5, p.y + len);
+  ctx.lineTo(p.x + p.vx * 5.5, p.y + len);
   ctx.stroke();
+  ctx.fillStyle = spec.color;
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, Math.max(0.6, p.size * 0.45), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
 }
 
 function drawSnow(p, spec) {
@@ -214,7 +224,17 @@ function frame(now) {
 
   for (const p of particles) {
     p.life += 0.02 * p.speed;
-    if (animation === 'meteors') {
+    if (animation === 'rain') {
+      p.x += p.vx * 1.8 * dt;
+      p.y += p.vy * 1.8 * dt;
+      if (p.y > height + 35) {
+        if (Math.random() < 0.3) {
+          splashes.push({ x: p.x, y: height - 2, life: 0 });
+        }
+        p.y = -25;
+        p.x = Math.random() * (width + 80) - 20;
+      }
+    } else if (animation === 'meteors') {
       p.x += 4.2 * p.speed * dt;
       p.y += 2.0 * p.speed * dt;
     } else if (animation === 'birds') {
@@ -236,6 +256,19 @@ function frame(now) {
     if (p.x < -40) p.x = width + 30;
 
     draw(p, spec);
+  }
+  if (animation === 'rain') {
+    for (const splash of splashes) {
+      splash.life += 0.055 * dt;
+      ctx.strokeStyle = spec.color;
+      ctx.globalAlpha = Math.max(0, 1 - splash.life);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(splash.x, splash.y, 2 + splash.life * 12, 1 + splash.life * 4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    splashes = splashes.filter((splash) => splash.life < 1);
   }
   raf = requestAnimationFrame(frame);
 }

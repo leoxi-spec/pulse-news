@@ -5,6 +5,7 @@ import { get } from '../api.js';
 import { html, raw, icons, toast, copyText, confetti, haptic, modal } from '../ui.js';
 import { state, prefs, record, toggleSave } from '../store.js';
 import { navigate } from '../router.js';
+import { applyVoice } from '../voice.js';
 
 const MODES = [
   ['for-you', 'For you'],
@@ -166,10 +167,11 @@ function reelCard(item) {
       ${item.image ? html`
         <img class="reel__bg reel__bg--img" src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
       ${fileVideo ? html`
-        <video class="reel__bg reel__video" data-reel-video src="${video.url}" poster="${item.image || ''}" muted loop playsinline preload="metadata"></video>` : ''}
-      ${video ? html`
-        <button class="reel__video-play" type="button" ${fileVideo ? 'data-reel-video-toggle' : 'data-reel-play'} aria-label="${fileVideo ? 'Turn video sound on or off' : 'Play video'}">
-          ${raw(icons.play)}<span>${fileVideo ? 'Sound' : (video.provider || 'Video')}</span>
+        <video class="reel__bg reel__video" data-reel-video src="${video.url}" poster="${item.image || ''}" muted loop playsinline preload="metadata" tabindex="0" aria-label="Video. Tap or press M to toggle sound."></video>
+        <span class="reel__sound-hint" data-sound-hint>Tap video for sound</span>` : ''}
+      ${video && !fileVideo ? html`
+        <button class="reel__video-play" type="button" data-reel-play aria-label="Play video">
+          ${raw(icons.play)}<span>${video.provider || 'Video'}</span>
         </button>` : ''}
       <div class="reel__shade"></div>
 
@@ -199,7 +201,7 @@ function reelCard(item) {
         <button class="reel-act ${item.saved ? 'is-on' : ''}" data-save aria-pressed="${Boolean(item.saved)}" aria-label="Save">
           ${raw(icons.bookmark)}<span>${item.saved ? 'Saved' : 'Save'}</span>
         </button>
-        <button class="reel-act" data-listen aria-label="Listen">${raw(icons.sound)}<span>Listen</span></button>
+        ${!video ? html`<button class="reel-act" data-listen aria-label="Listen">${raw(icons.sound)}<span>Listen</span></button>` : ''}
         <button class="reel-act" data-share aria-label="Share">${raw(icons.share)}<span>Share</span></button>
         <button class="reel-act reel-act--open" data-open aria-label="Open article">${raw(icons.external)}<span>Open</span></button>
       </div>
@@ -318,9 +320,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   const speak = (item, button = null) => {
     if (!('speechSynthesis' in window)) return;
     stopSpeech();
-    utterance = new SpeechSynthesisUtterance(`${item.title}. ${(item.preview || '').slice(0, 420)}`);
-    utterance.rate = 1.03;
-    utterance.lang = 'en-US';
+    utterance = applyVoice(new SpeechSynthesisUtterance(`${item.title}. ${(item.preview || '').slice(0, 420)}`));
     utterance.onend = () => {
       if (button) { button.classList.remove('is-on'); button.querySelector('span').textContent = 'Listen'; }
     };
@@ -361,12 +361,14 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   const syncVideo = (index) => {
     if (activeVideo) activeVideo.pause();
     activeVideo = null;
-    realReels().forEach((node) => node.querySelectorAll('[data-reel-video-toggle]').forEach((button) => {
-      button.classList.remove('is-on');
-      const label = button.querySelector('span');
-      if (label) label.textContent = 'Sound';
-    }));
     const reel = realReels()[index];
+    const hint = reel?.querySelector('[data-sound-hint]');
+    if (hint) {
+      hint.classList.remove('is-gone');
+      hint.style.animation = 'none';
+      void hint.offsetWidth;
+      hint.style.animation = '';
+    }
     const video = reel?.querySelector('video[data-reel-video]');
     if (video) {
       video.muted = true;
@@ -444,18 +446,6 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     reelVideo?.addEventListener('error', (event) => {
       event.currentTarget.style.display = 'none';
     });
-    reel.querySelectorAll('[data-reel-video-toggle]').forEach((button) => button.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const video = reel.querySelector('video[data-reel-video]');
-      if (!video) return;
-      video.muted = !video.muted;
-      if (!video.muted) video.play().catch(() => {});
-      reel.querySelectorAll('[data-reel-video-toggle]').forEach((node) => {
-        node.classList.toggle('is-on', !video.muted);
-        const label = node.querySelector('span');
-        if (label) label.textContent = video.muted ? 'Sound' : 'Sound on';
-      });
-    }));
     reel.querySelectorAll('[data-reel-play]').forEach((button) => button.addEventListener('click', (event) => {
       event.stopPropagation();
       openVideoModal(item);
@@ -463,11 +453,36 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     reel.querySelectorAll('.reel__bg--img').forEach((img) => {
       img.addEventListener('error', () => { img.style.display = 'none'; });
     });
+    let soundTimer = null;
+    const toggleSound = () => {
+      const video = reel.querySelector('video[data-reel-video]');
+      if (!video) return;
+      video.muted = !video.muted;
+      if (!video.muted) video.play().catch(() => {});
+      reel.querySelector('[data-sound-hint]')?.classList.add('is-gone');
+      toast(video.muted ? 'Video muted' : 'Video sound on');
+    };
     reel.addEventListener('click', (event) => {
       if (event.target.closest('button, a')) return;
+      const isFileVideo = item.video?.kind === 'file';
       const now = Date.now();
-      if (now - lastTap < 320) like(reel, item);
+      if (now - lastTap < 320) {
+        clearTimeout(soundTimer);
+        like(reel, item);
+        lastTap = now;
+        return;
+      }
       lastTap = now;
+      if (isFileVideo) {
+        clearTimeout(soundTimer);
+        soundTimer = setTimeout(toggleSound, 280);
+      }
+    });
+    reel.querySelector('video[data-reel-video]')?.addEventListener('keydown', (event) => {
+      if (event.key === 'm' || event.key === 'M' || event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleSound();
+      }
     });
   };
 

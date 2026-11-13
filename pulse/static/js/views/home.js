@@ -39,6 +39,13 @@ function allSections() {
 const sectionMeta = (id) => allSections().find((section) => section.id === id) || { id, label: id, hint: '' };
 
 function activeSections() {
+  const unique = [...new Set(computeSections())];
+  // The Today hero already contains the brief. Showing a separate brief card
+  // directly above it is the same feature twice.
+  return unique.includes('daily') ? unique.filter((id) => id !== 'brief') : unique;
+}
+
+function computeSections() {
   const saved = Array.isArray(prefs().home_sections) ? prefs().home_sections : [];
   const valid = saved.filter((id) => allSections().some((section) => section.id === id));
   const age = Number(state.profile?.survey?.age || 13);
@@ -91,6 +98,23 @@ function activeSections() {
     if (withInterests.length > DEFAULT_SECTIONS.length + 3) break;
   }
   return withInterests;
+}
+
+function bandRibbon() {
+  const band = ageBand(Number(state.profile?.survey?.age || 13));
+  const copy = {
+    junior: 'Big pictures, short stories, play and a 2-minute brief',
+    kids: 'Bolder type, quizzes, explainers and a gentle feed',
+    tween: 'The full feed, with training wheels off',
+    teen: 'Deeper reads, study tools, citations and video',
+    senior: 'Research mode, long reads and a denser front page',
+  };
+  return html`
+    <div class="band-ribbon band-ribbon--${band.id}">
+      <span class="band-ribbon__label">${band.label} edition</span>
+      <b>${band.min}–${band.max}</b>
+      <span>${copy[band.id] || band.blurb}</span>
+    </div>`;
 }
 
 function localGreeting() {
@@ -164,6 +188,8 @@ export async function homeView(root, ctx) {
         </a>
       </div>
     </div>
+
+    ${bandRibbon()}
 
     <button class="home-search" id="home-search" type="button">
       ${raw(icons.search)}

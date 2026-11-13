@@ -12,6 +12,7 @@ import { navigate } from '../router.js';
 import { openLegend } from '../legend.js';
 import { openWidgetEditor, WIDGET_COUNT, DEFAULT_WIDGET_IDS } from '../daily.js';
 import { chooseAnimation, chooseNoise, setNoiseVolume } from '../ambient.js';
+import { applyVoice, currentVoiceId, openVoicePicker, voiceProfile } from '../voice.js';
 
 // ---------------------------------------------------------------- search
 export async function searchView(root, ctx) {
@@ -47,6 +48,7 @@ export async function searchView(root, ctx) {
           <option value="newest" ${sort === 'newest' ? 'selected' : ''}>Newest first</option>
         </select>
         <a class="chip" href="/sources" data-link>Browse sources</a>
+        ${q ? html`<a class="chip" href="/keyword?q=${encodeURIComponent(q)}" data-link>Feed view ${raw(icons.chevron)}</a>` : ''}
         <span class="tiny faint" id="search-hint"></span>
       </div>
     </form>
@@ -89,7 +91,7 @@ function renderSearchHome(root) {
     <div class="card card-pad-lg">
       <h2 style="font-size:1rem">Try a topic</h2>
       <div class="hstack" style="margin-top:.6rem">
-        ${popular.map((term) => html`<a class="chip" href="/search?q=${encodeURIComponent(term)}" data-link>${term}</a>`)}
+        ${popular.map((term) => html`<a class="chip" href="/keyword?q=${encodeURIComponent(term)}" data-link>${term}</a>`)}
       </div>
       <p class="tiny muted" style="margin-top:1rem">Advanced: <code class="mono">source:bbc</code>, <code class="mono">topic:tech</code>, <code class="mono">after:2025-01-01</code>, <code class="mono">-trump</code>.</p>
     </div>
@@ -492,8 +494,7 @@ function speakBrief(stories, button) {
     if (stopped) return;
     if (index >= chunks.length) { finish(); toast('Brief finished'); return; }
     const utterance = new SpeechSynthesisUtterance(chunks[index]);
-    utterance.rate = Math.min(2, Math.max(0.7, Number(prefs().listen_rate) || 1.02));
-    utterance.lang = 'en-US';
+    applyVoice(utterance);
     utterance.onend = () => { index += 1; next(); };
     utterance.onerror = (event) => {
       if (event.error !== 'interrupted' && event.error !== 'canceled') toast('Read aloud stopped.', { type: 'bad' });
@@ -794,6 +795,10 @@ export async function profileView(root, ctx) {
           </div>
         </div>
         <div class="settings-row">
+          <div><div class="settings-row__label">Listening voice</div><div class="settings-row__hint">Five profiles for Listen. Pulse uses the most natural voice installed on this device.</div></div>
+          <button class="btn btn--sm btn--ghost" id="open-voice">${voiceProfile(currentVoiceId()).label}</button>
+        </div>
+        <div class="settings-row">
           <div><div class="settings-row__label">Text size</div><div class="settings-row__hint">${['XS', 'S', 'M', 'L', 'XL'][Number(p.text_size) || 1]}</div></div>
           <div class="segmented">
             ${[0, 1, 2, 3, 4].map((size) => html`<button data-pref="text_size" data-value="${size}" class="${Number(p.text_size) === size ? 'is-on' : ''}">${size + 1}</button>`)}
@@ -1079,6 +1084,12 @@ function bindProfile(root, p, today, profile) {
   });
   root.querySelector('#edit-interests')?.addEventListener('click', () => navigate('/onboarding?edit=1'));
   root.querySelector('#open-legend')?.addEventListener('click', () => openLegend());
+  root.querySelector('#open-voice')?.addEventListener('click', () => openVoicePicker({
+    onSelect: () => {
+      const button = root.querySelector('#open-voice');
+      if (button) button.textContent = voiceProfile(currentVoiceId()).label;
+    },
+  }));
   root.querySelector('#install-app')?.addEventListener('click', () => window.pulseInstall?.());
   root.querySelector('#export')?.addEventListener('click', async () => {
     try {

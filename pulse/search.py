@@ -286,7 +286,9 @@ def _count(expression: str | None, clauses: str, params: list) -> int:
 def _fallback_search(parsed: ParsedQuery, clauses: str, params: list, sort: str, limit: int, offset: int):
     """If FTS rejects the expression, fall back to LIKE on the terms."""
     terms = parsed.terms or parsed.phrases
-    like_clauses = list(clauses)
+    # `clauses` is a SQL fragment, not an iterable; wrapping it in list()
+    # split it into single characters and produced invalid SQL.
+    like_clauses = [clauses] if clauses else []
     like_params = list(params)
     for term in terms[:4]:
         like_clauses.append("(a.title LIKE ? OR a.summary LIKE ?)")

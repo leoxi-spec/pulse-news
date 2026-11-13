@@ -19,6 +19,7 @@ import { sportsView } from './views/sports.js';
 import { reelsView } from './views/reels.js';
 import { videosView } from './views/videos.js';
 import { aboutView, impactView, classroomView, roadmapView } from './views/founder.js';
+import { keywordView } from './views/keyword.js';
 import { accountView } from './views/account.js';
 import { privacyView, termsView } from './views/legal.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
@@ -61,6 +62,7 @@ function registerRoutes() {
   router.add('/story/:id', storyView);
   router.add('/article/:id', articleView);
   router.add('/search', searchView);
+  router.add('/keyword', keywordView);
   router.add('/saved', savedView);
   router.add('/brief', briefView);
   router.add('/study', studyView);

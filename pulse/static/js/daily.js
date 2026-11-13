@@ -143,7 +143,7 @@ export function dailySection(data) {
 function ticker(trending) {
   const terms = (trending || []).slice(0, 8);
   if (!terms.length) return '';
-  const items = terms.map((term) => html`<a href="/search?q=${encodeURIComponent(term.term)}" data-link>#${term.term}</a>`);
+  const items = terms.map((term) => html`<a href="/keyword?q=${encodeURIComponent(term.term)}" data-link>#${term.term}</a>`);
   return html`
     <div class="ticker" aria-label="Trending searches">
       <span class="ticker__label">${raw(icons.bolt)} Trending</span>

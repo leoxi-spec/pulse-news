@@ -169,7 +169,7 @@ def metrics(profile: dict) -> dict:
             "events": [{"kind": row["kind"], "count": row["n"]} for row in event_rows],
         },
         "quality": {
-            "tests": "130+",
+            "tests": "132",
             "third_party_js": 0,
             "trackers": 0,
             "ads": 0,

@@ -38,11 +38,14 @@ classes who still wants to understand what's happening. That means:
 |---|---|
 | **365+ sources** | 366 publications, 488 feeds, 51 countries, 20 topics — including a dedicated **Motorsport** section (F1, MotoGP, IndyCar) with five specialist outlets. |
 | **Video, everywhere** | Publisher clips and 30 official YouTube newsroom, league, space and learning channels. A dedicated **Watch** page, video Shorts, badges on cards and a privacy-friendly player on every story. |
+| **Five editions** | Junior, Kids, Tween, Teen and Senior each change type scale, card density, home rows and available tools — visibly different, not just a label. |
+| **Five listening voices** | Nova, Atlas, Luna, Sage and Orion choose the best installed English voice, with rate/pitch tuned for news. |
+| **Motion** | Rain drops with wind and splashes, snow, meteors, birds, stars, fireflies, petals, leaves, bubbles and aurora — plus animated founder diagrams and scroll reveals. |
 | **Founder toolkit** | `/impact` live product dashboard with downloadable report, `/about` press kit, `/classroom` 45-minute media-literacy lesson, `/roadmap` public feature voting and local feedback. |
 | **Story clustering** | Ten outlets covering one event become one card with a "9 outlets covering" badge and a compare-coverage view. |
 | **Clear read labels** | Every card states **📖 Read here** (full text inside Pulse), **👁️ Preview** (summary + overview, opens at the publisher) or **🔒 Subscription**. Articles open with a banner saying the same thing. A *Readable here* stream filters to in-app text only. |
 | **Symbol key** | Sidebar → **Key** (or press `?`) explains every icon, badge and score marker. |
-| **Search everywhere** | A search bar on the home page plus a command palette (`⌘K` or `/`) with headlines, topics, sources and quick actions as you type. |
+| **Search everywhere** | A search bar, a command palette (`⌘K` or `/`) and a dedicated **keyword archive** (`/keyword?q=`) that turns any term into a paginated feed across the whole archive, current and historical. |
 | **Front-page sections** | Apple News-style **Top Stories** grid plus configurable rows: brief, For you, scores, any topic, long reads, saved, research. Reorder or hide them in *Customize*. |
 | **15 themes** | Auto, Dark, Light, Sepia, Midnight, Forest, Sunset, Mono, Rose, Ocean, plus five calmer palettes: **Dusk, Sage, Sand, Mist, Clay**. |
 | **Room to read** | No sidebars at all: a compact top bar, a personalised **Today** masthead, full-width sections and a mixed-size mosaic (1–3 stories per row, tall leads and compact briefs). |
@@ -260,6 +263,7 @@ Everything the UI does is available as JSON:
 GET    /api/bootstrap                 catalogue, profile, AI/ingest status
 GET    /api/feed?mode=for-you|top|breaking|latest|longreads&topic=&offset=
 GET    /api/videos                    video-first stream (topic, offset, limit)
+GET    /api/keyword                   keyword feed across the whole archive
 GET    /api/impact                    live product, diversity and usage metrics
 GET    /api/impact/report             downloadable Markdown impact report
 GET    /api/press-kit                 downloadable Markdown press kit
@@ -298,7 +302,7 @@ server serves a small token login page before anything else. If `PULSE_ACCESS_TO
 ## Testing
 
 ```bash
-python3 -m unittest discover -s tests -v     # 130 tests, no network required
+python3 -m unittest discover -s tests -v     # 132 tests, no network required
 python3 tools/verify_catalog.py              # catalogue integrity
 python3 tools/verify_catalog.py --live       # fetch every feed (slow)
 python3 tools/check_js.py                    # syntax-check the ES modules

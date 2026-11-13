@@ -5,6 +5,7 @@ import {
   errorState, toastProgress, setLoading,
 } from '../ui.js';
 import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js';
+import { applyVoice, currentVoiceId, openVoicePicker, voiceProfile } from '../voice.js';
 
 const FONTS = [
   { id: 'serif', label: 'Serif' },
@@ -105,6 +106,7 @@ function articleMarkup(a, p) {
             <button class="btn" data-act="font">${raw(icons.text)} Reading font</button>
             <button class="btn" data-act="text-smaller">A− Smaller text</button>
             <button class="btn" data-act="text-larger">A+ Larger text</button>
+            <button class="btn" data-act="voice">${raw(icons.sound)} Listen voice <span class="tiny faint" data-voice-label>${voiceProfile(currentVoiceId()).label}</span></button>
             <a class="btn" href="${a.read_url}" target="_blank" rel="noopener noreferrer">${raw(icons.external)} Open at ${source.name}</a>
           </div>
         </details>
@@ -656,9 +658,7 @@ function onListen(button, article) {
     if (stopped) return;
     if (index >= chunks.length) { finish(); toast('Finished reading'); return; }
     const utterance = new SpeechSynthesisUtterance(chunks[index]);
-    utterance.rate = Math.min(2, Math.max(0.6, Number(prefs().listen_rate) || 1.02));
-    utterance.pitch = 1;
-    utterance.lang = 'en-US';
+    applyVoice(utterance);
     utterance.onend = () => { index += 1; speakNext(); };
     utterance.onerror = (event) => {
       if (event.error === 'interrupted' || event.error === 'canceled') { finish(); return; }
@@ -760,6 +760,12 @@ function bindArticle(root, article) {
       if (act === 'quiz') return onQuiz(article, root);
       if (act === 'notes') return onAddNote(article, root);
       if (act === 'listen') return onListen(button, article);
+      if (act === 'voice') return openVoicePicker({
+        onSelect: () => {
+          const label = root.querySelector('[data-voice-label]');
+          if (label) label.textContent = voiceProfile(currentVoiceId()).label;
+        },
+      });
       if (act === 'focus') return toggleFocus();
       if (act === 'font') return cycleFont();
       if (act === 'text-smaller') return adjustText(-1);
