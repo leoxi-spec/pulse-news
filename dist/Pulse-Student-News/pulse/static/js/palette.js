@@ -146,7 +146,7 @@ async function query(value) {
       data.sources.forEach((source) => next.push({ kind: 'source', label: source.name, hint: source.domain, id: source.id, initials: (source.name || '?').slice(0, 2).toUpperCase() }));
     }
     groups.push(sectionLabel('Action'));
-    next.push({ kind: 'search', label: `Search “${text}”`, hint: 'Across the entire archive', query: text });
+    next.push({ kind: 'search', label: `Search “${text}”`, hint: 'Full keyword landing', query: text });
 
     items = next;
     active = 0;
@@ -222,7 +222,7 @@ function goSearch() {
   if (!value) return;
   remember(value);
   close();
-  navigate(`/search?q=${encodeURIComponent(value)}`);
+  navigate(`/keyword?q=${encodeURIComponent(value)}`);
 }
 
 function activate(item) {
@@ -241,7 +241,7 @@ function activate(item) {
   if (item.kind === 'recent' || item.kind === 'search') {
     remember(item.query);
     close();
-    navigate(`/search?q=${encodeURIComponent(item.query)}`);
+    navigate(`/keyword?q=${encodeURIComponent(item.query)}`);
   }
 }
 

@@ -3663,3 +3663,49 @@ html[data-weather-theme="thunderstorm"] {
 
 /* Keep nav items at their natural width so the live badge never sits on a label. */
 .appnav > a, .appnav > .nav-group { flex: none; }
+
+/* Apple News-style keyword landing */
+.keyword-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; margin: .9rem 0 .4rem; }
+.keyword-hit {
+  display: grid; grid-template-columns: 136px minmax(0, 1fr) 20px; gap: .75rem; align-items: center;
+  padding: .65rem; border: 1px solid var(--line); border-radius: 13px; background: var(--surface);
+  min-height: 104px; transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.keyword-hit:hover { background: var(--surface-2); border-color: var(--line-strong); }
+.keyword-hit__media { width: 136px; height: 88px; border-radius: 9px; overflow: hidden; background: var(--grad-soft); display: grid; place-items: center; }
+.keyword-hit__media img { width: 100%; height: 100%; object-fit: cover; }
+.keyword-hit__monogram { font-size: 1.4rem; font-weight: 850; color: var(--accent); letter-spacing: .04em; }
+.keyword-hit__body { min-width: 0; display: flex; flex-direction: column; gap: .28rem; }
+.keyword-hit__source { display: flex; align-items: center; gap: .35rem; font-size: .65rem; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.keyword-hit__source .src-dot { width: 18px; height: 18px; font-size: .52rem; }
+.keyword-hit__title { font-size: .94rem; line-height: 1.24; letter-spacing: -.015em; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.keyword-hit__title a:hover { color: var(--accent); }
+.keyword-hit__meta { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; font-size: .64rem; color: var(--faint); }
+.keyword-hit__arrow { color: var(--faint); display: grid; place-items: center; }
+.keyword-hit__arrow svg { width: 1rem; height: 1rem; }
+.keyword-hit mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--text); border-radius: 3px; padding: 0 .1em; }
+.keyword-tabs { margin: .35rem 0 .1rem; }
+.keyword-tabs__hint { align-self: center; margin-left: .3rem; font-size: .64rem; color: var(--faint); }
+@media (max-width: 1100px) { .keyword-list { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .keyword-hit { grid-template-columns: 96px minmax(0, 1fr); min-height: 88px; gap: .55rem; }
+  .keyword-hit__media { width: 96px; height: 70px; }
+  .keyword-hit__arrow { display: none; }
+  .keyword-hit__title { font-size: .88rem; -webkit-line-clamp: 2; }
+}
+
+/* The live score count becomes a calm dot in the top bar; the number lives on Scores. */
+.appnav > a { position: relative; }
+.appnav .nav__badge--live {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  font-size: 0;
+  border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.appnav .nav__badge--live::before { display: none; }

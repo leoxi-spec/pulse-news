@@ -70,7 +70,9 @@ export async function searchView(root, ctx) {
     if (r) params.set('range', r);
     if (s && s !== 'relevance') params.set('sort', s);
     if (source) params.set('source', source);
-    navigate(`/search${params.toString() ? `?${params}` : ''}`);
+    const advanced = Boolean(t || r || (s && s !== 'relevance') || source);
+    if (!advanced && value) navigate(`/keyword?q=${encodeURIComponent(value)}`);
+    else navigate(`/search${params.toString() ? `?${params}` : ''}`);
   };
   form.addEventListener('submit', (event) => { event.preventDefault(); submit(); });
   root.querySelector('#f-topic').addEventListener('change', submit);
