@@ -325,15 +325,17 @@ function watchSection(data) {
       action: '<a class="btn btn--sm" href="/videos" data-link>Open Watch</a>',
     }));
   }
-  return sectionWrap('watch', head, html`<div class="video-strip">${items.map((item) => videoCard(item))}</div>`);
+  return sectionWrap('watch', head, html`<div class="video-strip">${items.map((item) => videoCard(item, { reels: true }))}</div>`);
 }
 
 function topSection(data) {
-  const items = (data?.items || []).slice(0, 3);
+  const candidates = (data?.items || []).slice(0, 6);
+  const withImages = candidates.filter((item) => item.image);
+  const items = (withImages.length >= 2 ? withImages : candidates).slice(0, 3);
   const head = sectionHead('Top Stories', html`<a href="/?stream=top" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'what the most outlets are covering' });
   if (!data) return sectionWrap('top', head, skeletonFeed(1));
   if (!items.length) return sectionWrap('top', head, emptyState({ title: 'No top stories yet', text: 'The next refresh will fill this in.' }));
-  return sectionWrap('top', head, html`<div class="top-grid">${items.map((item) => topCard(item))}</div>`);
+  return sectionWrap('top', head, html`<div class="top-grid top-grid--${items.length}">${items.map((item) => topCard(item))}</div>`);
 }
 
 function picksSection(data) {

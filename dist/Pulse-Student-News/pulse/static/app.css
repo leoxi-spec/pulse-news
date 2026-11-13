@@ -3712,3 +3712,13 @@ html[data-weather-theme="thunderstorm"] {
 
 .article__back svg, .keyword-head .article__back svg { transform: rotate(180deg); }
 button.article__back { appearance: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+
+/* A no-image lead should be compact, not a giant empty poster. */
+.mcard--lead.mcard--noimg { flex-direction: column; height: auto; }
+.mcard--lead.mcard--noimg .mcard__noimg-banner { min-height: 70px; }
+.mcard--noimg .mcard__noimg-banner { min-height: 92px; }
+
+.top-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.top-grid--1 { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 980px) { .top-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .top-grid--2, .top-grid--1 { grid-template-columns: 1fr; } }

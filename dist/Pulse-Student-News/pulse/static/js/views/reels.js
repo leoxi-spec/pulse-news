@@ -113,6 +113,18 @@ export async function reelsView(root, ctx) {
     initialError = err;
   }
 
+  // Deep links from a home card must start on that exact short, even if it
+  // is outside the first page of the stream.
+  if (startId && !items.some((item) => Number(item.id) === Number(startId))) {
+    try {
+      const data = await get(`/api/articles/${startId}`, 15);
+      if (data?.article) {
+        items.unshift(data.article);
+        seen.add(Number(startId));
+      }
+    } catch { /* fall through to the normal stream */ }
+  }
+
   if (!items.length) {
     root.innerHTML = html`
       <div class="reels reels--message">

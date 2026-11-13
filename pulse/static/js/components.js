@@ -64,10 +64,11 @@ export function videoBadge(item, cls = '') {
   return html`<span class="video-badge ${cls}">${raw(icons.play)}<span>Video</span></span>`;
 }
 
-export function videoCard(item) {
+export function videoCard(item, { reels = false } = {}) {
+  const href = reels ? `/reels?mode=video&start=${item.id}` : `/article/${item.id}`;
   return html`
     <article class="video-card" data-article-card="${item.id}">
-      <a class="video-card__media" href="/article/${item.id}" data-link aria-label="${item.title}">
+      <a class="video-card__media" href="${href}" data-link aria-label="${item.title}">
         ${item.image
           ? html`<img src="${item.image}" alt="" loading="lazy" decoding="async">`
           : html`<span class="video-card__fallback" aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>`}
@@ -80,7 +81,7 @@ export function videoCard(item) {
           <span class="faint">·</span>
           <span>${item.published_relative || ''}</span>
         </div>
-        <h3 class="video-card__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
+        <h3 class="video-card__title"><a href="${href}" data-link>${item.title}</a></h3>
         <div class="video-card__meta">
           <span>${item.topic_label || topicLabel(item.topic)}</span>
           <span class="faint">·</span>
@@ -170,21 +171,25 @@ export function seededRandom(seed) {
 export function newsRows(items, { lead = false, seed = '' } = {}) {
   const rng = seededRandom(seed);
   const rows = [];
+  let pool = [...items];
   let index = 0;
-  if (lead && items.length >= 5) {
-    rows.push(items.slice(0, 1));
-    index = 1;
+  if (lead && pool.length >= 5) {
+    const imageIndex = pool.findIndex((item) => Boolean(item.image));
+    const leadIndex = imageIndex >= 0 ? imageIndex : 0;
+    const [leadItem] = pool.splice(leadIndex, 1);
+    rows.push([leadItem]);
+    index = 0;
   }
-  while (index < items.length) {
-    const remaining = items.length - index;
+  while (index < pool.length) {
+    const remaining = pool.length - index;
     const roll = rng();
     let size = roll < 0.42 ? 4 : roll < 0.76 ? 3 : 2;
     if (remaining <= 4) {
-      rows.push(items.slice(index));
+      rows.push(pool.slice(index));
       break;
     }
     if (remaining - size === 1) size -= 1;
-    rows.push(items.slice(index, index + size));
+    rows.push(pool.slice(index, index + size));
     index += size;
   }
   return rows;
@@ -205,7 +210,7 @@ export function mosaicCard(item, { size = 'small' } = {}) {
       ${hasImage ? html`
         <a class="mcard__media" href="/article/${item.id}" data-link aria-label="${item.title}">
           <span class="media-fallback" aria-hidden="true">
-            <b>${topicEmoji(item.topic) || 'N'}</b>
+            <b>${item.source?.initials || topicEmoji(item.topic) || 'N'}</b>
             <i>${item.source?.name || ''}</i>
           </span>
           <img class="mcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">
@@ -215,12 +220,12 @@ export function mosaicCard(item, { size = 'small' } = {}) {
         </a>` : ''}
       ${hasImage ? '' : html`
         <div class="mcard__noimg-banner" aria-hidden="true">
-          <span>${topicEmoji(item.topic) || 'N'}</span>
+          <span>${item.source?.initials || topicEmoji(item.topic) || 'N'}</span>
           <b>${item.topic_label || item.source?.name || ''}</b>
         </div>`}
       <div class="mcard__body">
         <div class="mcard__kicker">
-          ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>`}
+          ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${item.source?.initials || topicEmoji(item.topic) || 'N'}</span>`}
           <span>${item.source?.name || ''}</span>
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
           ${!hasImage && isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
@@ -246,7 +251,7 @@ export function topCard(item) {
       ${item.image ? html`
         <a href="/article/${item.id}" data-link aria-label="${item.title}" class="top-card__media">
           <span class="media-fallback" aria-hidden="true">
-            <b>${topicEmoji(item.topic) || 'N'}</b>
+            <b>${item.source?.initials || topicEmoji(item.topic) || 'N'}</b>
             <i>${item.source?.name || ''}</i>
           </span>
           <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
@@ -254,7 +259,7 @@ export function topCard(item) {
           ${videoBadge(item, 'video-badge--card')}
         </a>` : html`
         <a class="top-card__banner" href="/article/${item.id}" data-link aria-label="${item.title}">
-          <span aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>
+          <span aria-hidden="true">${item.source?.initials || topicEmoji(item.topic) || 'N'}</span>
           <b>${item.topic_label || ''}</b>
         </a>`}
       <div class="top-card__body">
@@ -281,7 +286,7 @@ export function hCard(item) {
       <a href="/article/${item.id}" data-link aria-label="${item.title}">
         ${item.image
           ? html`<img class="hcard__img" src="${item.image}" alt="" loading="lazy" decoding="async">`
-          : html`<div class="hcard__img media-placeholder" aria-hidden="true"><span>${topicEmoji(item.topic) || 'N'}</span></div>`}
+          : html`<div class="hcard__img media-placeholder" aria-hidden="true"><span>${item.source?.initials || topicEmoji(item.topic) || 'N'}</span></div>`}
       </a>
       <div class="hcard__body">
         <h3 class="hcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>

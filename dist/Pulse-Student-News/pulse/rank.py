@@ -225,7 +225,9 @@ def score(row, model: ProfileModel) -> tuple[float, list[str]]:
     elif row["content_state"] == "linkonly":
         value -= 0.5
     if row["image_url"]:
-        value += 0.3
+        value += 0.85
+    else:
+        value -= 0.45
     if row["paywalled"]:
         value -= 0.7
         if not reasons:
