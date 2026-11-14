@@ -7,7 +7,7 @@ import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
   errorState, emptyState, compactNumber, number, toastProgress, confetti,
 } from '../ui.js';
-import { storyCard, rowsHtml, newsRows, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot, videoBadge } from '../components.js';
+import { storyCard, rowsHtml, newsRows, sectionHead, emptyState as empty, skeletonFeed, stat, sourceDot, videoBadge, translatedBadge } from '../components.js';
 import { navigate } from '../router.js';
 import { openLegend } from '../legend.js';
 import { openWidgetEditor, WIDGET_COUNT, DEFAULT_WIDGET_IDS } from '../daily.js';
@@ -173,6 +173,7 @@ async function runSearch(root, { q, topic, source, since, sort, offset, append }
           <article class="card search-hit">
             <div class="hstack" style="gap:.35rem;flex-wrap:wrap">
               <span class="badge badge--topic">${item.topic_label}</span>
+              ${translatedBadge(item)}
               <span class="tiny muted">${item.source_name}</span>
               <span class="tiny faint">·</span>
               <span class="tiny muted">${item.published_relative || ''}${item.date_label === 'First seen' ? ' (first seen)' : ''}</span>

@@ -4,7 +4,7 @@ import {
   html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog, confetti,
   errorState, toastProgress, setLoading,
 } from '../ui.js';
-import { sourceDot, leanBar, emptyState, accessInfo } from '../components.js';
+import { sourceDot, leanBar, emptyState, accessInfo, translatedBadge } from '../components.js';
 import { applyVoice, currentVoiceId, openVoicePicker, voiceProfile } from '../voice.js';
 
 const FONTS = [
@@ -69,6 +69,7 @@ function articleMarkup(a, p) {
       <button class="article__back" type="button" data-act="back">${raw(icons.chevron)} Back</button>
       <div class="article__kicker">
         <span class="badge badge--topic">${a.topic_label}</span>
+        ${translatedBadge(a, { long: true })}
         ${a.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
         ${a.story?.source_count > 1 ? html`<span class="badge badge--topic">${a.story.source_count} outlets covering</span>` : ''}
       </div>
@@ -1049,11 +1050,15 @@ function overviewMarkup(overview, article) {
   const meta = isAI
     ? html`<span class="tiny faint">${overview.model || 'model'} · grounded in this article</span>`
     : html`<span class="tiny faint">extractive · built from the article's own sentences</span>`;
+  const translated = overview.translated
+    ? html`<span class="badge badge--translated">Translated overview</span>`
+    : '';
   return html`
     <section class="overview" id="overview-card">
       <div class="overview__head">
         <h2>${badge}</h2>
         ${meta}
+        ${translated}
         <span class="spacer" style="flex:1"></span>
         <button class="btn btn--sm btn--ghost" data-act="simplify">${raw(icons.text)} Explain simply</button>
       </div>

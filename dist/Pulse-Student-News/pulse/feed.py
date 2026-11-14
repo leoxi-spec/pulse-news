@@ -11,7 +11,7 @@ import re
 from datetime import timedelta
 from urllib.parse import quote
 
-from . import htmltext, rank, stories
+from . import htmltext, rank, stories, translate
 from .config import APP_VERSION
 from .db import db
 from .sources import TOPICS, TOPIC_ICONS, TOPIC_LABELS, get_source
@@ -192,6 +192,7 @@ def card(row, *, model: rank.ProfileModel | None = None, saved_ids: set[int] | N
         stored_images.insert(0, row["image_url"])
     payload["image_count"] = len([url for url in stored_images if url]) or (1 if row["image_url"] else 0)
     payload.update(labels)
+    translate.decorate(payload)
     if model is not None:
         payload["reasons"] = rank.why_this(row, model)
     return payload
@@ -345,6 +346,7 @@ def feed_page(
         {**card(row, model=model, saved_ids=saved_ids, read_ids=read_ids), "score": round(value, 2), "reasons": reasons}
         for row, value, reasons in window
     ]
+    translate.localize_items(items, sync_limit=6)
     return {
         "items": items,
         "mode": mode,
@@ -432,6 +434,7 @@ def video_feed(
             continue
         seen.add(key)
         items.append(payload)
+    translate.localize_items(items, sync_limit=6)
     return {
         "items": items,
         "total": total,
@@ -495,6 +498,7 @@ def keyword_page(
         for article_id in ids
         if article_id in by_id
     ]
+    translate.localize_items(items, sync_limit=8)
     topic_counts = Counter(item["topic"] for item in items)
     source_counts = Counter((item["source"]["id"], item["source"]["name"]) for item in items)
     facets = {
@@ -602,6 +606,7 @@ def article_detail(article_id: int, profile: dict) -> dict | None:
     )
     payload["read_url"] = row["url"]
     payload["archive"] = True
+    translate.localize_payload(payload, sync=True)
     return payload
 
 
@@ -664,6 +669,7 @@ def related_cards(article_id: int, limit: int = 6) -> list[dict]:
                 "topic": row.get("primary_topic"),
             }
         )
+    translate.localize_items(output, sync_limit=2)
     return output
 
 
@@ -693,6 +699,7 @@ def story_detail(story_id: int, profile: dict) -> dict | None:
     profile_id = profile["id"]
     saved_ids = {int(r["article_id"]) for r in db.query("SELECT article_id FROM saves WHERE profile_id=?", (profile_id,))}
     cards = [card(row, saved_ids=saved_ids) for row in rows]
+    translate.localize_items(cards, sync_limit=4)
     return {
         "id": story_id,
         "title": story["title"],
@@ -875,6 +882,8 @@ def discover(profile: dict) -> dict:
         editors.append(card(row, model=model))
         if len(editors) >= 6:
             break
+    translate.localize_items(longreads, sync_limit=3)
+    translate.localize_items(editors, sync_limit=3)
     return {
         "topics": topics,
         "trending": trending,

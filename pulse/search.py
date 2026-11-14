@@ -11,6 +11,7 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 
+from . import translate
 from .db import db
 from .sources import SOURCES, TOPICS, TOPIC_LABELS, TOPIC_SLUGS
 from .timeutil import iso
@@ -246,6 +247,7 @@ def search(
         item["topic_label"] = TOPIC_LABELS.get(row["primary_topic"], row["primary_topic"].title())
         results.append(item)
 
+    translate.localize_items(results, sync_limit=4)
     total = _count(expression, clauses, params) if expression else _count(None, clauses, params)
     return {
         "query": raw_query,

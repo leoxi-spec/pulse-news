@@ -16,7 +16,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import ai, auth, citations, daily, feed, impact, ingest, profiles, rank, search, sports, stories, weather
+from . import ai, auth, citations, daily, feed, impact, ingest, profiles, rank, search, sports, stories, translate, weather
 from .config import APP_NAME, APP_TAGLINE, APP_VERSION, settings
 from .db import db
 from .httpclient import FetchError, FetchResult, HttpClient, validate_url
@@ -274,7 +274,7 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             collection = request.query.get("collection") or None
             items = profiles.saved(profile["id"], collection)
             return 200, {
-                "items": [feed.card(row, saved_ids={row["id"]}) for row in items],
+                "items": translate.localize_items([feed.card(row, saved_ids={row["id"]}) for row in items], sync_limit=4),
                 "collections": profiles.collections(profile["id"]),
                 "collection": collection,
             }, {}

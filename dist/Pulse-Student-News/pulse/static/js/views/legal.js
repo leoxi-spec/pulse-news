@@ -18,7 +18,7 @@ function legalShell(title, updated, body) {
 }
 
 export function privacyView(root) {
-  root.innerHTML = legalShell('Privacy', '11 November 2026', html`
+  root.innerHTML = legalShell('Privacy', '14 November 2026', html`
     <section><h2>The short version</h2>
       <p>Pulse is a self-hosted news reader. It has no ads, no third-party analytics, no tracking pixels and no data brokers. The archive and your profile live in a SQLite database on the server you are using — not in a cloud account owned by us.</p>
     </section>
@@ -34,6 +34,9 @@ export function privacyView(root) {
     </section>
     <section><h2>Cookies</h2>
       <p>Only essential cookies are used: a profile id, a session token if you sign in, and an access token only if the operator has protected this server with one. There are no advertising or analytics cookies.</p>
+    </section>
+    <section><h2>Translation</h2>
+      <p>When a story is in another language, Pulse translates the headline and short preview into English so you can decide whether to open it. Only those short excerpts are sent to a translation service; the full article is never sent and remains in its original language at the publisher. Translations are cached on this server. The translation provider is Google's public translation endpoint with MyMemory as a fallback; no account or profile data is included.</p>
     </section>
     <section><h2>Video</h2>
       <p>Publisher clips play from the publisher's own player. YouTube videos use the privacy-enhanced <b>youtube-nocookie.com</b> domain and only load when you press play; after that, YouTube's own privacy policy applies. Pulse does not preload or track video playback.</p>
@@ -60,7 +63,7 @@ export function privacyView(root) {
 }
 
 export function termsView(root) {
-  root.innerHTML = legalShell('Terms', '11 November 2026', html`
+  root.innerHTML = legalShell('Terms', '14 November 2026', html`
     <section><h2>Using Pulse</h2>
       <p>Pulse is a personal news reader for reading, studying and research. You may use it for personal, non-commercial purposes. Do not use it to redistribute publisher content, scrape at scale, harass people or break the law.</p>
     </section>

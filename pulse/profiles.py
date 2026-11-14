@@ -651,6 +651,8 @@ def daily_brief(profile_id: str, *, size: int = 5) -> dict:
         items.append(payload)
         # A brief is skimming summaries and overviews, not reading everything.
         words += len((payload.get("preview") or "").split()) + 45
+    from . import translate
+    translate.localize_items(items, sync_limit=3)
     return {
         "stories": items,
         "minutes": max(2, round(words / 220)),

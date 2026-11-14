@@ -192,9 +192,14 @@ function reelCard(item) {
         <div class="reel__badges">
           <span class="badge badge--glass">${item.topic_label || 'News'}</span>
           ${video ? html`<span class="badge badge--glass">Video</span>` : ''}
+          ${item.translated ? html`<span class="badge badge--glass">Translated from ${item.language_name || 'original'}</span>` : ''}
           ${item.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
           ${item.story?.source_count > 1 ? html`<span class="badge badge--glass">${item.story.source_count} outlets</span>` : ''}
         </div>
+        ${fileVideo ? html`
+          <button class="reel__seek" type="button" data-seek="10" aria-label="Fast forward 10 seconds" title="Fast forward 10 seconds">
+            <b>+10s</b><span>Forward</span>
+          </button>` : ''}
         <h2 class="reel__title">${item.title}</h2>
         ${item.preview ? html`<p class="reel__preview">${item.preview}</p>` : ''}
         <div class="reel__meta">
@@ -494,6 +499,22 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
       img.addEventListener('error', () => { img.style.display = 'none'; });
     });
     let soundTimer = null;
+    const seekForward = (seconds = 10) => {
+      const video = reel.querySelector('video[data-reel-video]');
+      if (!video) return;
+      const duration = Number(video.duration);
+      if (!Number.isFinite(duration) || duration <= 0) {
+        toast('Video is still loading…');
+        return;
+      }
+      video.currentTime = Math.min(Math.max(0, duration - 0.1), video.currentTime + seconds);
+      if (video.paused) video.play().catch(() => {});
+      toast(`Forward ${seconds} seconds`);
+    };
+    reel.querySelector('[data-seek]')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      seekForward(Number(event.currentTarget.dataset.seek) || 10);
+    });
     const toggleSound = () => {
       const video = reel.querySelector('video[data-reel-video]');
       if (!video) return;
@@ -519,6 +540,11 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
       }
     });
     reel.querySelector('video[data-reel-video]')?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight' || event.key === 'l' || event.key === 'L') {
+        event.preventDefault();
+        seekForward(10);
+        return;
+      }
       if (event.key === 'm' || event.key === 'M' || event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         toggleSound();

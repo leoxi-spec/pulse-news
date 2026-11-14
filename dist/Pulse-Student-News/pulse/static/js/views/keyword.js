@@ -1,7 +1,7 @@
 import { get } from '../api.js';
 import { state } from '../store.js';
 import { html, raw, icons, esc, compactNumber, number, absDate, errorState, emptyState } from '../ui.js';
-import { sourceDot } from '../components.js';
+import { sourceDot, translatedBadge } from '../components.js';
 
 const TORONTO_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -29,6 +29,7 @@ function itemMarkup(item, q) {
         <div class="keyword-hit__source">
           ${sourceDot(source)}
           <span>${source.name || ''}</span>
+          ${translatedBadge(item)}
           ${date ? html`<span class="faint">·</span><span>${date}</span>` : ''}
         </div>
         <h2 class="keyword-hit__title"><a href="/article/${item.id}" data-link>${raw(highlight(item.title, q))}</a></h2>

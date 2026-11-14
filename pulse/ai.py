@@ -21,7 +21,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-from . import htmltext
+from . import htmltext, translate
 from .config import settings
 from .db import db
 from .httpclient import FetchError, HttpClient
@@ -263,6 +263,11 @@ def overview(article: dict, *, force: bool = False, kind: str = "overview") -> d
 
     fallback = extractive_overview(article)
     fallback["available"] = False
+    source_lang = article.get("language") or translate.detect_language(
+        f"{article.get('title') or ''} {article.get('summary') or ''}"
+    )
+    if source_lang != "en":
+        fallback = translate.translate_overview(fallback, source_lang)
     if not settings.ai_enabled:
         fallback["warning"] = "AI overviews are off (no provider configured). This is an extractive summary built from the article's own sentences."
         return fallback

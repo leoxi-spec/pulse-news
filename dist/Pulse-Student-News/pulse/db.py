@@ -26,7 +26,7 @@ from .timeutil import iso, now, parse_iso
 
 log = get_logger("db")
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -257,6 +257,17 @@ CREATE TABLE IF NOT EXISTS ai_cache (
     payload    TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS translations (
+    cache_key       TEXT PRIMARY KEY,
+    source_lang     TEXT NOT NULL,
+    target_lang     TEXT NOT NULL DEFAULT 'en',
+    source_text     TEXT NOT NULL,
+    translated_text TEXT NOT NULL,
+    provider        TEXT,
+    created_at      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_translations_created ON translations(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS ingest_runs (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

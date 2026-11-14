@@ -64,6 +64,17 @@ export function videoBadge(item, cls = '') {
   return html`<span class="video-badge ${cls}">${raw(icons.play)}<span>Video</span></span>`;
 }
 
+export function translatedBadge(item, { long = false } = {}) {
+  const language = item?.language_name || 'another language';
+  if (!item?.translated) {
+    if (item?.language && item.language !== 'en') {
+      return html`<span class="badge badge--translated" title="Translation is not available right now. The original article remains in ${language}.">Original: ${language}</span>`;
+    }
+    return '';
+  }
+  return html`<span class="badge badge--translated" title="Headline and overview translated into English. Full article remains in ${language}.">${long ? `Translated from ${language}` : 'Translated'}</span>`;
+}
+
 export function videoCard(item, { reels = false } = {}) {
   const href = reels ? `/reels?mode=video&start=${item.id}` : `/article/${item.id}`;
   return html`
@@ -83,6 +94,7 @@ export function videoCard(item, { reels = false } = {}) {
         </div>
         <h3 class="video-card__title"><a href="${href}" data-link>${item.title}</a></h3>
         <div class="video-card__meta">
+          ${translatedBadge(item)}
           <span>${item.topic_label || topicLabel(item.topic)}</span>
           <span class="faint">·</span>
           <span>${item.video?.provider || 'Video'}</span>
@@ -105,6 +117,7 @@ export function storyCard(item, { compact = false } = {}) {
           ${item.preview ? html`<p class="story-card__summary">${item.preview}</p>` : ''}
           <div class="story-card__foot">
             ${accessPill(item)}
+            ${translatedBadge(item)}
             <span class="tiny faint">·</span>
             <span class="tiny muted">${item.reading_minutes} min read</span>
             <span class="tiny faint">·</span>
@@ -227,6 +240,7 @@ export function mosaicCard(item, { size = 'small' } = {}) {
         <div class="mcard__kicker">
           ${hasImage ? '' : html`<span class="mcard__dot" aria-hidden="true">${item.source?.initials || topicEmoji(item.topic) || 'N'}</span>`}
           <span>${item.source?.name || ''}</span>
+          ${translatedBadge(item)}
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
           ${!hasImage && isFreshBreaking(item) ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
           ${!hasImage ? videoBadge(item, 'video-badge--inline') : ''}
@@ -265,6 +279,7 @@ export function topCard(item) {
       <div class="top-card__body">
         <div class="top-card__source">
           <span>${item.source?.name || ''}</span>
+          ${translatedBadge(item)}
           ${item.story?.source_count > 1 ? html`<span class="faint">·</span><span>${item.story.source_count} outlets</span>` : ''}
         </div>
         <h3 class="top-card__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
@@ -292,6 +307,7 @@ export function hCard(item) {
         <h3 class="hcard__title"><a href="/article/${item.id}" data-link>${item.title}</a></h3>
         <div class="hcard__meta">
           ${accessPill(item)}
+          ${translatedBadge(item)}
           <span>${item.source?.name || ''}</span>
           <span class="faint">·</span>
           <span>${item.published_relative}</span>

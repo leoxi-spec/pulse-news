@@ -23,7 +23,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import feedparse, htmltext, sports, stories, topics
+from . import feedparse, htmltext, sports, stories, topics, translate
 from .config import settings
 from .db import db
 from .httpclient import FetchError, HttpClient, robots_allowed, validate_url
@@ -381,7 +381,7 @@ class IngestService:
                     (item.author or None), image, video_url, video_id, video_kind,
                     iso(published) if published else None, raw_date,
                     confidence, iso(published) if published else None, first_seen, seen_at,
-                    primary, json.dumps(topic_list), "en", words, minutes,
+                    primary, json.dumps(topic_list), translate.detect_language(f"{title} {summary}"), words, minutes,
                     content_text or None, None, "feed", paywalled, 0, signature, weight,
                 )
                 cur = conn.execute(
