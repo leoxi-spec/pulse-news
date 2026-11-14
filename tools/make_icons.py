@@ -36,12 +36,12 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     tile = (inset, inset, size - inset, size - inset)
     radius = int((tile[2] - tile[0]) * 0.23)
     bars = [0.38, 0.65, 0.95, 0.78, 0.50]  # relative heights of the pulse
-    bar_w = max(2, int(size * 0.09))
-    gap = max(2, int(size * 0.052))
+    bar_w = max(2, round(size * 0.108))
+    gap = max(2, round(size * 0.0624))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = (size - total_w) // 2 + int(size * 0.041667)
-    baseline = int(size * 0.735)
-    max_bar = int(size * 0.50)
+    baseline = int(size * 0.7825)
+    max_bar = int(size * 0.60)
 
     for y in range(size):
         row = bytearray()
@@ -97,7 +97,7 @@ def main() -> None:
     <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff" transform="translate(2.667,0)">
+  <g fill="#fff" transform="translate(2.667,0) translate(32,32) scale(1.2) translate(-32,-32)">
     <rect x="10.9" y="34.5" width="5.8" height="11.6" rx="2.9"/>
     <rect x="20" y="26.3" width="5.8" height="19.8" rx="2.9"/>
     <rect x="29.1" y="17.2" width="5.8" height="28.9" rx="2.9"/>
