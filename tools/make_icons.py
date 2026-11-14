@@ -41,8 +41,8 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     # Fill the square icon: the previous mark was already 75% of the height,
     # so a literal 1.5x linear scale would leave the canvas.  This is the
     # largest safe enlargement (about 1.5x the visual area).
-    bar_w = max(2, round(size * 0.1372))
-    gap = max(1, round(size * 0.030))
+    bar_w = max(2, round(size * 0.155))
+    gap = max(1, round(size * 0.040))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = int(size * 0.406 - total_w / 2)
     baseline = int(size * 0.96875)
@@ -103,11 +103,11 @@ def main() -> None:
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
   <g fill="#fff">
-    <rect x="0.5" y="39.2" width="8.8" height="22.8" rx="4.4"/>
-    <rect x="11.2" y="23" width="8.8" height="39" rx="4.4"/>
-    <rect x="21.9" y="5" width="8.8" height="57" rx="4.4"/>
-    <rect x="32.6" y="15.2" width="8.8" height="46.8" rx="4.4"/>
-    <rect x="43.3" y="32" width="8.8" height="30" rx="4.4"/>
+    <rect x="0.5" y="35.2" width="10" height="22.8" rx="5"/>
+    <rect x="13" y="19" width="10" height="39" rx="5"/>
+    <rect x="25.5" y="1" width="10" height="57" rx="5"/>
+    <rect x="38" y="11.2" width="10" height="46.8" rx="5"/>
+    <rect x="50.5" y="28" width="10" height="30" rx="5"/>
   </g>
 </svg>
 """,
