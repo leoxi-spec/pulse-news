@@ -44,8 +44,8 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     bar_w = max(2, round(size * 0.124))
     gap = max(1, round(size * 0.032))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
-    left = int(size * 0.0967)
-    baseline = int(size * 0.8125)
+    left = (size - total_w) // 2
+    baseline = int(size * 0.8564)
     max_bar = int(size * 0.75)
 
     for y in range(size):
@@ -102,12 +102,12 @@ def main() -> None:
     <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff" transform="translate(32,32) scale(0.8) translate(-32,-32)">
-    <rect x="0.5" y="35.2" width="10" height="22.8" rx="5"/>
-    <rect x="13" y="19" width="10" height="39" rx="5"/>
-    <rect x="25.5" y="1" width="10" height="57" rx="5"/>
-    <rect x="38" y="11.2" width="10" height="46.8" rx="5"/>
-    <rect x="50.5" y="28" width="10" height="30" rx="5"/>
+  <g fill="#fff">
+    <rect x="2" y="37.7" width="10" height="22.8" rx="5"/>
+    <rect x="14.5" y="21.5" width="10" height="39" rx="5"/>
+    <rect x="27" y="3.5" width="10" height="57" rx="5"/>
+    <rect x="39.5" y="13.7" width="10" height="46.8" rx="5"/>
+    <rect x="52" y="30.5" width="10" height="30" rx="5"/>
   </g>
 </svg>
 """,
