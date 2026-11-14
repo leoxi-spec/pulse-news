@@ -12,7 +12,7 @@ from pathlib import Path
 
 APP_NAME = "Pulse"
 APP_TAGLINE = "News that keeps up with you"
-APP_VERSION = "3.1.8"
+APP_VERSION = "3.2.0"
 
 ROOT = Path(__file__).resolve().parent.parent
 

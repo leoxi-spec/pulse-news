@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pulse">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
+  </linearGradient></defs>
+  <rect width="64" height="64" rx="15" fill="url(#g)"/>
+  <g fill="#fff">
+    <rect x="26" y="33.1" width="2" height="4.6" rx="1"/>
+    <rect x="28.5" y="29.9" width="2" height="7.8" rx="1"/>
+    <rect x="31" y="26.3" width="2" height="11.4" rx="1"/>
+    <rect x="33.5" y="28.3" width="2" height="9.4" rx="1"/>
+    <rect x="36" y="31.7" width="2" height="6" rx="1"/>
+  </g>
+</svg>
