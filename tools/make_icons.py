@@ -38,12 +38,15 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     bars = [0.38, 0.65, 0.95, 0.78, 0.50]  # relative heights of the pulse
     # 1.25x larger than the v9 artwork.  Keep the left edge anchored so the
     # wider mark grows into the available space instead of clipping.
-    bar_w = max(2, round(size * 0.108 * 1.1))
-    gap = max(1, round(size * 0.0624 * 1.1 * 0.55))
+    # Fill the square icon: the previous mark was already 75% of the height,
+    # so a literal 1.5x linear scale would leave the canvas.  This is the
+    # largest safe enlargement (about 1.5x the visual area).
+    bar_w = max(2, round(size * 0.155))
+    gap = max(1, round(size * 0.040))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = max(2, int(size * 0.015))
-    baseline = int(size * 0.875)
-    max_bar = int(size * 0.75)
+    baseline = int(size * 0.96875)
+    max_bar = int(size * 0.9375)
 
     for y in range(size):
         row = bytearray()
@@ -100,11 +103,11 @@ def main() -> None:
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
   <g fill="#fff">
-    <rect x="0.5" y="36.1" width="7.7" height="16.5" rx="3.85"/>
-    <rect x="10.7" y="24.4" width="7.7" height="28.2" rx="3.85"/>
-    <rect x="20.9" y="11.4" width="7.7" height="41.2" rx="3.85"/>
-    <rect x="31.1" y="18.8" width="7.7" height="33.8" rx="3.85"/>
-    <rect x="41.3" y="30.9" width="7.7" height="21.7" rx="3.85"/>
+    <rect x="0.5" y="39.2" width="10" height="22.8" rx="5"/>
+    <rect x="13" y="23" width="10" height="39" rx="5"/>
+    <rect x="25.5" y="5" width="10" height="57" rx="5"/>
+    <rect x="38" y="15.2" width="10" height="46.8" rx="5"/>
+    <rect x="50.5" y="32" width="10" height="30" rx="5"/>
   </g>
 </svg>
 """,

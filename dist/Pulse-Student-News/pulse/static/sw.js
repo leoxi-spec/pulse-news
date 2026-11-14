@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v44';
+const VERSION = 'pulse-v45';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -29,9 +29,9 @@ const SHELL = [
   '/js/views/sports.js',
   '/js/views/sources.js',
   '/manifest.webmanifest',
-  '/icons/icon-v11.svg',
-  '/icons/icon-192-v11.png',
-  '/icons/icon-512-v11.png',
+  '/icons/icon-v12.svg',
+  '/icons/icon-192-v12.png',
+  '/icons/icon-512-v12.png',
 ];
 
 const CACHEABLE_API = [
