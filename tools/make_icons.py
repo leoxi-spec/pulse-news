@@ -41,12 +41,12 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     # Fill the square icon: the previous mark was already 75% of the height,
     # so a literal 1.5x linear scale would leave the canvas.  This is the
     # largest safe enlargement (about 1.5x the visual area).
-    bar_w = max(2, round(size * 0.124))
-    gap = max(1, round(size * 0.032))
+    bar_w = max(2, round(size * 0.155))
+    gap = max(1, round(size * 0.040))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = int(size * 0.4775 - total_w / 2)
-    baseline = int(size * 0.875)
-    max_bar = int(size * 0.75)
+    baseline = int(size * 0.96875)
+    max_bar = int(size * 0.9375)
 
     for y in range(size):
         row = bytearray()
@@ -102,7 +102,7 @@ def main() -> None:
     <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff" transform="translate(32,32) scale(0.8) translate(-32,-32)">
+  <g fill="#fff">
     <rect x="0.5" y="39.2" width="10" height="22.8" rx="5"/>
     <rect x="13" y="23" width="10" height="39" rx="5"/>
     <rect x="25.5" y="5" width="10" height="57" rx="5"/>
