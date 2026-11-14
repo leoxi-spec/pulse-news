@@ -3753,3 +3753,6 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
 .reading-mix__label { text-transform: uppercase; letter-spacing: .09em; color: var(--faint); font-weight: 750; margin-right: .15rem; }
 .reading-mix__item { border: 1px solid var(--line); border-radius: 999px; padding: .16rem .45rem; background: var(--surface); }
 .reading-mix__item b { color: var(--accent); margin-left: .12rem; }
+
+/* Fit the whole source video inside the vertical Shorts frame. */
+.reel__video { object-fit: contain; background: #000; }

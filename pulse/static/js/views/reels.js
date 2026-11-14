@@ -179,8 +179,8 @@ function reelCard(item) {
       ${item.image ? html`
         <img class="reel__bg reel__bg--img" src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
       ${fileVideo ? html`
-        <video class="reel__bg reel__video" data-reel-video src="${video.url}" poster="${item.image || ''}" muted loop playsinline preload="metadata" tabindex="0" aria-label="Video. Tap or press M to toggle sound."></video>
-        <span class="reel__sound-hint" data-sound-hint>Tap video for sound</span>` : ''}
+        <video class="reel__bg reel__video" data-reel-video src="${video.url}" poster="${item.image || ''}" loop playsinline preload="metadata" tabindex="0" aria-label="Video. Tap or press M to toggle sound."></video>
+        <span class="reel__sound-hint" data-sound-hint>Sound on · tap to mute</span>` : ''}
       ${video && !fileVideo ? html`
         <button class="reel__video-play" type="button" data-reel-play aria-label="Play video">
           ${raw(icons.play)}<span>${video.provider || 'Video'}</span>
@@ -383,9 +383,17 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     }
     const video = reel?.querySelector('video[data-reel-video]');
     if (video) {
-      video.muted = true;
+      // Original audio is on by default. If the browser blocks audible
+      // autoplay, fall back to muted playback and surface the tap hint.
+      video.muted = false;
+      video.volume = 1;
       if (video.readyState >= 2) video.classList.add('is-ready');
-      video.play().catch(() => {});
+      video.play().catch(() => {
+        video.muted = true;
+        const fallback = reel?.querySelector('[data-sound-hint]');
+        if (fallback) fallback.textContent = 'Tap for sound';
+        video.play().catch(() => {});
+      });
       activeVideo = video;
     }
   };
@@ -421,7 +429,7 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
     const item = items[index];
     if (item) record('view', { articleId: item.id, silent: true }).catch(() => {});
     stopSpeech();
-    if (soundOn && item) speak(item);
+    if (soundOn && item && !item.video) speak(item);
     if (auto) { aimAuto(); scheduleAuto(); }
     const next = items[index + 1];
     if (next?.image) { const preload = new Image(); preload.src = next.image; }
