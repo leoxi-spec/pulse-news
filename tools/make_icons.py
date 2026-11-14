@@ -39,7 +39,7 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     # 1.25x larger than the v9 artwork.  Keep the left edge anchored so the
     # wider mark grows into the available space instead of clipping.
     bar_w = max(2, round(size * 0.108 * 1.1))
-    gap = max(2, round(size * 0.0624 * 1.1))
+    gap = max(1, round(size * 0.0624 * 1.1 * 0.55))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
     left = max(2, int(size * 0.015))
     baseline = int(size * 0.875)
@@ -100,11 +100,11 @@ def main() -> None:
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
   <g fill="#fff">
-    <rect x="1.2" y="36.1" width="7.7" height="16.5" rx="3.85"/>
-    <rect x="13.2" y="24.4" width="7.7" height="28.2" rx="3.85"/>
-    <rect x="25.2" y="11.4" width="7.7" height="41.2" rx="3.85"/>
-    <rect x="37.2" y="18.8" width="7.7" height="33.8" rx="3.85"/>
-    <rect x="49.3" y="30.9" width="7.7" height="21.7" rx="3.85"/>
+    <rect x="0.5" y="36.1" width="7.7" height="16.5" rx="3.85"/>
+    <rect x="10.7" y="24.4" width="7.7" height="28.2" rx="3.85"/>
+    <rect x="20.9" y="11.4" width="7.7" height="41.2" rx="3.85"/>
+    <rect x="31.1" y="18.8" width="7.7" height="33.8" rx="3.85"/>
+    <rect x="41.3" y="30.9" width="7.7" height="21.7" rx="3.85"/>
   </g>
 </svg>
 """,
