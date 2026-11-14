@@ -150,6 +150,7 @@ export async function reelsView(root, ctx) {
         <div class="reels__tools">
           <button class="reels__live" data-live type="button" title="Check for new stories" aria-label="Check for new stories"><i></i></button>
           <span class="reels__count" data-count title="Story number">1</span>
+          <button class="reel-pill reel-pill--min" data-min-text aria-pressed="false" title="Minimize story text" aria-label="Minimize story text">Min</button>
           <button class="reel-pill" data-autoplay aria-pressed="false" title="Advance automatically">${raw(icons.play)} Auto</button>
           <button class="reel-icon-btn" data-sound aria-pressed="false" title="Read the active story aloud" aria-label="Sound">${raw(icons.sound)}</button>
         </div>
@@ -270,6 +271,8 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   const live = root.querySelector('[data-live]');
   const autoButton = root.querySelector('[data-autoplay]');
   const soundButton = root.querySelector('[data-sound]');
+  const minButton = root.querySelector('[data-min-text]');
+  const reelsEl = root.querySelector('.reels');
   const progressFill = root.querySelector('[data-progress]');
 
   const items = [...initialItems];
@@ -285,6 +288,23 @@ function bind(root, initialItems, mode, streams, fetchNext, seen, startId = 0) {
   let cleaned = false;
   let lastTap = 0;
   let activeStarted = performance.now();
+
+  const setMinimized = (on) => {
+    reelsEl?.classList.toggle('is-min', on);
+    if (minButton) {
+      minButton.classList.toggle('is-on', on);
+      minButton.setAttribute('aria-pressed', String(on));
+      minButton.textContent = on ? 'Text' : 'Min';
+      minButton.title = on ? 'Show story text' : 'Minimize story text';
+      minButton.setAttribute('aria-label', on ? 'Show story text' : 'Minimize story text');
+    }
+    try { localStorage.setItem('pulse.reels.min', JSON.stringify(on)); } catch { /* private mode */ }
+  };
+  setMinimized(readLocal('pulse.reels.min', false));
+  minButton?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setMinimized(!reelsEl?.classList.contains('is-min'));
+  });
 
   const saveDwell = (keepalive = false) => {
     const item = items[active];
