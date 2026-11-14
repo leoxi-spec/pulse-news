@@ -36,14 +36,14 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     tile = (inset, inset, size - inset, size - inset)
     radius = int((tile[2] - tile[0]) * 0.23)
     bars = [0.38, 0.65, 0.95, 0.78, 0.50]  # relative heights of the pulse
-    # Keep the 1.2x waveform height, but compress its width slightly so the
-    # requested left shift does not clip the first bar against the icon edge.
-    bar_w = max(2, round(size * 0.108 * 0.88))
-    gap = max(2, round(size * 0.0624 * 0.88))
+    # 1.25x larger than the v9 artwork.  Keep the left edge anchored so the
+    # wider mark grows into the available space instead of clipping.
+    bar_w = max(2, round(size * 0.108 * 1.1))
+    gap = max(2, round(size * 0.0624 * 1.1))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
-    left = (size - total_w) // 2 + -int(size * 0.1375)
-    baseline = int(size * 0.7825)
-    max_bar = int(size * 0.60)
+    left = max(2, int(size * 0.015))
+    baseline = int(size * 0.875)
+    max_bar = int(size * 0.75)
 
     for y in range(size):
         row = bytearray()
@@ -99,12 +99,12 @@ def main() -> None:
     <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
   </linearGradient></defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff" transform="translate(-8.8,0) translate(32,32) scale(1.056,1.2) translate(-32,-32)">
-    <rect x="10.9" y="34.5" width="5.8" height="11.6" rx="2.9"/>
-    <rect x="20" y="26.3" width="5.8" height="19.8" rx="2.9"/>
-    <rect x="29.1" y="17.2" width="5.8" height="28.9" rx="2.9"/>
-    <rect x="38.2" y="22.4" width="5.8" height="23.7" rx="2.9"/>
-    <rect x="47.3" y="30.9" width="5.8" height="15.2" rx="2.9"/>
+  <g fill="#fff">
+    <rect x="1.2" y="36.1" width="7.7" height="16.5" rx="3.85"/>
+    <rect x="13.2" y="24.4" width="7.7" height="28.2" rx="3.85"/>
+    <rect x="25.2" y="11.4" width="7.7" height="41.2" rx="3.85"/>
+    <rect x="37.2" y="18.8" width="7.7" height="33.8" rx="3.85"/>
+    <rect x="49.3" y="30.9" width="7.7" height="21.7" rx="3.85"/>
   </g>
 </svg>
 """,
