@@ -90,12 +90,12 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     radius = int((tile[2] - tile[0]) * 0.23)
     bars = [0.38, 0.65, 0.95, 0.78, 0.50]
 
-    # Keep the established placement: centred 1/12 left and scaled to fit.
+    # Centred in the tile; scaled to fit the safe area.
     fit = 0.82
     bar_w = max(2, round(size * 0.160 * fit))
     gap = max(1, round(size * 0.042 * fit))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
-    left = (size - total_w) // 2 - int(size / 12)
+    left = (size - total_w) // 2
     max_bar = int(size * 0.9600 * fit)
     baseline = int(size * (0.5 + (0.9600 * fit * 0.95) / 2))
 
@@ -112,7 +112,8 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     ]
     snowflakes = [
         (int(size * 0.875), int(size * 0.17), max(2, int(size * 0.030))),
-        (int(size * 0.905), int(size * 0.74), max(2, int(size * 0.024))),
+        (int(size * 0.945), int(size * 0.74), max(2, int(size * 0.024))),
+        (int(size * 0.075), int(size * 0.22), max(2, int(size * 0.017))),
     ]
 
     for y in range(size):
@@ -197,7 +198,7 @@ def main() -> None:
       <stop offset="0" stop-color="#0c3c2b"/>
       <stop offset="1" stop-color="#771b27"/>
     </linearGradient>
-    <radialGradient id="glow" cx="26.7" cy="6" r="12" gradientUnits="userSpaceOnUse">
+    <radialGradient id="glow" cx="32" cy="6" r="12" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#f7c948" stop-opacity=".22"/>
       <stop offset="1" stop-color="#f7c948" stop-opacity="0"/>
     </radialGradient>
@@ -206,21 +207,22 @@ def main() -> None:
   <rect width="64" height="64" rx="15" fill="url(#glow)"/>
   <g stroke="#fffaf2" stroke-opacity=".72" stroke-width=".42" stroke-linecap="round">
     <g transform="translate(56 11)"><path d="M-2 0H2M-1-1.73 1 1.73M-1 1.73 1-1.73"/></g>
-    <g transform="translate(58 47)"><path d="M-1.5 0H1.5M-.75-1.3 1.3-0.75M-.75 1.3 1.3 0.75"/></g>
+    <g transform="translate(4.8 14.1)"><path d="M-1.2 0H1.2M-.6-1.04 1.04-.6M-.6 1.04 1.04.6"/></g>
+    <g transform="translate(60.5 47)"><path d="M-1.5 0H1.5M-.75-1.3 1.3-0.75M-.75 1.3 1.3 0.75"/></g>
   </g>
-  <g fill="#fffaf2">
+  <g fill="#fffaf2" transform="translate(5.333 0)">
     <rect x="1.25" y="36.75" width="8.375" height="19.125" rx="4.1875"/>
     <rect x="11.875" y="23.25" width="8.375" height="32.625" rx="4.1875"/>
     <rect x="22.5" y="8.125" width="8.375" height="47.75" rx="4.1875"/>
     <rect x="33.125" y="16.625" width="8.375" height="39.25" rx="4.1875"/>
     <rect x="43.75" y="30.75" width="8.375" height="25.125" rx="4.1875"/>
   </g>
-  <g>
+  <g transform="translate(5.333 0)">
     <circle cx="16.062" cy="38.875" r=".875" fill="#f34e5b"/>
     <circle cx="26.688" cy="36.75" r=".875" fill="#f7c948"/>
     <circle cx="37.312" cy="34.375" r=".875" fill="#f34e5b"/>
   </g>
-  <g fill="#f7c948">
+  <g fill="#f7c948" transform="translate(5.333 0)">
     <polygon points="26.688,2.375 27.583,4.768 30.136,4.88 28.136,6.47 28.819,8.933 26.688,7.522 24.557,8.933 25.24,6.47 23.24,4.88 25.793,4.768"/>
     <circle cx="26.688" cy="6" r=".7" fill="#ffeba0"/>
   </g>
