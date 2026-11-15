@@ -179,6 +179,14 @@ function renderNav() {
 }
 
 function bindShell() {
+  document.getElementById('nav-back')?.addEventListener('click', () => {
+    if (window.history.length > 1) window.history.back();
+    else router.navigate('/');
+  });
+  document.getElementById('nav-forward')?.addEventListener('click', () => {
+    window.history.forward();
+  });
+
   document.addEventListener('click', (event) => {
     if (!event.target.closest('[data-nav-group]')) closeNavMenus();
   });

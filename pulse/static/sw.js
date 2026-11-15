@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v54';
+const VERSION = 'pulse-v55';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;

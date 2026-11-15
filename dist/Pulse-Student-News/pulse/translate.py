@@ -446,3 +446,250 @@ def translate_overview(overview: dict, source_lang: str | None) -> dict:
     overview["translation_provider"] = provider
     overview["translated"] = True
     return overview
+
+
+# --------------------------------------------------------------- full article
+# The short surfaces above are translated automatically.  Full article
+# translation is an explicit reader action: only when someone taps "Translate
+# article" do we send the publisher's paragraphs to the same service.  The
+# translation is stored as a single JSON document, so revisiting the story is
+# instant and does not hit the network again.
+
+_MAX_BLOCK_CHARS = 1400
+
+
+def _full_cache_key(article_id: int, code: str) -> str:
+    return hashlib.sha256(f"article-full|{article_id}|{code}|en".encode("utf-8")).hexdigest()
+
+
+def _full_cache_get(key: str) -> dict | None:
+    row = db.query_one(
+        "SELECT translated_text, provider FROM translations WHERE cache_key=? AND target_lang='en'",
+        (key,),
+    )
+    if not row:
+        return None
+    try:
+        data = json.loads(row["translated_text"])
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    data["provider"] = row["provider"] or data.get("provider") or "cache"
+    data["cached"] = True
+    return data
+
+
+def _full_cache_put(key: str, payload: dict, code: str, provider: str) -> None:
+    try:
+        db.execute(
+            """
+            INSERT INTO translations(cache_key, source_lang, target_lang, source_text,
+                                     translated_text, provider, created_at)
+            VALUES(?,?,?,?,?,?,?)
+            ON CONFLICT(cache_key) DO UPDATE SET
+              translated_text=excluded.translated_text, provider=excluded.provider,
+              created_at=excluded.created_at
+            """,
+            (key, code, "en", f"article-full:{code}", json.dumps(payload, ensure_ascii=False), provider, iso()),
+        )
+    except Exception:
+        log.debug("could not persist full article translation", exc_info=True)
+
+
+def _split_text(text: str, limit: int = _MAX_BLOCK_CHARS) -> list[str]:
+    """Split a long paragraph on word boundaries without dropping content."""
+    text = _clean(text)
+    if len(text) <= limit:
+        return [text]
+    parts: list[str] = []
+    remaining = text
+    while len(remaining) > limit:
+        cut = remaining[:limit]
+        boundary = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "), cut.rfind("; "))
+        if boundary < int(limit * 0.55):
+            boundary = cut.rfind(" ")
+        if boundary < int(limit * 0.4):
+            boundary = limit
+        part = remaining[:boundary].strip()
+        if part:
+            parts.append(part)
+        remaining = remaining[boundary:].strip()
+    if remaining:
+        parts.append(remaining)
+    return parts
+
+
+def _translate_chunk(text: str, code: str) -> tuple[str | None, str]:
+    """Translate one <=1400 character chunk, using the short-text cache."""
+    cached = _cache_get(code, text)
+    if cached:
+        return cached, "cache"
+    translated = None
+    try:
+        translated, _detected = _google(text)
+    except (FetchError, OSError, ValueError) as exc:
+        log.debug("google article translate unavailable: %s", exc)
+    provider = "google"
+    if not translated and len(text) <= 490:
+        provider = "mymemory"
+        try:
+            translated = _mymemory(text, code)
+        except (FetchError, OSError, ValueError) as exc:
+            log.debug("mymemory article translate unavailable: %s", exc)
+    if not translated:
+        return None, "none"
+    translated = _clean(translated)
+    _cache_put(code, text, translated, provider)
+    return translated, provider
+
+
+def _translate_block_batch(texts: list[str], code: str) -> tuple[list[str | None], str]:
+    """Translate several paragraphs in as few requests as possible."""
+    results: list[str | None] = [None] * len(texts)
+    providers: set[str] = set()
+    groups: list[list[int]] = []
+    current: list[int] = []
+    size = 0
+    for index, text in enumerate(texts):
+        if len(text) > _MAX_BLOCK_CHARS:
+            if current:
+                groups.append(current)
+                current, size = [], 0
+            parts = _split_text(text)
+            translated_parts = []
+            for part in parts:
+                translated, provider_one = _translate_chunk(part, code)
+                if translated:
+                    translated_parts.append(translated)
+                    providers.add(provider_one)
+            if translated_parts and len(translated_parts) == len(parts):
+                results[index] = " ".join(translated_parts)
+            continue
+        extra = len(text) + (len(_SEP) if current else 0)
+        if current and size + extra > _MAX_BLOCK_CHARS:
+            groups.append(current)
+            current, size = [], 0
+        current.append(index)
+        size += extra
+    if current:
+        groups.append(current)
+
+    for group in groups:
+        combined = _SEP.join(texts[index] for index in group)
+        cached = _cache_get(code, combined)
+        translated = cached
+        provider = "cache" if cached else "google"
+        if not translated:
+            try:
+                translated, _detected = _google(combined)
+            except (FetchError, OSError, ValueError) as exc:
+                log.debug("google article batch unavailable: %s", exc)
+            if translated:
+                translated = _clean(translated)
+                _cache_put(code, combined, translated, provider)
+        if translated:
+            parts = [_clean(part) for part in re.split(r"\s*@@PULSE@@\s*", translated)]
+            if len(parts) == len(group) and all(parts):
+                for index, part in zip(group, parts):
+                    results[index] = part
+                providers.add(provider)
+                continue
+        # A provider can collapse or duplicate the separator.  Fall back to
+        # individual paragraphs rather than risk putting the wrong text under a
+        # heading.
+        for index in group:
+            translated_one, provider_one = _translate_chunk(texts[index], code)
+            if translated_one:
+                results[index] = translated_one
+                providers.add(provider_one)
+    if not providers:
+        return results, "none"
+    if providers == {"cache"}:
+        return results, "cache"
+    if "google" in providers:
+        return results, "google"
+    if "mymemory" in providers:
+        return results, "mymemory"
+    return results, "none"
+
+
+def full_article_translation(article: dict, source_lang: str | None = None) -> dict:
+    """Translate every readable paragraph of an article payload.
+
+    ``article`` is the serialised article detail payload (it contains
+    ``blocks``).  Returns a payload ready for the JSON API.  The original
+    publisher text is never replaced on disk; only the returned copy changes.
+    """
+    blocks = article.get("blocks") or []
+    if not isinstance(blocks, list) or not blocks:
+        return {
+            "translated": False,
+            "language": source_lang or "en",
+            "language_name": language_name(source_lang),
+            "error": "This story has no full text to translate.",
+            "blocks": [],
+        }
+    code = (source_lang or article.get("language") or detect_language(
+        f"{article.get('title') or ''} {article.get('summary') or ''}"
+    )).lower()
+    if code == "en":
+        return {
+            "translated": False,
+            "language": "en",
+            "language_name": "English",
+            "error": "This story is already in English.",
+            "blocks": blocks,
+        }
+    article_id = int(article.get("id") or 0)
+    key = _full_cache_key(article_id, code)
+    cached = _full_cache_get(key)
+    if cached and isinstance(cached.get("blocks"), list):
+        return cached
+
+    translatable: list[int] = []
+    texts: list[str] = []
+    for index, block in enumerate(blocks):
+        if not isinstance(block, dict):
+            continue
+        kind = str(block.get("type") or "p")
+        if kind not in {"p", "h2", "h3", "h4", "li", "blockquote"}:
+            continue
+        text = _clean(str(block.get("text") or ""))
+        if len(text) < 2:
+            continue
+        translatable.append(index)
+        texts.append(text)
+
+    translated_texts, provider = _translate_block_batch(texts, code)
+    out_blocks = [dict(block) if isinstance(block, dict) else block for block in blocks]
+    translated_count = 0
+    for index, text in zip(translatable, translated_texts):
+        if text:
+            out_blocks[index]["text"] = text
+            translated_count += 1
+    if translated_count == 0:
+        return {
+            "translated": False,
+            "language": code,
+            "language_name": language_name(code),
+            "error": "The translation service is busy. Try again in a moment.",
+            "blocks": blocks,
+        }
+
+    payload = {
+        "translated": True,
+        "partial": translated_count < len(translatable),
+        "language": code,
+        "language_name": language_name(code),
+        "provider": provider,
+        "translated_paragraphs": translated_count,
+        "paragraphs": len(translatable),
+        "blocks": out_blocks,
+        "cached": False,
+    }
+    # Only cache a complete translation. A partial result is still shown, but
+    # a later attempt should be able to fill the paragraphs the service missed.
+    if not payload["partial"]:
+        _full_cache_put(key, payload, code, provider)
+    return payload

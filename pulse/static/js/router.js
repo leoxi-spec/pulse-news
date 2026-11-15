@@ -4,6 +4,7 @@ import { emptyState } from './components.js';
 const routes = [];
 const scrollMemory = new Map();
 let restoring = false;
+let restoreEpoch = 0;
 
 function compile(pattern) {
   const keys = [];
@@ -56,6 +57,7 @@ export async function render(url = window.location.pathname + window.location.se
   // Moving to the top before rendering keeps a fresh navigation from yanking
   // the viewport down while the async handler is still filling the page.
   const restoreTarget = restoreScroll ? (scrollMemory.get(path) || 0) : 0;
+  const epoch = ++restoreEpoch;
   if (restoreScroll) restoring = true;
   window.scrollTo({ top: restoreTarget, behavior: 'instant' });
 
@@ -74,6 +76,7 @@ export async function render(url = window.location.pathname + window.location.se
     // has settled so returning from an article lands where the reader left,
     // not at the top of the page.
     const applyRestore = () => {
+      if (epoch !== restoreEpoch) return;
       if (Math.abs(window.scrollY - restoreTarget) > 2) {
         window.scrollTo({ top: restoreTarget, behavior: 'instant' });
       }
@@ -82,7 +85,9 @@ export async function render(url = window.location.pathname + window.location.se
     requestAnimationFrame(() => requestAnimationFrame(applyRestore));
     setTimeout(applyRestore, 120);
     setTimeout(applyRestore, 360);
-    setTimeout(() => { restoring = false; }, 650);
+    setTimeout(() => {
+      if (epoch === restoreEpoch) restoring = false;
+    }, 650);
   } else {
     restoring = false;
   }
