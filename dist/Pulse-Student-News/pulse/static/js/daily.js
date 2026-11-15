@@ -99,19 +99,12 @@ function kidsHero(data) {
       <div class="kids-hero__mascot" aria-hidden="true">
         <svg viewBox="0 0 180 180" class="kids-mascot">
           <defs><linearGradient id="kg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#0c3c2b"/><stop offset=".55" stop-color="#14513a"/><stop offset="1" stop-color="#771b27"/>
+            <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/>
           </linearGradient></defs>
           <rect x="18" y="18" width="144" height="144" rx="48" fill="url(#kg)"/>
-          <circle cx="46" cy="52" r="2.5" fill="#fffaf2" opacity=".7"/>
-          <circle cx="132" cy="118" r="2.2" fill="#fffaf2" opacity=".55"/>
-          <circle cx="52" cy="126" r="1.6" fill="#fffaf2" opacity=".4"/>
-          <path d="M102 40 Q108 6 138 14 Q154 18 154 40 Z" fill="#f34e5b"/>
-          <path d="M98 40 Q124 31 158 40" stroke="#fffaf2" stroke-width="9" fill="none" stroke-linecap="round"/>
-          <circle cx="151" cy="15" r="8" fill="#fffaf2"/>
           <circle cx="70" cy="86" r="8" fill="#fff"/><circle cx="110" cy="86" r="8" fill="#fff"/>
           <path d="M70 112 Q90 130 110 112" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round"/>
           <path d="M42 66 L56 66 L64 50 L74 82 L84 60 L96 60" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
-          <circle cx="64" cy="50" r="4" fill="#f34e5b"/><circle cx="96" cy="60" r="3.5" fill="#f7c948"/>
         </svg>
       </div>
       ${top.length ? html`

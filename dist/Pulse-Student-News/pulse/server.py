@@ -22,7 +22,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import api, profiles
+from . import api, holidays, profiles
 from .config import APP_VERSION, settings
 from .db import db
 from .logging_setup import get_logger
@@ -241,6 +241,12 @@ class Handler(BaseHTTPRequestHandler):
         if ".." in path.split("/"):
             self._send_json(403, {"error": "Forbidden"})
             return 403
+        if path == "/manifest.webmanifest":
+            body = json.dumps(holidays.manifest(), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            return self._send_bytes(200, body, {
+                "Content-Type": "application/manifest+json; charset=utf-8",
+                "Cache-Control": "no-cache",
+            })
         if path in ("/", ""):
             return self._send_file(settings.static_dir / "index.html", spa=True)
         # Client-side routes render the SPA shell. Anything without a file
@@ -333,13 +339,14 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
-    def _send_bytes(self, status: int, body: bytes, extra: dict | None = None) -> None:
+    def _send_bytes(self, status: int, body: bytes, extra: dict | None = None) -> int:
         self.send_response(status)
         self._base_headers(extra=extra or {})
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
+        return status
 
     def _maybe_gzip(self, body: bytes) -> tuple[bytes, str | None]:
         if len(body) < 1200:

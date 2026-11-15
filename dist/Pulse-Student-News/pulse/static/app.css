@@ -3804,32 +3804,48 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
   .app-history__btn { width: 30px; height: 30px; }
 }
 
-/* Christmas edition mark: the same Pulse waveform, dressed as a tiny tree. */
-.brand__pulse { position: relative; }
-.brand__pulse span {
-  background: linear-gradient(180deg, #fbfff9 0%, #c9f8dd 38%, #39c47a 100%);
+/* Seasonal mark: the active holiday icon replaces the waveform in the header. */
+.brand__season {
+  width: 1.75rem; height: 1.75rem; flex: none; border-radius: 7px;
+  object-fit: contain; display: none;
 }
-.brand__pulse span:nth-child(2), .brand__pulse span:nth-child(4) {
-  background: linear-gradient(180deg, #fff8f8 0%, #ffd0d6 38%, #f34e5b 100%);
+.brand.has-season .brand__pulse { display: none; }
+.brand.has-season .brand__season { display: block; }
+@media (max-width: 560px) {
+  .brand__season { width: 1.6rem; height: 1.6rem; }
 }
-.brand__pulse::before {
-  content: ""; position: absolute; z-index: 2; left: 88%; top: -.24rem;
-  width: .5rem; height: .5rem; transform: translateX(-50%);
-  background: #f7c948;
-  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter: drop-shadow(0 0 4px rgba(247, 201, 72, .65));
-  pointer-events: none;
+
+/* --------------------------------------------------------- seasons archive */
+.seasonal-page { max-width: 1180px; }
+.season-now {
+  display: flex; align-items: center; justify-content: space-between; gap: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  background: var(--grad-soft); margin-bottom: 1.2rem;
 }
-.boot__mark { position: relative; padding-top: .75rem; }
-.boot__mark::before {
-  content: ""; position: absolute; top: 0; left: 50%; width: 13px; height: 13px;
-  transform: translateX(-50%); background: #f7c948;
-  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter: drop-shadow(0 0 5px rgba(247, 201, 72, .7));
+.season-now__copy h2 { margin: .2rem 0 .35rem; font-size: clamp(1.35rem, 3vw, 2rem); letter-spacing: -.03em; }
+.season-now__copy .tiny { margin-top: .45rem; }
+.season-now__art img { width: 104px; height: 104px; border-radius: 24px; display: block; }
+.season-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: .7rem; }
+.season-card {
+  position: relative; display: flex; flex-direction: column; gap: .8rem;
+  padding: .8rem; border-radius: 16px; border: 1px solid var(--line);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--season-bg) 82%, var(--surface)), var(--surface));
+  min-height: 132px;
 }
-.boot__mark span {
-  background: linear-gradient(180deg, #fbfff9 0%, #bdf6d5 45%, #39c47a 100%);
-}
-.boot__mark span:nth-child(2), .boot__mark span:nth-child(4) {
-  background: linear-gradient(180deg, #fff8f8 0%, #ffd0d6 45%, #f34e5b 100%);
+.season-card.is-active { border-color: var(--season-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--season-accent) 28%, transparent); }
+.season-card__top { display: flex; gap: .7rem; align-items: flex-start; }
+.season-card__top img { width: 58px; height: 58px; border-radius: 14px; flex: none; }
+.season-card h3 { margin: .1rem 0 .2rem; font-size: .9rem; }
+.season-card p { margin: 0; color: var(--muted); font-size: .7rem; line-height: 1.4; }
+.season-card__foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: auto; }
+.season-card__next { color: var(--faint); font-size: .62rem; font-weight: 650; }
+.season-card__dots { display: inline-flex; gap: 3px; }
+.season-card__dots i { width: 8px; height: 8px; border-radius: 50%; display: block; background: var(--season-accent); }
+.season-card__dots i:nth-child(2) { background: var(--season-accent-2); }
+.season-card__dots i:nth-child(3) { background: var(--season-bg); border: 1px solid var(--line); }
+.season-card__badge { position: absolute; top: .5rem; right: .5rem; font-size: .55rem; }
+.seasonal-note { margin: 1.2rem 0 0; max-width: 70ch; line-height: 1.55; }
+@media (max-width: 620px) {
+  .season-now { align-items: flex-start; }
+  .season-now__art img { width: 76px; height: 76px; border-radius: 18px; }
 }

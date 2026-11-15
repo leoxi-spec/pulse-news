@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v60';
+const VERSION = 'pulse-v61';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -25,15 +25,17 @@ const SHELL = [
   '/js/voice.js',
   '/js/weather.js',
   '/js/ambient.js',
+  '/js/seasons.js',
   '/js/daily.js',
   '/js/views/sports.js',
   '/js/views/sources.js',
+  '/js/views/seasons.js',
   '/manifest.webmanifest',
-  '/icons/icon-v23.svg',
-  '/icons/icon-192-v23.png',
-  '/icons/icon-512-v23.png',
-  '/icons/icon-maskable-v23.png',
-  '/icons/apple-touch-icon-v23.png',
+  '/icons/icon-v24.svg',
+  '/icons/icon-192-v24.png',
+  '/icons/icon-512-v24.png',
+  '/icons/icon-maskable-v24.png',
+  '/icons/apple-touch-icon-v24.png',
 ];
 
 const CACHEABLE_API = [
@@ -48,6 +50,8 @@ const CACHEABLE_API = [
   '/api/topics',
   '/api/brief',
   '/api/weather',
+  '/api/season',
+  '/api/seasons',
 ];
 
 self.addEventListener('message', (event) => {

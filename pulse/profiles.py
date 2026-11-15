@@ -45,6 +45,7 @@ DEFAULT_PREFS: dict = {
     "mode": "auto",
     "animation": "theme",
     "weather_theme": False,
+    "seasonal_themes": True,
     "noise": "off",
     "noise_volume": 0.35,
     "compact_cards": False,
@@ -283,7 +284,7 @@ def sanitise_prefs(prefs: dict) -> dict:
     clean["daily_goal"] = max(1, min(30, int(clean.get("daily_goal", 5))))
     for key in ("reduce_motion", "high_contrast", "show_images", "ai_overview", "hide_paywalled",
                 "notify_breaking", "autoplay_sports", "show_reading_streak", "sidebar_slim",
-                "weather_theme"):
+                "weather_theme", "seasonal_themes"):
         if key in prefs:
             clean[key] = bool(prefs[key])
     try:

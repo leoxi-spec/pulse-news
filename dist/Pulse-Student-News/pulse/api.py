@@ -16,7 +16,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from . import ai, auth, citations, daily, feed, impact, ingest, profiles, rank, search, sports, stories, translate, weather
+from . import ai, auth, citations, daily, feed, holidays, impact, ingest, profiles, rank, search, sports, stories, translate, weather
 from .config import APP_NAME, APP_TAGLINE, APP_VERSION, settings
 from .db import db
 from .httpclient import FetchError, FetchResult, HttpClient, validate_url
@@ -161,6 +161,10 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             }
         if path == "/api/health" and method == "GET":
             return 200, _health(), {}
+        if path == "/api/season" and method == "GET":
+            return 200, holidays.current(), {"Cache-Control": "no-store"}
+        if path == "/api/seasons" and method == "GET":
+            return 200, {"seasons": holidays.archive()}, {"Cache-Control": "no-store"}
         if path == "/api/profiles" and method == "POST":
             payload = request.json()
             created = profiles.create(str(payload.get("name") or "Student"))

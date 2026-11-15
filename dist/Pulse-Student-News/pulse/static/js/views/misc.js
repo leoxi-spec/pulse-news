@@ -796,6 +796,10 @@ export async function profileView(root, ctx) {
           </div>
         </div>
         <div class="settings-row">
+          <div><div class="settings-row__label">Holiday themes</div><div class="settings-row__hint">Switch the palette, header mark and favicon automatically when the next holiday is within 1.5 weeks. <a href="/seasons" data-link>Browse all 24</a>.</div></div>
+          <button class="switch ${p.seasonal_themes !== false ? 'is-on' : ''}" data-toggle="seasonal_themes" aria-pressed="${p.seasonal_themes !== false}"></button>
+        </div>
+        <div class="settings-row">
           <div><div class="settings-row__label">Reading font</div><div class="settings-row__hint">Easy-read uses a dyslexia-friendly stack.</div></div>
           <div class="segmented">
             ${[['sans', 'Sans'], ['serif', 'Serif'], ['dyslexic', 'Easy-read']].map(([id, label]) => html`
@@ -1031,7 +1035,8 @@ function bindProfile(root, p, today, profile) {
     if (label) button.setAttribute('aria-label', label);
     button.addEventListener('click', async () => {
       const key = button.dataset.toggle;
-      const value = !(p[key]);
+      const current = key === 'seasonal_themes' ? p[key] !== false : Boolean(p[key]);
+      const value = !current;
       button.classList.toggle('is-on', value);
       button.setAttribute('aria-pressed', String(value));
       p[key] = value;
@@ -1238,7 +1243,7 @@ export async function onboardingView(root, ctx) {
     root.innerHTML = html`
       <div class="onboarding ${key === 'welcome' ? 'onboarding--welcome' : ''}">
         <div class="onboarding__top">
-          <a class="brand" href="/" data-link><span class="brand__pulse"><span></span><span></span><span></span><span></span></span><span class="brand__name">Pulse</span></a>
+          <a class="brand" href="/" data-link><span class="brand__pulse"><span></span><span></span><span></span><span></span></span><img class="brand__season" data-season-icon alt="" hidden><span class="brand__name">Pulse</span></a>
           <div class="onboarding__dots" aria-label="Step ${step + 1} of ${ONBOARD_STEPS.length}">
             ${ONBOARD_STEPS.map((_, index) => html`<span class="onboarding__dot ${index <= step ? 'is-on' : ''}"></span>`)}
           </div>

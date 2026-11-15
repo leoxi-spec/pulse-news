@@ -24,10 +24,12 @@ import { arcadeView } from './views/arcade.js';
 import { accountView } from './views/account.js';
 import { privacyView, termsView } from './views/legal.js';
 import { searchView, savedView, briefView, studyView, profileView, onboardingView } from './views/misc.js';
+import { seasonsView } from './views/seasons.js';
 import { researchView } from './views/research.js';
 import { bootPrefsFromStorage } from './store.js';
 import { applyAmbient } from './ambient.js';
 import { initWeather } from './weather.js';
+import { initSeasons } from './seasons.js';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home', mobile: true },
@@ -58,6 +60,7 @@ const NAV = [
       { href: '/classroom', label: 'Classroom', icon: 'book', hint: 'A 45-minute lesson' },
       { href: '/roadmap', label: 'Roadmap', icon: 'note', hint: 'Vote and send feedback' },
       { href: '/profile', label: 'Profile & settings', icon: 'user', hint: 'Photo, themes and data' },
+      { href: '/seasons', label: 'Seasonal archive', icon: 'sparkle', hint: '24 holiday themes and icons' },
       { href: '/account', label: 'Account & sync', icon: 'user', hint: 'Keep progress across browsers' },
     ],
   },
@@ -99,6 +102,7 @@ function registerRoutes() {
   router.add('/privacy', privacyView);
   router.add('/terms', termsView);
   router.add('/profile', profileView);
+  router.add('/seasons', seasonsView);
   router.add('/settings', (root, ctx) => profileView(root, { ...ctx, query: { ...ctx.query, focus: 'settings' } }));
   router.add('/onboarding', onboardingView);
 }
@@ -523,6 +527,7 @@ async function boot() {
     return;
   }
   setBoot(data);
+  await initSeasons();
   applyAmbient();
   initWeather().catch(() => {});
   document.getElementById('shell').hidden = false;
