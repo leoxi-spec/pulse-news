@@ -374,10 +374,16 @@ function setupChrome() {
   const onScroll = () => appbar?.classList.toggle('is-scrolled', window.scrollY > 8);
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+  let markQueued = false;
   const markImages = () => {
-    document.querySelectorAll('img:not(.img-loaded)').forEach((img) => {
-      if (img.complete && img.naturalWidth) img.classList.add('img-loaded');
-      else img.addEventListener('load', () => img.classList.add('img-loaded'), { once: true });
+    if (markQueued) return;
+    markQueued = true;
+    requestAnimationFrame(() => {
+      markQueued = false;
+      document.querySelectorAll('img:not(.img-loaded)').forEach((img) => {
+        if (img.complete && img.naturalWidth) img.classList.add('img-loaded');
+        else img.addEventListener('load', () => img.classList.add('img-loaded'), { once: true });
+      });
     });
   };
   markImages();

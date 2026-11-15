@@ -3,8 +3,16 @@ import { emptyState } from './components.js';
 
 const routes = [];
 const scrollMemory = new Map();
+const viewCleanups = new Set();
 let restoring = false;
 let restoreEpoch = 0;
+
+// Views that attach window/document listeners register a cleanup here. This
+// prevents old article/Shorts handlers from firing after navigation.
+export function onViewCleanup(fn) {
+  viewCleanups.add(fn);
+  return () => viewCleanups.delete(fn);
+}
 
 function compile(pattern) {
   const keys = [];
@@ -37,6 +45,10 @@ export async function render(url = window.location.pathname + window.location.se
   }
   const view = document.getElementById('view');
   if (!view) return;
+  for (const cleanup of [...viewCleanups]) {
+    try { cleanup(); } catch (err) { console.error('view cleanup failed', err); }
+  }
+  viewCleanups.clear();
   if (!match) {
     view.innerHTML = emptyState({
       icon: '🧭',

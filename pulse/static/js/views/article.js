@@ -6,6 +6,10 @@ import {
 } from '../ui.js';
 import { sourceDot, leanBar, emptyState, accessInfo, translatedBadge } from '../components.js';
 import { applyVoice, currentVoiceId, openVoicePicker, voiceProfile } from '../voice.js';
+import { onViewCleanup } from '../router.js';
+
+let articleAbort = null;
+let articleEpoch = 0;
 
 const FONTS = [
   { id: 'serif', label: 'Serif' },
@@ -14,6 +18,11 @@ const FONTS = [
 ];
 
 export async function articleView(root, ctx) {
+  const epoch = ++articleEpoch;
+  articleAbort?.abort();
+  articleAbort = new AbortController();
+  const signal = articleAbort.signal;
+  onViewCleanup(() => articleAbort?.abort());
   const id = Number(ctx.params.id);
   if (!Number.isFinite(id)) {
     root.innerHTML = emptyState({ icon: '🔍', title: 'Bad article link', text: 'That article id is not valid.' });
@@ -31,8 +40,10 @@ export async function articleView(root, ctx) {
   let article;
   try {
     const data = await get(`/api/articles/${id}`, 30);
+    if (epoch !== articleEpoch) return;
     article = data.article;
   } catch (err) {
+    if (epoch !== articleEpoch) return;
     if (err.status === 404) {
       root.innerHTML = emptyState({
         icon: '🗞️',
@@ -48,10 +59,18 @@ export async function articleView(root, ctx) {
 
   const p = prefs();
   root.innerHTML = articleMarkup(article, p);
-  bindArticle(root, article);
+  bindArticle(root, article, signal);
   renderStoryExtras(root, article);
-  trackReading(article);
-  loadOverview(root, article);
+  trackReading(article, signal);
+  if (article.overview) {
+    const overviewSlot = root.querySelector('#overview-slot');
+    if (overviewSlot) {
+      overviewSlot.innerHTML = overviewMarkup(article.overview, article);
+      bindOverview(root, article, article.overview);
+    }
+  } else {
+    loadOverview(root, article);
+  }
   if (article.notes?.length) renderNotes(root, article);
 }
 
@@ -755,7 +774,7 @@ function bindGallery(root, article) {
   });
 }
 
-function bindArticle(root, article) {
+function bindArticle(root, article, signal) {
   bindGallery(root, article);
   bindVideo(root, article);
   const prose = root.querySelector('#prose');
@@ -842,8 +861,8 @@ function bindArticle(root, article) {
   }
   document.addEventListener('click', (event) => {
     if (!menu.hidden && !menu.contains(event.target) && !prose?.contains(event.target)) hideMenu();
-  });
-  window.addEventListener('scroll', hideMenu, { passive: true });
+  }, { signal });
+  window.addEventListener('scroll', hideMenu, { passive: true, signal });
 
   // Track reading progress and award a "read" once.
   const bar = root.querySelector('#read-progress');
@@ -852,7 +871,7 @@ function bindArticle(root, article) {
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const percent = max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0;
     bar.style.width = `${percent}%`;
-  }, { passive: true });
+  }, { passive: true, signal });
 }
 
 async function onTranslateArticle(button, article, root) {
@@ -1189,7 +1208,7 @@ function bindOverview(root, article, overview) {
 }
 
 let readTimer = null;
-function trackReading(article) {
+function trackReading(article, signal) {
   if (readTimer) clearTimeout(readTimer);
   record('open', { articleId: article.id, silent: true });
   const started = Date.now();
@@ -1210,5 +1229,6 @@ function trackReading(article) {
       window.removeEventListener('scroll', onScroll);
     }
   };
-  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true, signal });
+  signal.addEventListener('abort', () => clearTimeout(readTimer), { once: true });
 }

@@ -33,9 +33,11 @@ let raf = 0;
 let splashes = [];
 let flash = 0;
 let lastFrame = 0;
+let lastDraw = 0;
 let width = 0;
 let height = 0;
 let resizeBound = false;
+const FRAME_MS = 1000 / 30;
 
 let audio = null;
 let noiseNode = null;
@@ -58,9 +60,12 @@ function ensureCanvas() {
   canvas.id = 'ambient-canvas';
   canvas.setAttribute('aria-hidden', 'true');
   document.body.appendChild(canvas);
-  ctx = canvas.getContext('2d');
+  ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
   const resize = () => {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Retina screens at 2x make a full-window canvas expensive to clear every
+    // frame. The particles are soft-edged, so 1.5x is visually indistinguishable
+    // while cutting the pixel count by roughly half.
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     width = window.innerWidth;
     height = window.innerHeight;
     canvas.width = Math.round(width * dpr);
@@ -72,6 +77,13 @@ function ensureCanvas() {
   };
   if (!resizeBound) {
     window.addEventListener('resize', resize, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && animation !== 'none' && !raf && !prefs().reduce_motion) {
+        lastFrame = 0;
+        lastDraw = 0;
+        raf = requestAnimationFrame(frame);
+      }
+    }, { passive: true });
     resizeBound = true;
   }
   resize();
@@ -303,6 +315,13 @@ function frame(now) {
   raf = 0;
   const reduced = prefs().reduce_motion || document.body.classList.contains('reduce-motion');
   if (!ctx || animation === 'none' || reduced || document.hidden) return;
+  // Ambient motion is decorative. 30fps is enough for drifting particles and
+  // keeps scrolling responsive on Retina displays.
+  if (lastDraw && now - lastDraw < FRAME_MS) {
+    raf = requestAnimationFrame(frame);
+    return;
+  }
+  lastDraw = now;
   const dt = Math.min(34, now - lastFrame || 16) / 16.67;
   lastFrame = now;
   ctx.clearRect(0, 0, width, height);
@@ -399,6 +418,7 @@ export function setAnimation(pref) {
   ensureCanvas();
   seed();
   lastFrame = 0;
+  lastDraw = 0;
   if (!raf) raf = requestAnimationFrame(frame);
 }
 
