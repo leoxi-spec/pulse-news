@@ -95,6 +95,10 @@ function articleMarkup(a, p) {
         ${renderSaveButton(a)}
         <button class="btn" data-act="share">${raw(icons.share)} Share</button>
         <button class="btn" data-act="cite">${raw(icons.quote)} Cite</button>
+        ${a.language && a.language !== 'en' && hasBody ? html`
+          <button class="btn btn--translate" data-act="translate" aria-pressed="false" title="Translate the full article into English">
+            ${raw(icons.language)} Translate article
+          </button>` : ''}
         <button class="btn" data-act="quiz">${raw(icons.bolt)} Quiz</button>
         <button class="btn" data-act="listen" aria-pressed="false" title="Read this story aloud">${raw(icons.sound)} Listen</button>
         <span class="spacer"></span>
@@ -143,6 +147,7 @@ function articleMarkup(a, p) {
         </div>
       </div>
 
+      <div id="full-translation-note"></div>
       <div class="prose" id="prose" data-font="${document.body.classList.contains('font-serif') ? 'serif' : ''}">${renderBlocks(a, blocks)}</div>
 
       <div id="extras-slot"></div>
@@ -604,7 +609,10 @@ function markTerms(sentence, tokens) {
 
 function speechChunks(article) {
   const parts = [article.title, article.summary || ''];
-  for (const block of article.blocks || []) {
+  const blocks = article.showingFullTranslation && article.translated_blocks
+    ? article.translated_blocks
+    : (article.blocks || []);
+  for (const block of blocks) {
     if (['p', 'li', 'blockquote', 'h2', 'h3', 'h4'].includes(block.type) && block.text) parts.push(block.text);
   }
   const text = parts.filter(Boolean).join('. ')
@@ -763,6 +771,7 @@ function bindArticle(root, article) {
       if (act === 'save') return onSave(button, article);
       if (act === 'share') return onShare(article);
       if (act === 'cite') return onCite(article);
+      if (act === 'translate') return onTranslateArticle(button, article, root);
       if (act === 'quiz') return onQuiz(article, root);
       if (act === 'notes') return onAddNote(article, root);
       if (act === 'listen') return onListen(button, article);
@@ -844,6 +853,67 @@ function bindArticle(root, article) {
     const percent = max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0;
     bar.style.width = `${percent}%`;
   }, { passive: true });
+}
+
+async function onTranslateArticle(button, article, root) {
+  const prose = root.querySelector('#prose');
+  const note = root.querySelector('#full-translation-note');
+  if (!prose) return;
+
+  const paint = (translated) => {
+    const blocks = translated ? (article.translated_blocks || []) : (article.blocks || []);
+    article.showingFullTranslation = translated;
+    prose.innerHTML = renderBlocks(article, blocks);
+    prose.classList.toggle('is-translated', translated);
+    button.classList.toggle('is-on', translated);
+    button.setAttribute('aria-pressed', translated ? 'true' : 'false');
+    button.innerHTML = html`${raw(icons.language)} ${translated ? 'Show original' : 'Translate article'}`;
+    if (!note) return;
+    if (!translated) {
+      note.innerHTML = '';
+      return;
+    }
+    const meta = article.translation_meta || {};
+    const provider = meta.provider === 'mymemory' ? 'MyMemory' : 'Google Translate';
+    const partial = meta.partial ? ' Some paragraphs could not be translated and stay in the original language.' : '';
+    note.innerHTML = html`
+      <div class="translation-note">
+        <span class="translation-note__mark">${raw(icons.language)}</span>
+        <div>
+          <b>Translated from ${meta.language_name || article.language_name || 'the original language'}</b>
+          <span>Full article translated by ${provider}. The publisher's original is always one tap away.${partial}</span>
+        </div>
+        <button class="link" type="button" data-act="translate">Show original</button>
+      </div>`;
+    note.querySelector('[data-act="translate"]')?.addEventListener('click', () => paint(false));
+  };
+
+  if (article.translated_blocks) {
+    paint(!article.showingFullTranslation);
+    return;
+  }
+
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  const previous = button.innerHTML;
+  button.innerHTML = html`${raw(icons.language)} Translating…`;
+  try {
+    const data = await get(`/api/articles/${article.id}/translation`, 180);
+    if (!data.translated || !Array.isArray(data.blocks) || !data.blocks.length) {
+      toast(data.error || 'The translation service is busy. Try again in a moment.', { type: 'bad' });
+      return;
+    }
+    article.translated_blocks = data.blocks;
+    article.translation_meta = data;
+    paint(true);
+    toast(data.partial ? 'Article translated — some paragraphs are still original' : 'Full article translated', { type: 'good' });
+  } catch (err) {
+    toast(err.message || 'Could not translate this article.', { type: 'bad' });
+  } finally {
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    if (!article.translated_blocks) button.innerHTML = previous;
+  }
 }
 
 async function onSave(button, article) {

@@ -3771,3 +3771,35 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
 
 /* Fit the whole source video inside the vertical Shorts frame. */
 .reel__video { object-fit: contain; background: #000; }
+
+/* --------------------------------------------------------- translation */
+.btn--translate { color: var(--accent-2) !important; border-color: color-mix(in srgb, var(--accent-2) 34%, transparent) !important; background: color-mix(in srgb, var(--accent-2) 7%, transparent) !important; }
+.btn--translate:hover { background: color-mix(in srgb, var(--accent-2) 13%, transparent) !important; }
+.btn--translate.is-on { color: var(--text) !important; border-color: var(--accent-2) !important; }
+.translation-note {
+  display: flex; align-items: flex-start; gap: .7rem; margin: 1rem 0;
+  padding: .8rem .9rem; border: 1px solid color-mix(in srgb, var(--accent-2) 28%, var(--line));
+  border-radius: 12px; background: color-mix(in srgb, var(--accent-2) 6%, var(--surface));
+}
+.translation-note__mark { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; background: var(--surface-3); color: var(--accent-2); }
+.translation-note__mark svg { width: 1rem; height: 1rem; }
+.translation-note b { display: block; font-size: .82rem; }
+.translation-note span { display: block; font-size: .72rem; color: var(--muted); line-height: 1.45; margin-top: .12rem; }
+.translation-note .link { margin-left: auto; flex: none; background: none; border: 0; color: var(--accent-2); font-size: .72rem; font-weight: 700; cursor: pointer; }
+
+/* --------------------------------------------------------- page history */
+.app-history { display: flex; align-items: center; gap: .12rem; flex: none; }
+.app-history__btn {
+  width: 32px; height: 32px; border-radius: 9px; color: var(--muted);
+  border: 1px solid transparent; background: transparent;
+}
+.app-history__btn svg { width: 1.05rem; height: 1.05rem; }
+.app-history__btn:hover { color: var(--text); background: var(--surface-2); border-color: var(--line-soft); }
+.app-history__btn:active { transform: translateY(1px); }
+@media (max-width: 860px) {
+  .app-history { gap: .05rem; }
+  .app-history__btn { width: 34px; height: 34px; }
+}
+@media (max-width: 380px) {
+  .app-history__btn { width: 30px; height: 30px; }
+}

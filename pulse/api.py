@@ -366,6 +366,13 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             article["jargon"] = ai.decode_jargon(article.get("content_text") or article.get("summary") or "")
             return 200, {"article": article}, {}
 
+        match = re.fullmatch(r"/api/articles/(\d+)/translation", path)
+        if match and method == "GET":
+            article = feed.article_detail(int(match.group(1)), profile)
+            if article is None:
+                raise ApiError(404, "Article not found")
+            return 200, translate.full_article_translation(article, article.get("language")), {}
+
         match = re.fullmatch(r"/api/articles/(\d+)/overview", path)
         if match and method == "GET":
             row = _article_row(int(match.group(1)))

@@ -53,3 +53,60 @@ class OverviewTranslationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FullArticleTranslationTests(unittest.TestCase):
+    @patch.object(translate, "_full_cache_get", return_value=None)
+    @patch.object(translate, "_full_cache_put")
+    @patch.object(translate, "_cache_get", return_value=None)
+    @patch.object(translate, "_cache_put")
+    @patch.object(translate, "_google", return_value=("Encabezado en inglés@@PULSE@@Primer párrafo en inglés@@PULSE@@Segundo párrafo en inglés", None))
+    def test_translates_every_block_and_keeps_types(self, *_mocks):
+        article = {
+            "id": 987654,
+            "title": "Título",
+            "summary": "Resumen",
+            "language": "es",
+            "blocks": [
+                {"type": "h2", "text": "Encabezado"},
+                {"type": "p", "text": "Primer párrafo"},
+                {"type": "p", "text": "Segundo párrafo"},
+            ],
+        }
+        result = translate.full_article_translation(article, "es")
+        self.assertTrue(result["translated"])
+        self.assertEqual(result["language"], "es")
+        self.assertEqual(result["blocks"][0]["type"], "h2")
+        self.assertEqual(result["blocks"][0]["text"], "Encabezado en inglés")
+        self.assertEqual(result["blocks"][2]["text"], "Segundo párrafo en inglés")
+        self.assertFalse(result["partial"])
+
+    @patch.object(translate, "_full_cache_get", return_value=None)
+    @patch.object(translate, "_cache_get", return_value=None)
+    @patch.object(translate, "_cache_put")
+    @patch.object(translate, "_mymemory", return_value=None)
+    @patch.object(translate, "_google", return_value=(None, None))
+    def test_reports_busy_service_without_inventing_text(self, *_mocks):
+        article = {
+            "id": 987655,
+            "title": "Título",
+            "summary": "Resumen",
+            "language": "es",
+            "blocks": [{"type": "p", "text": "Texto original"}],
+        }
+        result = translate.full_article_translation(article, "es")
+        self.assertFalse(result["translated"])
+        self.assertIn("busy", result["error"].lower())
+        self.assertEqual(result["blocks"][0]["text"], "Texto original")
+
+    def test_never_translates_an_english_article(self):
+        result = translate.full_article_translation(
+            {"id": 1, "language": "en", "blocks": [{"type": "p", "text": "Hello"}]},
+            "en",
+        )
+        self.assertFalse(result["translated"])
+        self.assertIn("already in English", result["error"])
+
+
+if __name__ == "__main__":
+    unittest.main()

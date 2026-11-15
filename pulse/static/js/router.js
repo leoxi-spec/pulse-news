@@ -3,6 +3,7 @@ import { emptyState } from './components.js';
 
 const routes = [];
 const scrollMemory = new Map();
+let restoring = false;
 
 function compile(pattern) {
   const keys = [];
@@ -51,14 +52,12 @@ export async function render(url = window.location.pathname + window.location.se
   document.body.classList.toggle('reels-mode', path === '/reels');
   document.title = 'Pulse — Student News';
 
-  // Move to the top *before* rendering. Doing it after the async handler used
-  // to yank the viewport back down while you were already scrolling a
-  // half-loaded page.
-  if (restoreScroll && scrollMemory.has(path)) {
-    window.scrollTo({ top: scrollMemory.get(path), behavior: 'instant' });
-  } else {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }
+  // Restore the previous reading position only for browser back/forward.
+  // Moving to the top before rendering keeps a fresh navigation from yanking
+  // the viewport down while the async handler is still filling the page.
+  const restoreTarget = restoreScroll ? (scrollMemory.get(path) || 0) : 0;
+  if (restoreScroll) restoring = true;
+  window.scrollTo({ top: restoreTarget, behavior: 'instant' });
 
   try {
     await match.route.handler(view, context);
@@ -69,12 +68,32 @@ export async function render(url = window.location.pathname + window.location.se
   view.classList.remove('page-enter');
   void view.offsetWidth;
   view.classList.add('page-enter');
+
+  if (restoreScroll && restoreTarget > 0) {
+    // The feed loads asynchronously. Re-apply the saved position after layout
+    // has settled so returning from an article lands where the reader left,
+    // not at the top of the page.
+    const applyRestore = () => {
+      if (Math.abs(window.scrollY - restoreTarget) > 2) {
+        window.scrollTo({ top: restoreTarget, behavior: 'instant' });
+      }
+    };
+    applyRestore();
+    requestAnimationFrame(() => requestAnimationFrame(applyRestore));
+    setTimeout(applyRestore, 120);
+    setTimeout(applyRestore, 360);
+    setTimeout(() => { restoring = false; }, 650);
+  } else {
+    restoring = false;
+  }
+
   const main = document.getElementById('main');
   if (main && !restoreScroll) main.focus({ preventScroll: true });
 }
 
 export function navigate(url, { replace = false } = {}) {
   const current = window.location.pathname + window.location.search;
+  restoring = false;
   scrollMemory.set(window.location.pathname, window.scrollY);
   if (url === current) {
     render(url);
@@ -85,6 +104,13 @@ export function navigate(url, { replace = false } = {}) {
 }
 
 export function start() {
+  if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+  // Keep a live position for the current page. This is what makes Back from an
+  // article return to the exact card the reader tapped.
+  window.addEventListener('scroll', () => {
+    if (!restoring) scrollMemory.set(window.location.pathname, window.scrollY);
+  }, { passive: true });
+
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = event.target.closest('a');

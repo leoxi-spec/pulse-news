@@ -36,7 +36,7 @@ export function privacyView(root) {
       <p>Only essential cookies are used: a profile id, a session token if you sign in, and an access token only if the operator has protected this server with one. There are no advertising or analytics cookies.</p>
     </section>
     <section><h2>Translation</h2>
-      <p>When a story is in another language, Pulse translates the headline and short preview into English so you can decide whether to open it. Only those short excerpts are sent to a translation service; the full article is never sent and remains in its original language at the publisher. Translations are cached on this server. The translation provider is Google's public translation endpoint with MyMemory as a fallback; no account or profile data is included.</p>
+      <p>When a story is in another language, Pulse translates the headline and short preview into English automatically so you can decide whether to open it. If you tap <b>Translate article</b> on a story, the paragraphs Pulse has already extracted for in-app reading are sent to the translation service as well; the publisher's original remains unchanged and the app can switch back at any time. Translations are cached on this server. The translation provider is Google's public translation endpoint with MyMemory as a fallback; no account or profile data is included.</p>
     </section>
     <section><h2>Video</h2>
       <p>Publisher clips play from the publisher's own player. YouTube videos use the privacy-enhanced <b>youtube-nocookie.com</b> domain and only load when you press play; after that, YouTube's own privacy policy applies. Pulse does not preload or track video playback.</p>
