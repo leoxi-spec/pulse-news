@@ -688,8 +688,8 @@ def full_article_translation(article: dict, source_lang: str | None = None) -> d
         "blocks": out_blocks,
         "cached": False,
     }
-    # Cache even a partial result: retrying will fill any missing paragraphs,
-    # while the reader still gets the English they asked for.
-    if translated_count:
+    # Only cache a complete translation. A partial result is still shown, but
+    # a later attempt should be able to fill the paragraphs the service missed.
+    if not payload["partial"]:
         _full_cache_put(key, payload, code, provider)
     return payload
