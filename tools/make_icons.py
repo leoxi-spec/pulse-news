@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate Pulse app icons as PNGs using only the standard library."""
 import struct
+import math
 import zlib
 from pathlib import Path
 
@@ -26,25 +27,70 @@ def rounded_rect(x, y, w, h, radius, px, py):
     )
 
 
+def _blend(base, over, alpha):
+    alpha = max(0.0, min(1.0, alpha))
+    return tuple(round(base[i] + (over[i] - base[i]) * alpha) for i in range(3))
+
+
+def _circle(px, py, cx, cy, radius):
+    return (px - cx) ** 2 + (py - cy) ** 2 <= radius ** 2
+
+
+def _polygon(px, py, points):
+    inside = False
+    j = len(points) - 1
+    for i in range(len(points)):
+        xi, yi = points[i]
+        xj, yj = points[j]
+        if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / ((yj - yi) or 1e-9) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
+def _star_points(cx, cy, outer, inner, points=5):
+    import math
+    result = []
+    for index in range(points * 2):
+        angle = -math.pi / 2 + index * math.pi / points
+        radius = outer if index % 2 == 0 else inner
+        result.append((cx + math.cos(angle) * radius, cy + math.sin(angle) * radius))
+    return result
+
+
+def _snowflake(px, py, cx, cy, radius):
+    """Six-spoke snowflake, drawn as thin lines without a graphics library."""
+    dx, dy = px - cx, py - cy
+    if dx * dx + dy * dy > (radius * 1.04) ** 2:
+        return False
+    for angle in (0, 30, 60, 90, 120, 150):
+        radians = math.radians(angle)
+        ux, uy = math.cos(radians), math.sin(radians)
+        along = dx * ux + dy * uy
+        across = abs(dx * uy - dy * ux)
+        if abs(along) <= radius and across <= max(0.8, radius * 0.055):
+            return True
+    return False
+
+
 def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytearray:
-    """Violet→pink rounded tile with a white pulse waveform."""
-    bg = (10, 12, 17) if transparent else lerp((124, 92, 255), (255, 77, 141), 0.35)
-    start = (124, 92, 255)
-    end = (255, 77, 141)
+    """Christmas Pulse icon: evergreen/crimson tile, snowy bars, gold star."""
+    if transparent:
+        bg = (10, 12, 17)
+    else:
+        bg = lerp((12, 60, 43), (119, 27, 39), 0.38)
+    start = (12, 60, 43)       # deep pine
+    end = (119, 27, 39)        # Christmas crimson
+    snow = (255, 250, 242)
+    gold = (247, 201, 72)
+    red = (243, 78, 91)
     pixels = bytearray()
     inset = int(size * padding)
     tile = (inset, inset, size - inset, size - inset)
     radius = int((tile[2] - tile[0]) * 0.23)
-    bars = [0.38, 0.65, 0.95, 0.78, 0.50]  # relative heights of the pulse
-    # 1.25x larger than the v9 artwork.  Keep the left edge anchored so the
-    # wider mark grows into the available space instead of clipping.
-    # Fill the square icon: the previous mark was already 75% of the height,
-    # so a literal 1.5x linear scale would leave the canvas.  This is the
-    # largest safe enlargement (about 1.5x the visual area).
-    # The mark fills almost the whole tile in v20, so a literal 1/12 shift
-    # would clip the first bar.  Scale the whole mark to 82% (still large) and
-    # shift its centre exactly 1/12 of the icon width to the left.  This keeps
-    # every bar intact on 180/192/512px icons.
+    bars = [0.38, 0.65, 0.95, 0.78, 0.50]
+
+    # Keep the established placement: centred 1/12 left and scaled to fit.
     fit = 0.82
     bar_w = max(2, round(size * 0.160 * fit))
     gap = max(1, round(size * 0.042 * fit))
@@ -53,26 +99,69 @@ def draw(size: int, *, padding: float = 0.0, transparent: bool = False) -> bytea
     max_bar = int(size * 0.9600 * fit)
     baseline = int(size * (0.5 + (0.9600 * fit * 0.95) / 2))
 
+    tallest_top = baseline - int(max_bar * 0.95)
+    star_cx = left + 2 * (bar_w + gap) + bar_w / 2
+    star_cy = tallest_top - max(3, int(size * 0.035))
+    star_r = max(5, int(size * 0.058))
+    star = _star_points(star_cx, star_cy, star_r, star_r * 0.42)
+    ornament_r = max(2, int(size * 0.014))
+    ornaments = [
+        (left + (bar_w + gap) + bar_w / 2, baseline - int(max_bar * 0.65 * 0.52), red),
+        (left + 2 * (bar_w + gap) + bar_w / 2, baseline - int(max_bar * 0.95 * 0.40), gold),
+        (left + 3 * (bar_w + gap) + bar_w / 2, baseline - int(max_bar * 0.78 * 0.55), red),
+    ]
+    snowflakes = [
+        (int(size * 0.875), int(size * 0.17), max(2, int(size * 0.030))),
+        (int(size * 0.905), int(size * 0.74), max(2, int(size * 0.024))),
+    ]
+
     for y in range(size):
         row = bytearray()
         for x in range(size):
-            if not transparent and not rounded_rect(*tile, radius, x, y) and not (tile[0] <= x <= tile[2] and tile[1] <= y <= tile[3]):
+            if not transparent and not rounded_rect(*tile, radius, x, y):
                 row += b"\x00\x00\x00\x00"
                 continue
             t = ((x - tile[0]) + (y - tile[1])) / max(1, (tile[2] - tile[0]) + (tile[3] - tile[1]))
             color = lerp(start, end, min(1.0, max(0.0, t)))
-            if not transparent and not rounded_rect(*tile, radius, x, y):
-                row += b"\x00\x00\x00\x00"
-                continue
-            alpha = 255
+            if transparent:
+                color = bg
+
+            # A soft gold halo around the tree-topper star.
+            dx, dy = x - star_cx, y - star_cy
+            halo = (dx * dx + dy * dy) ** 0.5
+            if halo < star_r * 3.0:
+                color = _blend(color, gold, 0.10 * (1 - halo / (star_r * 3.0)))
+
+            # Snowflakes sit behind the waveform.
+            for fx, fy, fr in snowflakes:
+                if _snowflake(x, y, fx, fy, fr):
+                    color = _blend(color, snow, 0.72)
+                    break
+
+            # Five snowy pulse bars.
+            in_bar = False
             for index, height in enumerate(bars):
                 bx = left + index * (bar_w + gap)
                 bh = int(max_bar * height)
                 by = baseline - bh
                 if rounded_rect(bx, by, bar_w, bh, bar_w // 2, x, y):
-                    color = (255, 255, 255)
+                    color = snow
+                    in_bar = True
                     break
-            row += bytes((*color, alpha))
+
+            # Baubles on the bars.
+            for ox, oy, ornament in ornaments:
+                if _circle(x, y, ox, oy, ornament_r):
+                    color = ornament
+                    break
+
+            # Gold star, with a warmer centre.
+            if _polygon(x, y, star):
+                color = gold
+                if _circle(x, y, star_cx, star_cy, max(1, star_r * 0.22)):
+                    color = (255, 235, 160)
+
+            row += bytes((*color, 255))
         pixels += b"\x00" + row
     return pixels
 
@@ -102,17 +191,38 @@ def main() -> None:
     pixels = draw(180)
     write_png(OUT / "apple-touch-icon.png", 180, pixels, 180, 180)
     (OUT / "icon.svg").write_text(
-        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pulse">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4d8d"/>
-  </linearGradient></defs>
-  <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <g fill="#fff" transform="translate(-5.333 0) translate(32 32) scale(0.82) translate(-32 -32)">
-    <rect x="0.75" y="39" width="10.5" height="23" rx="5.25"/>
-    <rect x="13.75" y="23" width="10.5" height="39" rx="5.25"/>
-    <rect x="26.75" y="3" width="10.5" height="59" rx="5.25"/>
-    <rect x="39.75" y="14" width="10.5" height="48" rx="5.25"/>
-    <rect x="52.75" y="31" width="10.5" height="31" rx="5.25"/>
+        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pulse — Christmas edition">
+  <defs>
+    <linearGradient id="pine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c3c2b"/>
+      <stop offset="1" stop-color="#771b27"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="26.7" cy="6" r="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7c948" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#f7c948" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#pine)"/>
+  <rect width="64" height="64" rx="15" fill="url(#glow)"/>
+  <g stroke="#fffaf2" stroke-opacity=".72" stroke-width=".42" stroke-linecap="round">
+    <g transform="translate(56 11)"><path d="M-2 0H2M-1-1.73 1 1.73M-1 1.73 1-1.73"/></g>
+    <g transform="translate(58 47)"><path d="M-1.5 0H1.5M-.75-1.3 1.3-0.75M-.75 1.3 1.3 0.75"/></g>
+  </g>
+  <g fill="#fffaf2">
+    <rect x="1.25" y="36.75" width="8.375" height="19.125" rx="4.1875"/>
+    <rect x="11.875" y="23.25" width="8.375" height="32.625" rx="4.1875"/>
+    <rect x="22.5" y="8.125" width="8.375" height="47.75" rx="4.1875"/>
+    <rect x="33.125" y="16.625" width="8.375" height="39.25" rx="4.1875"/>
+    <rect x="43.75" y="30.75" width="8.375" height="25.125" rx="4.1875"/>
+  </g>
+  <g>
+    <circle cx="16.062" cy="38.875" r=".875" fill="#f34e5b"/>
+    <circle cx="26.688" cy="36.75" r=".875" fill="#f7c948"/>
+    <circle cx="37.312" cy="34.375" r=".875" fill="#f34e5b"/>
+  </g>
+  <g fill="#f7c948">
+    <polygon points="26.688,2.375 27.583,4.768 30.136,4.88 28.136,6.47 28.819,8.933 26.688,7.522 24.557,8.933 25.24,6.47 23.24,4.88 25.793,4.768"/>
+    <circle cx="26.688" cy="6" r=".7" fill="#ffeba0"/>
   </g>
 </svg>
 """,
