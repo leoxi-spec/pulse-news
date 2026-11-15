@@ -395,7 +395,7 @@ function sportsCard(data) {
 function f1Card(data) {
   const items = (data.widgets?.motorsport || []).slice(0, 2);
   if (!items.length) return '';
-  return newCard('', icons.fire, 'F1 & motorsport', html`<div class="mini-list">${items.map((item) => miniStory(item))}</div>`);
+  return newCard('', icons.fire, 'Formula 1', html`<div class="mini-list">${items.map((item) => miniStory(item))}</div>`);
 }
 
 function scienceCard(data) {
@@ -876,7 +876,7 @@ const WIDGETS = [
   { id: 'source', label: 'Source spotlight', render: sourceCard },
   { id: 'most', label: 'Most covered', render: mostCoveredCard },
   { id: 'sports', label: 'Sports quick hits', render: sportsCard },
-  { id: 'f1', label: 'F1 & motorsport', render: f1Card },
+  { id: 'f1', label: 'Formula 1', render: f1Card },
   { id: 'science', label: 'Science spark', render: scienceCard },
   { id: 'culture', label: 'Culture pick', render: cultureCard },
   { id: 'numbers', label: 'Number of the day', render: numbersCard },

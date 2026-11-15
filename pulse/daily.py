@@ -17,6 +17,7 @@ from collections import Counter
 from datetime import date
 from urllib.parse import quote
 
+from . import topics
 from .db import db
 from .timeutil import day_key, now, relative, start_of_day
 
@@ -478,6 +479,14 @@ def _widget_rows(where: str, params: tuple = (), limit: int = 3, order: str = "C
     return [_article_brief(row) for row in rows]
 
 
+def _f1_widget_rows(limit: int = 3):
+    rows = db.query(
+        f"{_WIDGET_SELECT} WHERE a.primary_topic = 'motorsport' "
+        "ORDER BY COALESCE(a.published_at, a.first_seen_at) DESC LIMIT 24"
+    )
+    return [_article_brief(row) for row in rows if topics.is_f1(row["title"], row["summary"] or "")][:limit]
+
+
 _CHILD_BLOCK = re.compile(
     r"\b(kill(?:ed|ing)?|shoot(?:ing|er)?|shot|war|bomb|attack|assault|rape|suicide|dead|death|"
     r"murder|hostage|missile|airstrike|massacre|abuse|gun|terror|behead|torture|genocide|fatal|casualt|wounded|injured|"
@@ -518,7 +527,7 @@ def widget_stories(age: int = 13) -> dict:
         "good": _widget_rows("a.primary_topic IN ('science','health','culture') AND a.is_breaking = 0"),
         "photo": _widget_rows("a.image_url IS NOT NULL AND a.image_url <> ''"),
         "sports": _widget_rows("a.primary_topic = 'sports'"),
-        "motorsport": _widget_rows("a.primary_topic = 'motorsport'"),
+        "motorsport": _f1_widget_rows(),
         "science": _widget_rows("a.primary_topic = 'science'", limit=2),
         "culture": _widget_rows("a.primary_topic = 'culture'", limit=2),
         "most": _widget_rows("a.content_state = 'extracted'", order="COALESCE(st.source_count, 0) DESC, COALESCE(a.published_at, a.first_seen_at) DESC", limit=2),

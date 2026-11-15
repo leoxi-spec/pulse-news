@@ -9,7 +9,7 @@ const FILTERS = [
   { id: 'science', label: 'Science' },
   { id: 'tech', label: 'Tech' },
   { id: 'education', label: 'Learning' },
-  { id: 'motorsport', label: 'Motorsport' },
+  { id: 'motorsport', label: 'Formula 1' },
 ];
 
 function playerBody(item) {

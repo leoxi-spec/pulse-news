@@ -11,7 +11,7 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 
-from . import translate
+from . import topics, translate
 from .db import db
 from .sources import SOURCES, TOPICS, TOPIC_LABELS, TOPIC_SLUGS
 from .timeutil import iso
@@ -147,6 +147,9 @@ def search(
     offset: int = 0,
 ) -> dict:
     parsed = parse_query(raw_query)
+    f1_only = topics.wants_f1(raw_query) or "motorsport" in parsed.topics
+    if f1_only and "motorsport" not in parsed.topics:
+        parsed.topics.append("motorsport")
     if topic:
         parsed.topics.append(topic)
     if source:
@@ -234,6 +237,8 @@ def search(
         """
         rows = db.query(sql, [*params, limit + 1, offset])
 
+    if f1_only:
+        rows = [row for row in rows if topics.is_f1(row["title"], row["summary"] or "")]
     has_more = len(rows) > limit
     rows = rows[:limit]
     from .feed import video_payload

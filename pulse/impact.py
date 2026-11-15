@@ -337,7 +337,7 @@ Student news consumption is fragmented across feeds, paywalls, push alerts and s
 ## The product
 
 - {p['sources']} publications and {p['feeds']} feeds from {p['countries']} countries
-- {p['topics']} topics, including a dedicated motorsport section
+- {p['topics']} topics, including a dedicated Formula 1 section
 - {p['videos']:,} publisher and YouTube videos with a privacy-enhanced player
 - A permanent, searchable archive with FTS5
 - A two-minute brief, quizzes, citations, study tools and classroom lesson plans

@@ -142,6 +142,71 @@ LEXICON: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Formula 1 is intentionally strict. A generic motorsport feed can carry
+# MotoGP, cycling, sailing or rally copy; "F1" must only show open-wheel
+# Formula 1 stories. The term list is therefore made of F1-specific markers,
+# not the broad motorsport words above.
+_F1_MARKERS = re.compile(
+    r"(?<![\w-])(?:"
+    r"formula\s*(?:1|one)|f1|fia|"
+    r"max\s+verstappen|lewis\s+hamilton|charles\s+leclerc|lando\s+norris|"
+    r"oscar\s+piastri|george\s+russell|carlos\s+sainz|fernando\s+alonso|"
+    r"sergio\s+perez|kimi\s+antonelli|daniel\s+ricciardo|valtteri\s+bottas|"
+    r"red\s+bull\s+racing|mclaren\s+f1|scuderia\s+ferrari|ferrari\s+f1|"
+    r"mercedes-amg|aston\s+martin\s+f1|williams\s+racing|alpine\s+f1|haas\s+f1|"
+    r"sauber|racing\s+bulls|alphatauri|cadillac\s+f1|audi\s+f1|"
+    r"constructors(?:'|\s)?\s+championship|drivers(?:'|\s)?\s+championship|"
+    r"pole\s+position|pit\s+lane|sprint\s+race|chequered\s+flag|"
+    r"race\s+weekend|paddock|formula\s+one\s+world|f1\s+academy"
+    r")(?![\w-])",
+    re.I,
+)
+_NON_F1_MARKERS = re.compile(
+    r"(?<![\w-])(?:motogp|moto2|moto3|indycar|nascar|rally|rallying|wrc|"
+    r"le\s+mans|wec|formula\s+e|supercars|btcc|dtm|touring\s+cars?|"
+    r"cycling|tour\s+de\s+france|giro|vuelta|sailing|america'?s\s+cup|"
+    r"horse\s+racing|kentucky\s+derby|grand\s+national|"
+    r"figure\s+skating|isu|skate\s+america|skate\s+canada|ice\s+dance|"
+    r"gymnastics|show\s+jumping|dressage|swimming|athletics|marathon|"
+    r"drag\s+racing|rallycross|speedway)(?![\w-])",
+    re.I,
+)
+
+
+_F1_QUERY = re.compile(r"(?<![\w-])(?:f1|formula\s*(?:1|one)|grand\s*prix|formula\s*one)(?![\w-])", re.I)
+
+
+def wants_f1(query: str | None) -> bool:
+    """Whether a search should be constrained to the Formula 1 lane."""
+    return bool(query and _F1_QUERY.search(query))
+
+
+def is_f1(title: str, summary: str = "") -> bool:
+    """True only for Formula 1 stories, never generic motorsport.
+
+    The title decides the lane. A MotoGP or IndyCar headline is excluded even
+    if the body happens to mention F1 for comparison; an F1 headline is kept
+    even when it mentions another series.
+    """
+    title = title or ""
+    summary = summary or ""
+    if not f"{title} {summary}".strip():
+        return False
+    # Non-F1 series in the headline means this is not an F1 story.
+    if _NON_F1_MARKERS.search(title):
+        return False
+    if _F1_MARKERS.search(title):
+        return True
+    # A non-F1 series only in the preview is still not an F1 story.
+    if _NON_F1_MARKERS.search(summary):
+        return False
+    if _F1_MARKERS.search(summary):
+        return True
+    # "Las Vegas Grand Prix" without an F1 word is usually still F1, but only
+    # when no other series marker is present.
+    return bool(re.search(r"(?<![\w-])grand\s*prix(?![\w-])", f"{title} {summary}", re.I))
+
+
 _COMPILED: dict[str, list[re.Pattern[str]]] = {
     topic: [re.compile(r"(?<![\w-])" + re.escape(term.strip()) + r"(?![\w-])", re.I) for term in terms]
     for topic, terms in LEXICON.items()
@@ -179,8 +244,14 @@ def score_topics(title: str, summary: str = "", feed_topic: str | None = None) -
 
 
 def classify(title: str, summary: str = "", feed_topic: str | None = None, source_topics: tuple[str, ...] = ()) -> tuple[str, list[str]]:
-    scores = score_topics(title, summary, feed_topic)
+    f1_story = is_f1(title, summary)
+    # A motorsport hint is not a licence to file MotoGP, cycling or sailing
+    # under Formula 1. Those stories remain sports; F1 is a strict lane.
+    effective_feed_topic = "sports" if feed_topic == "motorsport" and not f1_story else feed_topic
+    scores = score_topics(title, summary, effective_feed_topic)
     for topic in source_topics:
+        if topic == "motorsport" and not f1_story:
+            topic = "sports"
         if topic in scores:
             scores[topic] += 0.5
     ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)

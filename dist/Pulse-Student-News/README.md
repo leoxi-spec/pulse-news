@@ -36,7 +36,7 @@ classes who still wants to understand what's happening. That means:
 ### Reading
 | | |
 |---|---|
-| **365+ sources** | 366 publications, 488 feeds, 51 countries, 20 topics — including a dedicated **Motorsport** section (F1, MotoGP, IndyCar) with five specialist outlets. |
+| **500+ sources** | 501 publications, 625 feeds, 58 countries, 20 topics — including a strict **Formula 1** section with 22 F1-focused sources and active newsroom feeds. |
 | **Video, everywhere** | Publisher clips and 30 official YouTube newsroom, league, space and learning channels. A dedicated **Watch** page, video Shorts, badges on cards and a privacy-friendly player on every story. |
 | **Five editions** | Junior, Kids, Tween, Teen and Senior each change type scale, card density, home rows and available tools — visibly different, not just a label. |
 | **Five listening voices** | Nova, Atlas, Luna, Sage and Orion choose the best installed English voice, with rate/pitch tuned for news. |

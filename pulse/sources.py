@@ -24,7 +24,7 @@ TOPICS: tuple[tuple[str, str, str], ...] = (
     ("health", "Health", "🩺"),
     ("climate", "Climate", "🌱"),
     ("sports", "Sports", "🏆"),
-    ("motorsport", "Motorsport", "🏎️"),
+    ("motorsport", "Formula 1", "🏎️"),
     ("culture", "Culture", "🎭"),
     ("entertainment", "Entertainment", "🎬"),
     ("music", "Music", "🎧"),
@@ -478,6 +478,141 @@ yt-bloomberg|Bloomberg Video|youtube.com|US|Global|center|0|general|business,tec
 yt-verge|The Verge Video|youtube.com|US|Global|center|0|teen|tech,culture|The Verge technology video.
 yt-wired|WIRED Video|youtube.com|US|Global|center|0|student|tech,science,culture|WIRED science and technology video.
 yt-vox|Vox Video|youtube.com|US|Global|center-left|0|student|world,politics,culture,education|Vox explanatory video.
+crash-f1|Crash.net F1|crash.net|GB|United Kingdom|center|0|general|motorsport,sports|Formula 1 news, race reports and paddock analysis.
+f1oversteer|F1 Oversteer|f1oversteer.com|GB|Global|center|0|general|motorsport,sports|Independent Formula 1 news and opinion.
+f1chronicle|F1 Chronicle|f1chronicle.com|AU|Oceania|center|0|general|motorsport,sports|Formula 1 news and race coverage.
+f1i|F1i|f1i.com|FR|Europe|center|0|general|motorsport,sports|Formula 1 news, results and features.
+f1technical|F1Technical|f1technical.net|NL|Global|center|0|specialist|motorsport,sports|Formula 1 technical analysis and news.
+formula1news|Formula 1 News|formula1news.co.uk|GB|Global|center|0|general|motorsport,sports|Formula 1 headlines and paddock news.
+time|TIME|time.com|US|Global|center|0|general|world,us,politics,business,health,culture|Global news magazine and explainers.
+marshallproject|The Marshall Project|themarshallproject.org|US|United States|center|0|student|us,politics,opinion|Criminal justice reporting and analysis.
+healthline|Healthline|healthline.com|US|Global|center|0|general|health,money|Health and wellness news.
+theatlantic|The Atlantic|theatlantic.com|US|Global|center-left|1|general|politics,culture,opinion,world|Ideas, politics and long-form journalism.
+newyorker|The New Yorker|newyorker.com|US|Global|left|1|general|culture,politics,opinion,world|Reporting, criticism and fiction.
+harpers|Harper's Magazine|harpers.org|US|Global|left|1|general|culture,politics,opinion|Essays, reporting and criticism.
+projectsyndicate|Project Syndicate|project-syndicate.org|US|Global|center|0|student|opinion,world,politics,business|Economists and thinkers on global issues.
+defector|Defector|defector.com|US|United States|center-left|0|general|sports,culture|Independent sports and culture writing.
+ninety-min|90min|90min.com|GB|Global|center|0|teen|sports|Football news, transfers and features.
+channel4news|Channel 4 News|channel4.com|GB|United Kingdom|center-left|0|general|world,politics,business,culture|UK news and investigations.
+unherd|UnHerd|unherd.com|GB|Global|center-right|0|general|politics,culture,opinion|Heterodox ideas and debate.
+bylinetimes|Byline Times|bylinetimes.com|GB|United Kingdom|left|0|general|politics,world,opinion|UK investigations and political analysis.
+rfi|RFI English|rfi.fr|FR|Global|center|0|general|world,politics,business,culture|French international public radio.
+dn|Dagens Nyheter|dn.se|SE|Europe|center|1|general|world,politics,business,culture|Swedish daily newspaper.
+nrk|NRK|nrk.no|NO|Europe|center|0|general|world,politics,business|Norwegian public broadcaster.
+dr|DR Nyheder|dr.dk|DK|Europe|center|0|general|world,politics,business|Danish public broadcaster.
+standardmedia|The Standard|standardmedia.co.ke|KE|Africa|center|0|general|world,politics,business,sports|Kenyan news.
+g1|G1|g1.globo.com|BR|Latin America|center|0|general|world,politics,business,culture|Brazilian news portal.
+eltiempo|El Tiempo|eltiempo.com|CO|Latin America|center|0|general|world,politics,business,culture|Colombian national newspaper.
+stuff|Stuff|stuff.co.nz|NZ|Oceania|center|0|general|world,politics,business,culture|New Zealand news.
+f1-fansite|F1-Fansite|f1-fansite.com|NL|Global|center|0|general|motorsport,sports|Formula 1 news, results and fan guides.
+racecar-engineering|Racecar Engineering|racecar-engineering.com|GB|Global|center|0|specialist|motorsport,sports|Race car technology and engineering.
+fia|FIA|fia.com|FR|Global|center|0|general|motorsport,sports|Official motorsport federation news.
+digitaltrends|Digital Trends|digitaltrends.com|US|Global|center|0|general|tech,culture|Consumer tech and entertainment.
+androidpolice|Android Police|androidpolice.com|US|Global|center|0|general|tech|Android news, reviews and tips.
+xda|XDA Developers|xda-developers.com|US|Global|center|0|general|tech|Android, Windows and developer news.
+imore|iMore|imore.com|US|Global|center|0|general|tech|Apple news and advice.
+techradar|TechRadar|techradar.com|GB|Global|center|0|general|tech|Technology news and reviews.
+gsmarena|GSMArena|gsmarena.com|BG|Global|center|0|general|tech|Phone news and specifications.
+neowin|Neowin|neowin.net|US|Global|center|0|general|tech|Software and technology news.
+slashdot|Slashdot|slashdot.org|US|Global|center|0|student|tech|Technology news for developers and enthusiasts.
+knowable|Knowable Magazine|knowablemagazine.org|US|Global|center|0|student|science,health,climate|Deep science explainers.
+astronomy|Astronomy Magazine|astronomy.com|US|Global|center|0|general|space,science|Astronomy news and sky guides.
+skyandtelescope|Sky & Telescope|skyandtelescope.org|US|Global|center|0|general|space,science|Astronomy observing and news.
+earthsky|EarthSky|earthsky.org|US|Global|center|0|general|space,science,climate|Astronomy and Earth science.
+medicalxpress|Medical Xpress|medicalxpress.com|US|Global|center|0|general|health,science|Medical research news.
+psypost|PsyPost|psypost.org|US|Global|center|0|student|health,science,culture|Psychology research news.
+yalee360|Yale Environment 360|e360.yale.edu|US|Global|center|0|student|climate,science,politics|Environmental journalism and analysis.
+mongabay|Mongabay|mongabay.com|US|Global|center|0|student|climate,science,world|Environmental and conservation news.
+reliefweb|ReliefWeb|reliefweb.int|INT|Global|center|0|student|world,politics,health,climate|Humanitarian crises and response updates.
+ipsnews|Inter Press Service|ipsnews.net|IT|Global|center|0|student|world,politics,climate,business|News from the Global South.
+codastory|Coda Story|codastory.com|US|Global|center|0|student|world,tech,politics|Investigations into global information wars.
+jacobin|Jacobin|jacobin.com|US|Global|left|0|general|politics,opinion,culture|Socialist politics and ideas.
+truthout|Truthout|truthout.org|US|Global|left|0|general|politics,opinion,world|Independent news and commentary.
+semafor|Semafor|semafor.com|US|Global|center|0|general|world,politics,business,tech|Global news with multiple viewpoints.
+mitsloan|MIT Sloan Management Review|sloanreview.mit.edu|US|Global|center|0|student|business,tech,opinion|Management research for leaders.
+positive|Positive News|positive.news|GB|Global|center|0|general|world,culture,climate,health|Solutions-focused journalism.
+bigissue|The Big Issue|bigissue.com|GB|United Kingdom|center-left|0|general|politics,culture,money|UK social affairs and culture.
+europeanpress|European Press Prize|europeanpressprize.com|NL|Europe|center|0|student|culture,politics|European investigative and public-interest journalism.
+notesfrompoland|Notes from Poland|notesfrompoland.com|PL|Europe|center|0|general|world,politics,culture|Polish news and analysis in English.
+kafkadesk|Kafkadesk|kafkadesk.org|CZ|Europe|center|0|general|world,politics,culture|Central European news and analysis.
+brusselssignal|The Brussels Signal|brusselssignal.eu|BE|Europe|center-right|0|general|politics,business,culture|European politics and culture.
+thediplomat|The Diplomat|thediplomat.com|US|East Asia|center|0|general|world,politics,business|Asia-Pacific politics and analysis.
+newnaratif|New Naratif|newnaratif.com|SG|Southeast Asia|left|0|student|world,politics,culture|Southeast Asian journalism and democracy.
+ecobusiness|Eco-Business|eco-business.com|SG|Global|center|0|student|climate,business,tech|Sustainability news across Asia.
+business-standard|Business Standard|business-standard.com|IN|South Asia|center|0|general|business,politics|Indian business news.
+png|Post-Courier|postcourier.com.pg|PG|Oceania|center|0|general|world,politics,culture|Papua New Guinea news.
+islandsbusiness|Islands Business|islandsbusiness.com|FJ|Oceania|center|0|general|world,business,climate|Pacific business and climate news.
+federalreserve|Federal Reserve|federalreserve.gov|US|United States|center|0|student|business,us,money|US central bank press releases.
+rand|RAND Corporation|rand.org|US|Global|center|0|student|politics,world,health,tech|Policy research and analysis.
+pienews|The PIE News|thepienews.com|GB|Global|center|0|student|education,business,world|International education news.
+facultyfocus|Faculty Focus|facultyfocus.com|US|Global|center|0|student|education|Teaching practice in higher education.
+edsource|EdSource|edsource.org|US|United States|center|0|student|education,us|California education reporting.
+ccdaily|Community College Daily|ccdaily.com|US|United States|center|0|student|education,us|Community college news.
+cfodive|CFO Dive|cfodive.com|US|Global|center|0|general|business,money|Corporate finance news.
+bankingdive|Banking Dive|bankingdive.com|US|Global|center|0|general|business,money|Banking industry news.
+hrdive|HR Dive|hrdive.com|US|Global|center|0|general|business,money,education|Workplace and HR news.
+retaildive|Retail Dive|retaildive.com|US|Global|center|0|general|business,money|Retail industry news.
+marketingdive|Marketing Dive|marketingdive.com|US|Global|center|0|general|business,culture|Marketing and advertising news.
+utilitydive|Utility Dive|utilitydive.com|US|Global|center|0|general|business,climate|Energy utility news.
+biopharmadive|BioPharma Dive|biopharmadive.com|US|Global|center|0|general|health,business|Biotech and pharmaceutical news.
+supplychaindive|Supply Chain Dive|supplychaindive.com|US|Global|center|0|general|business,world|Logistics and supply chain news.
+ciodive|CIO Dive|ciodive.com|US|Global|center|0|general|tech,business|Enterprise IT leadership news.
+siliconangle|SiliconANGLE|siliconangle.com|US|Global|center|0|general|tech,business|Enterprise tech and cloud news.
+computerworld|Computerworld|computerworld.com|US|Global|center|0|general|tech,business|Enterprise IT news.
+lightreading|Light Reading|lightreading.com|US|Global|center|0|general|tech,business|Telecom and networking news.
+fiercenetwork|Fierce Network|fierce-network.com|US|Global|center|0|general|tech,business|Telecom and enterprise network news.
+dezeen|Dezeen|dezeen.com|GB|Global|center|0|general|culture,tech|Architecture and design.
+designboom|designboom|designboom.com|IT|Global|center|0|general|culture,tech|Design, architecture and art.
+creativeboom|Creative Boom|creativeboom.com|GB|Global|center|0|general|culture|Creative industry news.
+colossal|Colossal|thisiscolossal.com|US|Global|center|0|general|culture|Art and visual culture.
+artsy|Artsy|artsy.net|US|Global|center|0|general|culture|Art news and market coverage.
+architecturaldigest|Architectural Digest|architecturaldigest.com|US|Global|center|0|general|culture|Architecture and interior design.
+paste|Paste|pastemagazine.com|US|Global|center|0|general|music,entertainment,culture|Music, film and culture.
+purexbox|Pure Xbox|purexbox.com|GB|Global|center|0|teen|gaming|Xbox news and reviews.
+siliconera|Siliconera|siliconera.com|US|Global|center|0|teen|gaming,culture|Japanese games and culture.
+gematsu|Gematsu|gematsu.com|US|Global|center|0|teen|gaming|Japanese game news.
+automaton|Automaton|automaton-media.com|JP|East Asia|center|0|teen|gaming,culture|Japanese games news in English.
+fodors|Fodor's Travel|fodors.com|US|Global|center|0|general|travel,culture|Travel guides and news.
+matador|Matador Network|matadornetwork.com|US|Global|center|0|general|travel,culture|Travel stories and guides.
+sportico|Sportico|sportico.com|US|Global|center|0|general|sports,business|Sports business and valuation.
+frontofficesports|Front Office Sports|frontofficesports.com|US|Global|center|0|general|sports,business|Sports business news.
+voiceofsandiego|Voice of San Diego|voiceofsandiego.org|US|United States|center|0|general|us,politics|San Diego investigative news.
+civilbeat|Honolulu Civil Beat|civilbeat.org|US|United States|center|0|general|us,politics,climate|Hawaii investigative journalism.
+blockclub|Block Club Chicago|blockclubchicago.org|US|United States|center|0|general|us,culture|Chicago neighbourhood news.
+publicintegrity|Center for Public Integrity|publicintegrity.org|US|Global|center|0|student|us,politics,business,climate|Investigative journalism on inequality.
+reveal|Reveal|revealnews.org|US|Global|center|0|student|us,politics,business,climate|Investigative reporting from the Center for Investigative Reporting.
+documentedny|Documented NY|documentedny.com|US|United States|center|0|general|us,politics,culture|Immigration news in New York.
+coloradonewsline|Colorado Newsline|coloradonewsline.com|US|United States|center|0|general|us,politics,climate,education|Colorado policy and accountability news.
+floridaphoenix|Florida Phoenix|floridaphoenix.com|US|United States|center|0|general|us,politics,climate,education|Florida policy and accountability news.
+iowacapitaldispatch|Iowa Capital Dispatch|iowacapitaldispatch.com|US|United States|center|0|general|us,politics,climate,education|Iowa policy and accountability news.
+michiganadvance|Michigan Advance|michiganadvance.com|US|United States|center|0|general|us,politics,climate,education|Michigan policy and accountability news.
+minnesotareformer|Minnesota Reformer|minnesotareformer.com|US|United States|center|0|general|us,politics,climate,education|Minnesota policy and accountability news.
+nevadacurrent|Nevada Current|nevadacurrent.com|US|United States|center|0|general|us,politics,climate,education|Nevada policy and accountability news.
+ohiocapitaljournal|Ohio Capital Journal|ohiocapitaljournal.com|US|United States|center|0|general|us,politics,climate,education|Ohio policy and accountability news.
+wisconsinexaminer|Wisconsin Examiner|wisconsinexaminer.com|US|United States|center|0|general|us,politics,climate,education|Wisconsin policy and accountability news.
+virginiamercury|Virginia Mercury|virginiamercury.com|US|United States|center|0|general|us,politics,climate,education|Virginia policy and accountability news.
+georgiarecorder|Georgia Recorder|georgiarecorder.com|US|United States|center|0|general|us,politics,climate,education|Georgia policy and accountability news.
+tennesseelookout|Tennessee Lookout|tennesseelookout.com|US|United States|center|0|general|us,politics,climate,education|Tennessee policy and accountability news.
+kansasreflector|Kansas Reflector|kansasreflector.com|US|United States|center|0|general|us,politics,climate,education|Kansas policy and accountability news.
+arkansasadvocate|Arkansas Advocate|arkansasadvocate.com|US|United States|center|0|general|us,politics,climate,education|Arkansas policy and accountability news.
+mainemorningstar|Maine Morning Star|mainemorningstar.com|US|United States|center|0|general|us,politics,climate,education|Maine policy and accountability news.
+missouriindependent|The Missouri Independent|missouriindependent.com|US|United States|center|0|general|us,politics,climate,education|Missouri policy and accountability news.
+alaskabeacon|Alaska Beacon|alaskabeacon.com|US|United States|center|0|general|us,politics,climate,education|Alaska policy and accountability news.
+indianacapitalchronicle|Indiana Capital Chronicle|indianacapitalchronicle.com|US|United States|center|0|general|us,politics,climate,education|Indiana policy and accountability news.
+kentuckylantern|Kentucky Lantern|kentuckylantern.com|US|United States|center|0|general|us,politics,climate,education|Kentucky policy and accountability news.
+marylandmatters|Maryland Matters|marylandmatters.org|US|United States|center|0|general|us,politics,climate,education|Maryland policy and accountability news.
+mlb|MLB|mlb.com|US|Global|center|0|teen|sports|Official baseball news.
+aei|American Enterprise Institute|aei.org|US|Global|center-right|0|student|politics,business,world,education|Conservative policy research.
+epi|Economic Policy Institute|epi.org|US|United States|center-left|0|student|business,money,politics|Economic research on workers and inequality.
+hrw|Human Rights Watch|hrw.org|US|Global|center|0|general|world,politics,opinion|Human rights investigations and news.
+amnesty|Amnesty International|amnesty.org|GB|Global|center|0|general|world,politics,opinion|Human rights news and campaigns.
+crisisgroup|International Crisis Group|crisisgroup.org|BE|Global|center|0|student|world,politics|Conflict analysis and prevention.
+atlanticcouncil|Atlantic Council|atlanticcouncil.org|US|Global|center|0|student|world,politics,business,tech|International affairs analysis.
+stimson|Stimson Center|stimson.org|US|Global|center|0|student|world,politics,tech,climate|Security and international policy research.
+gpfans|GPFans|gpfans.com|GB|Global|center|0|general|motorsport,sports|Formula 1 news and fan-focused analysis.
+racingnews365|RacingNews365|racingnews365.com|NL|Europe|center|0|general|motorsport,sports|Formula 1 news, interviews and technical analysis.
+totalmotorsport|Total Motorsport|total-motorsport.com|GB|Global|center|0|general|motorsport,sports|Formula 1 and motorsport news.
+pitpass|Pitpass|pitpass.com|GB|Global|center|0|general|motorsport,sports|Independent Formula 1 news and comment.
 """
 
 # ---------------------------------------------------------------------------
@@ -980,6 +1115,143 @@ yt-bloomberg|business|https://www.youtube.com/feeds/videos.xml?channel_id=UCIALM
 yt-verge|tech|https://www.youtube.com/feeds/videos.xml?channel_id=UCddiUEpeqJcYeBxX1IVBKvQ
 yt-wired|tech|https://www.youtube.com/feeds/videos.xml?channel_id=UCftwRNsjfRo08xYE31tkiyw
 yt-vox|world|https://www.youtube.com/feeds/videos.xml?channel_id=UC3XTzVzaHQEd30rQbuvCtTQ
+crash-f1|motorsport|https://www.crash.net/rss/f1
+f1oversteer|motorsport|https://www.f1oversteer.com/feed/
+f1chronicle|motorsport|https://f1chronicle.com/feed/
+f1i|motorsport|https://f1i.com/feed
+f1technical|motorsport|https://www.f1technical.net/rss/news
+formula1news|motorsport|https://formula1news.co.uk/feed/
+time|world|https://time.com/feed/
+marshallproject|us|https://www.themarshallproject.org/rss/recent
+healthline|health|https://www.healthline.com/rss/health-news
+theatlantic|politics|https://www.theatlantic.com/feed/all/
+newyorker|culture|https://www.newyorker.com/feed/everything
+harpers|culture|https://harpers.org/feed/
+projectsyndicate|opinion|https://www.project-syndicate.org/rss
+defector|sports|https://defector.com/feed
+ninety-min|sports|https://www.90min.com/posts.rss
+channel4news|world|https://www.channel4.com/news/feed
+unherd|politics|https://unherd.com/feed/
+bylinetimes|politics|https://bylinetimes.com/feed/
+rfi|world|https://www.rfi.fr/en/rss
+dn|world|https://www.dn.se/rss/
+nrk|world|https://www.nrk.no/toppsaker.rss
+dr|world|https://www.dr.dk/nyheder/service/feeds/allenyheder
+standardmedia|world|https://www.standardmedia.co.ke/rss/headlines.php
+g1|world|https://g1.globo.com/rss/g1/
+eltiempo|world|https://www.eltiempo.com/rss/colombia.xml
+stuff|world|https://www.stuff.co.nz/rss
+f1-fansite|motorsport|https://www.f1-fansite.com/feed/
+racecar-engineering|motorsport|https://www.racecar-engineering.com/feed/
+fia|motorsport|https://www.fia.com/rss/news
+digitaltrends|tech|https://www.digitaltrends.com/feed/
+androidpolice|tech|https://www.androidpolice.com/feed/
+xda|tech|https://www.xda-developers.com/feed/
+imore|tech|https://www.imore.com/feed
+techradar|tech|https://www.techradar.com/rss
+gsmarena|tech|https://www.gsmarena.com/rss-news-reviews.php3
+neowin|tech|https://www.neowin.net/news/rss/
+slashdot|tech|https://rss.slashdot.org/Slashdot/slashdotMain
+knowable|science|https://www.knowablemagazine.org/rss
+astronomy|space|https://www.astronomy.com/feed/
+skyandtelescope|space|https://skyandtelescope.org/feed/
+earthsky|space|https://earthsky.org/feed/
+medicalxpress|health|https://medicalxpress.com/rss-feed/
+psypost|health|https://www.psypost.org/feed/
+yalee360|climate|https://e360.yale.edu/feed.xml
+mongabay|climate|https://news.mongabay.com/feed/
+reliefweb|world|https://reliefweb.int/updates/rss.xml
+ipsnews|world|https://www.ipsnews.net/feed/
+codastory|world|https://www.codastory.com/feed/
+jacobin|politics|https://jacobin.com/feed
+truthout|politics|https://truthout.org/feed/
+semafor|world|https://www.semafor.com/rss.xml
+mitsloan|business|https://sloanreview.mit.edu/feed/
+positive|world|https://www.positive.news/feed/
+bigissue|politics|https://www.bigissue.com/feed/
+europeanpress|culture|https://www.europeanpressprize.com/feed/
+notesfrompoland|world|https://notesfrompoland.com/feed/
+kafkadesk|world|https://kafkadesk.org/feed/
+brusselssignal|politics|https://brusselssignal.eu/feed/
+thediplomat|world|https://thediplomat.com/feed/
+newnaratif|world|https://newnaratif.com/feed/
+ecobusiness|climate|https://www.eco-business.com/feeds/news/
+business-standard|business|https://www.business-standard.com/rss/home_page_top_stories.rss
+png|world|https://www.postcourier.com.pg/feed/
+islandsbusiness|world|https://islandsbusiness.com/feed/
+federalreserve|business|https://www.federalreserve.gov/feeds/press_all.xml
+rand|politics|https://www.rand.org/pubs/articles.xml
+pienews|education|https://thepienews.com/feed/
+facultyfocus|education|https://www.facultyfocus.com/feed/
+edsource|education|https://edsource.org/feed
+ccdaily|education|https://www.ccdaily.com/feed/
+cfodive|business|https://www.cfodive.com/feeds/news/
+bankingdive|business|https://www.bankingdive.com/feeds/news/
+hrdive|business|https://www.hrdive.com/feeds/news/
+retaildive|business|https://www.retaildive.com/feeds/news/
+marketingdive|business|https://www.marketingdive.com/feeds/news/
+utilitydive|business|https://www.utilitydive.com/feeds/news/
+biopharmadive|health|https://www.biopharmadive.com/feeds/news/
+supplychaindive|business|https://www.supplychaindive.com/feeds/news/
+ciodive|tech|https://www.ciodive.com/feeds/news/
+siliconangle|tech|https://siliconangle.com/feed/
+computerworld|tech|https://www.computerworld.com/index.rss
+lightreading|tech|https://www.lightreading.com/rss.xml
+fiercenetwork|tech|https://www.fierce-network.com/rss/xml
+dezeen|culture|https://www.dezeen.com/feed/
+designboom|culture|https://www.designboom.com/feed/
+creativeboom|culture|https://www.creativeboom.com/feed/
+colossal|culture|https://www.thisiscolossal.com/feed/
+artsy|culture|https://www.artsy.net/rss/news
+architecturaldigest|culture|https://www.architecturaldigest.com/feed/rss
+paste|music|https://www.pastemagazine.com/feed
+purexbox|gaming|https://www.purexbox.com/feeds/latest
+siliconera|gaming|https://www.siliconera.com/feed/
+gematsu|gaming|https://www.gematsu.com/feed
+automaton|gaming|https://automaton-media.com/en/feed/
+fodors|travel|https://www.fodors.com/feed
+matador|travel|https://matadornetwork.com/feed/
+sportico|sports|https://www.sportico.com/feed/
+frontofficesports|sports|https://frontofficesports.com/feed/
+voiceofsandiego|us|https://voiceofsandiego.org/feed/
+civilbeat|us|https://www.civilbeat.org/feed/
+blockclub|us|https://blockclubchicago.org/feed/
+publicintegrity|us|https://publicintegrity.org/feed/
+reveal|us|https://revealnews.org/feed/
+documentedny|us|https://documentedny.com/feed/
+coloradonewsline|us|https://coloradonewsline.com/feed/
+floridaphoenix|us|https://floridaphoenix.com/feed/
+iowacapitaldispatch|us|https://iowacapitaldispatch.com/feed/
+michiganadvance|us|https://michiganadvance.com/feed/
+minnesotareformer|us|https://minnesotareformer.com/feed/
+nevadacurrent|us|https://nevadacurrent.com/feed/
+ohiocapitaljournal|us|https://ohiocapitaljournal.com/feed/
+wisconsinexaminer|us|https://wisconsinexaminer.com/feed/
+virginiamercury|us|https://virginiamercury.com/feed/
+georgiarecorder|us|https://georgiarecorder.com/feed/
+tennesseelookout|us|https://tennesseelookout.com/feed/
+kansasreflector|us|https://kansasreflector.com/feed/
+arkansasadvocate|us|https://arkansasadvocate.com/feed/
+mainemorningstar|us|https://mainemorningstar.com/feed/
+missouriindependent|us|https://missouriindependent.com/feed/
+alaskabeacon|us|https://alaskabeacon.com/feed/
+indianacapitalchronicle|us|https://indianacapitalchronicle.com/feed/
+kentuckylantern|us|https://kentuckylantern.com/feed/
+marylandmatters|us|https://marylandmatters.org/feed/
+mlb|sports|https://www.mlb.com/feeds/news/rss.xml
+aei|politics|https://www.aei.org/feed/
+epi|business|https://www.epi.org/feed/
+hrw|world|https://www.hrw.org/rss/news
+amnesty|world|https://www.amnesty.org/en/latest/feed/
+crisisgroup|world|https://www.crisisgroup.org/rss
+atlanticcouncil|world|https://www.atlanticcouncil.org/feed/
+stimson|world|https://www.stimson.org/feed/
+gpfans|motorsport|https://www.gpfans.com/en/rss/
+racingnews365|motorsport|https://racingnews365.com/rss
+totalmotorsport|motorsport|https://www.total-motorsport.com/feed/
+pitpass|motorsport|https://www.pitpass.com/feed
+bbc|motorsport|https://feeds.bbci.co.uk/sport/formula1/rss.xml
+guardian|motorsport|https://www.theguardian.com/sport/formulaone/rss
 """
 
 

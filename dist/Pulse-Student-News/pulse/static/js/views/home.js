@@ -221,7 +221,7 @@ export async function homeView(root, ctx) {
         ${followedTopics().filter((slug) => !kidHidden?.has(slug)).slice(0, 5).map((slug) => html`
           <a class="chip" href="/topic/${slug}" data-link>${topicLabel(slug)}</a>`)}
         ${followedTopics().includes('motorsport') ? '' : html`
-          <a class="chip" href="/topic/motorsport" data-link>F1 &amp; motorsport</a>`}
+          <a class="chip" href="/topic/motorsport" data-link>Formula 1</a>`}
         <a class="chip" href="/discover" data-link>${raw(icons.compass)} All sections</a>
       </div>
       <div class="hstack" style="gap:.3rem">

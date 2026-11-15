@@ -446,8 +446,8 @@ async function loadMotorsportNews(root) {
     const block = document.createElement('div');
     block.className = 'section';
     block.innerHTML = html`
-      <div class="section-head"><h2>Formula 1 & motorsport</h2>
-        <a href="/topic/motorsport" data-link>All motorsport ${raw(icons.chevron)}</a></div>
+      <div class="section-head"><h2>Formula 1</h2>
+        <a href="/topic/motorsport" data-link>All F1 ${raw(icons.chevron)}</a></div>
       <div class="topic-grid">
         ${data.items.slice(0, 3).map((item) => html`
           <a class="card" href="/article/${item.id}" data-link style="display:block;overflow:hidden">

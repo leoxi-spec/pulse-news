@@ -12,7 +12,7 @@ import re
 from datetime import timedelta
 from urllib.parse import quote
 
-from . import htmltext, rank, stories, translate
+from . import htmltext, rank, stories, topics, translate
 from .config import APP_VERSION
 from .db import db
 from .sources import TOPICS, TOPIC_ICONS, TOPIC_LABELS, get_source
@@ -68,7 +68,10 @@ def load_candidates(
         sql += " AND (a.content_state = 'extracted' OR a.word_count >= 240)"
     sql += " ORDER BY COALESCE(a.published_at, a.first_seen_at) DESC LIMIT ?"
     params.append(limit)
-    return db.query(sql, params)
+    rows = db.query(sql, params)
+    if topic == "motorsport":
+        rows = [row for row in rows if topics.is_f1(row["title"], row["summary"] or "")]
+    return rows
 
 
 def collapse_stories(rows: list, *, keep: int = 1) -> list:
@@ -439,6 +442,8 @@ def video_feed(
         """,
         tuple(params + [limit, offset]),
     )
+    if topic == "motorsport":
+        rows = [row for row in rows if topics.is_f1(row["title"], row["summary"] or "")]
     age = int((profile.get("survey") or {}).get("age") or 13)
     if age <= 8:
         allowed = {"science", "space", "culture", "sports", "motorsport", "tech", "health", "education"}
