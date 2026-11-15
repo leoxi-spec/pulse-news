@@ -320,7 +320,9 @@ def draw(size: int, style: dict | None = None, *, padding: float = 0.0, transpar
     radius = int((tile[2] - tile[0]) * 0.23)
     bars = [0.38, 0.65, 0.95, 0.78, 0.50]
 
-    fit = 0.82
+    # Leave a generous tile border around the waveform. 0.72 of the old
+    # 0.82 mark keeps the same shape but gives the icon more breathing room.
+    fit = 0.72
     bar_w = max(2, round(size * 0.160 * fit))
     gap = max(1, round(size * 0.042 * fit))
     total_w = len(bars) * bar_w + (len(bars) - 1) * gap
@@ -331,7 +333,7 @@ def draw(size: int, style: dict | None = None, *, padding: float = 0.0, transpar
     tallest_top = baseline - int(max_bar * 0.95)
     motif_cx = left + 2 * (bar_w + gap) + bar_w / 2
     motif_cy = tallest_top - max(3, int(size * 0.035))
-    motif_r = max(5, int(size * 0.058))
+    motif_r = max(5, int(size * 0.058 * (fit / 0.82)))
     ornament_r = max(2, int(size * 0.014))
     ornaments = [
         (left + (bar_w + gap) + bar_w / 2, baseline - int(max_bar * 0.65 * 0.52), rgb(config["motif_color"])),
@@ -405,6 +407,21 @@ def write_style(directory: Path, style: dict) -> None:
 
 
 def normal_svg() -> str:
+    size = 64
+    fit = 0.72
+    bars = [0.38, 0.65, 0.95, 0.78, 0.50]
+    bar_w = max(2, round(size * 0.160 * fit))
+    gap = max(1, round(size * 0.042 * fit))
+    total_w = len(bars) * bar_w + (len(bars) - 1) * gap
+    left = (size - total_w) // 2
+    max_bar = int(size * 0.9600 * fit)
+    baseline = int(size * (0.5 + (0.9600 * fit * 0.95) / 2))
+    rects = []
+    for index, height in enumerate(bars):
+        bx = left + index * (bar_w + gap)
+        bh = int(max_bar * height)
+        by = baseline - bh
+        rects.append(f'    <rect x="{bx}" y="{by}" width="{bar_w}" height="{bh}" rx="{bar_w / 2}"/>')
     return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pulse">
   <defs>
     <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="1">
@@ -414,14 +431,10 @@ def normal_svg() -> str:
   </defs>
   <rect width="64" height="64" rx="15" fill="url(#pulse)"/>
   <g fill="#ffffff">
-    <rect x="6.583" y="36.75" width="8.375" height="19.125" rx="4.1875"/>
-    <rect x="17.208" y="23.25" width="8.375" height="32.625" rx="4.1875"/>
-    <rect x="27.833" y="8.125" width="8.375" height="47.75" rx="4.1875"/>
-    <rect x="38.458" y="16.625" width="8.375" height="39.25" rx="4.1875"/>
-    <rect x="49.083" y="30.75" width="8.375" height="25.125" rx="4.1875"/>
+%s
   </g>
 </svg>
-"""
+""" % "\n".join(rects)
 
 
 def main() -> None:
@@ -429,14 +442,14 @@ def main() -> None:
     for size in (192, 512):
         pixels = draw(size, NORMAL)
         write_png(OUT / f"icon-{size}.png", size, pixels, size, size)
-        write_png(OUT / f"icon-{size}-v24.png", size, pixels, size, size)
+        write_png(OUT / f"icon-{size}-v25.png", size, pixels, size, size)
     write_png(OUT / "icon-maskable.png", 512, draw(512, NORMAL), 512, 512)
-    write_png(OUT / "icon-maskable-v24.png", 512, draw(512, NORMAL), 512, 512)
+    write_png(OUT / "icon-maskable-v25.png", 512, draw(512, NORMAL), 512, 512)
     write_png(OUT / "apple-touch-icon.png", 180, draw(180, NORMAL), 180, 180)
-    write_png(OUT / "apple-touch-icon-v24.png", 180, draw(180, NORMAL), 180, 180)
+    write_png(OUT / "apple-touch-icon-v25.png", 180, draw(180, NORMAL), 180, 180)
     svg = normal_svg()
     (OUT / "icon.svg").write_text(svg, encoding="utf-8")
-    (OUT / "icon-v24.svg").write_text(svg, encoding="utf-8")
+    (OUT / "icon-v25.svg").write_text(svg, encoding="utf-8")
 
     for season in SEASONS:
         write_style(SEASON_OUT / season["id"], season)

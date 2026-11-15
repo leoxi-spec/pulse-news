@@ -7,10 +7,10 @@
   </defs>
   <rect width="64" height="64" rx="15" fill="url(#pulse)"/>
   <g fill="#ffffff">
-    <rect x="6.583" y="36.75" width="8.375" height="19.125" rx="4.1875"/>
-    <rect x="17.208" y="23.25" width="8.375" height="32.625" rx="4.1875"/>
-    <rect x="27.833" y="8.125" width="8.375" height="47.75" rx="4.1875"/>
-    <rect x="38.458" y="16.625" width="8.375" height="39.25" rx="4.1875"/>
-    <rect x="49.083" y="30.75" width="8.375" height="25.125" rx="4.1875"/>
+    <rect x="10" y="37" width="7" height="16" rx="3.5"/>
+    <rect x="19" y="25" width="7" height="28" rx="3.5"/>
+    <rect x="28" y="12" width="7" height="41" rx="3.5"/>
+    <rect x="37" y="19" width="7" height="34" rx="3.5"/>
+    <rect x="46" y="31" width="7" height="22" rx="3.5"/>
   </g>
 </svg>

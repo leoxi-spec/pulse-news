@@ -446,10 +446,10 @@ def _public(item: Occurrence, today: date) -> dict:
 def icon_paths(ident: str) -> tuple[str, str, str, str]:
     if ident == NORMAL_ID:
         return (
-            "/icons/icon-192-v24.png",
-            "/icons/icon-512-v24.png",
-            "/icons/icon-maskable-v24.png",
-            "/icons/apple-touch-icon-v24.png",
+            "/icons/icon-192-v25.png",
+            "/icons/icon-512-v25.png",
+            "/icons/icon-maskable-v25.png",
+            "/icons/apple-touch-icon-v25.png",
         )
     base = f"/icons/seasons/{ident}"
     return (f"{base}/icon-192.png", f"{base}/icon-512.png", f"{base}/icon-maskable.png", f"{base}/apple-touch-icon.png")
@@ -546,7 +546,7 @@ def manifest(today: date | None = None) -> dict:
             {"src": icons[0], "sizes": "192x192", "type": "image/png", "purpose": "any"},
             {"src": icons[1], "sizes": "512x512", "type": "image/png", "purpose": "any"},
             {"src": icons[2], "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
-            *(([{"src": "/icons/icon-v24.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+            *(([{"src": "/icons/icon-v25.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
                if active["id"] == NORMAL_ID else [])),
         ],
         "shortcuts": [
