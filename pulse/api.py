@@ -211,7 +211,8 @@ def handle(request: Request) -> tuple[int, dict, dict]:
             offset = request.int_param("offset", 0, minimum=0, maximum=5000)
             limit = request.int_param("limit", 24, minimum=1, maximum=60)
             days = request.int_param("days", 3, minimum=1, maximum=365)
-            payload = feed.feed_page(profile, mode=mode, topic=topic, source=source, offset=offset, limit=limit, days=days)
+            seed = (request.query.get("seed") or "").strip()[:64] or None
+            payload = feed.feed_page(profile, mode=mode, topic=topic, source=source, offset=offset, limit=limit, days=days, seed=seed)
             return 200, payload, {}
         if path == "/api/weather" and method == "GET":
             return 200, weather.current(), {}

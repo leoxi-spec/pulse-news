@@ -8,6 +8,15 @@ import { open as openPalette, mountHomeSearch } from '../palette.js';
 import { dailySection, bindDaily, loadDaily } from '../daily.js';
 import { mountWeather, weatherWidget } from '../weather.js';
 
+// A fresh seed is created once per app load. Refreshing or reopening the app
+// gets a new top-of-page mix, while navigating inside the app keeps the same
+// front page. Nothing here polls or reshuffles on a timer.
+let feedSeed = newFeedSeed();
+
+function newFeedSeed() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 const DEFAULT_SECTIONS = [
   'brief', 'daily', 'top', 'shorts', 'watch', 'for-you', 'picks', 'my-sports',
   'topic:tech', 'topic:world', 'topic:motorsport', 'longreads',
@@ -140,26 +149,31 @@ function todayLine() {
   return `${compactNumber(archive)} stories archived · ${healthy}/${feeds} feeds live`;
 }
 
-function feedUrl(mode, offset, limit = 20) {
-  const params = new URLSearchParams({ mode, offset: String(offset), limit: String(limit) });
+function feedUrl(mode, offset, limit = 20, extra = {}) {
+  const params = new URLSearchParams({
+    mode, offset: String(offset), limit: String(limit), seed: feedSeed,
+  });
   if (mode === 'longreads') params.set('days', '45');
+  for (const [key, value] of Object.entries(extra)) {
+    if (value !== undefined && value !== null) params.set(key, String(value));
+  }
   return `/api/feed?${params}`;
 }
 
 async function loadSection(id, timeoutMs = 3000) {
   const task = (async () => {
     if (id === 'brief') return get(`/api/brief?size=${briefSize()}`, 60, true);
-    if (id === 'shorts') return get('/api/feed?mode=top&limit=6&days=2', 45);
+    if (id === 'shorts') return get(feedUrl('top', 0, 6, { days: 2 }), 45);
     if (id === 'watch') return get('/api/videos?limit=6', 45);
     if (id === 'daily') return loadDaily();
-    if (id === 'top') return get('/api/feed?mode=top&limit=3&days=2', 45);
+    if (id === 'top') return get(feedUrl('top', 0, 6, { days: 2 }), 45);
     if (id === 'picks') return get('/api/discover', 120);
     if (id === 'for-you') return get(feedUrl('for-you', 0), 20);
     if (id === 'sports' || id === 'my-sports') return get('/api/sports', 25);
-    if (id === 'longreads') return get('/api/feed?mode=longreads&limit=8&days=45', 120);
+    if (id === 'longreads') return get(feedUrl('longreads', 0, 8, { days: 45 }), 120);
     if (id === 'saved') return get('/api/saved', 0, true);
     if (id === 'research') return {};
-    if (id.startsWith('topic:')) return get(`/api/feed?topic=${encodeURIComponent(id.slice(6))}&mode=top&limit=8&days=14`, 60);
+    if (id.startsWith('topic:')) return get(feedUrl('top', 0, 8, { topic: id.slice(6), days: 14 }), 60);
     return {};
   })();
   if (!timeoutMs) return task;
@@ -595,6 +609,7 @@ function bindRefresh(root, sections) {
     button.classList.add('spin');
     try {
       await post('/api/ingest/refresh', {});
+      feedSeed = newFeedSeed();
       toast('Refreshing feeds…');
       for (let i = 0; i < 30; i += 1) {
         await new Promise((resolve) => setTimeout(resolve, 2000));

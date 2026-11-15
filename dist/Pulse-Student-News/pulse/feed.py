@@ -7,6 +7,7 @@ client consumes, including the date labels that keep "published" and
 from __future__ import annotations
 
 import json
+import random
 import re
 from datetime import timedelta
 from urllib.parse import quote
@@ -281,6 +282,20 @@ def proxied_image(url: str | None) -> str | None:
     return "/api/img?u=" + quote(url, safe="")
 
 
+def _seeded_head(ranked: list, seed: str | None, pool_size: int) -> list:
+    """Shuffle only the leading quality pool, not the whole archive.
+
+    A new app load gets a new seed, so the top of the front page changes while
+    still drawing from the highest-heat stories. The rest of the ranking stays
+    stable, which keeps "Load more" coherent.
+    """
+    if not seed or pool_size < 2 or len(ranked) < 2:
+        return ranked
+    pool = list(ranked[: min(pool_size, len(ranked))])
+    random.Random(str(seed)).shuffle(pool)
+    return pool + list(ranked[len(pool):])
+
+
 def feed_page(
     profile: dict,
     *,
@@ -290,6 +305,7 @@ def feed_page(
     offset: int = 0,
     limit: int = 24,
     days: int = 3,
+    seed: str | None = None,
 ) -> dict:
     profile_id = profile["id"]
     model = rank.build_model(profile_id, profile["survey"], profile["prefs"])
@@ -339,6 +355,12 @@ def feed_page(
                 seen_story.add(story_id)
             deduped.append((row, value, reasons))
         ranked = deduped
+
+    if seed:
+        if mode == "top":
+            ranked = _seeded_head(ranked, seed, 10 if topic else 16)
+        elif mode == "for-you":
+            ranked = _seeded_head(ranked, seed, 8)
 
     total = len(ranked)
     window = ranked[offset : offset + limit]
