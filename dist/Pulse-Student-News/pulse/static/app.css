@@ -3803,3 +3803,33 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
 @media (max-width: 380px) {
   .app-history__btn { width: 30px; height: 30px; }
 }
+
+/* Christmas edition mark: the same Pulse waveform, dressed as a tiny tree. */
+.brand__pulse { position: relative; }
+.brand__pulse span {
+  background: linear-gradient(180deg, #fbfff9 0%, #c9f8dd 38%, #39c47a 100%);
+}
+.brand__pulse span:nth-child(2), .brand__pulse span:nth-child(4) {
+  background: linear-gradient(180deg, #fff8f8 0%, #ffd0d6 38%, #f34e5b 100%);
+}
+.brand__pulse::before {
+  content: ""; position: absolute; z-index: 2; left: 88%; top: -.24rem;
+  width: .5rem; height: .5rem; transform: translateX(-50%);
+  background: #f7c948;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  filter: drop-shadow(0 0 4px rgba(247, 201, 72, .65));
+  pointer-events: none;
+}
+.boot__mark { position: relative; padding-top: .75rem; }
+.boot__mark::before {
+  content: ""; position: absolute; top: 0; left: 50%; width: 13px; height: 13px;
+  transform: translateX(-50%); background: #f7c948;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  filter: drop-shadow(0 0 5px rgba(247, 201, 72, .7));
+}
+.boot__mark span {
+  background: linear-gradient(180deg, #fbfff9 0%, #bdf6d5 45%, #39c47a 100%);
+}
+.boot__mark span:nth-child(2), .boot__mark span:nth-child(4) {
+  background: linear-gradient(180deg, #fff8f8 0%, #ffd0d6 45%, #f34e5b 100%);
+}
