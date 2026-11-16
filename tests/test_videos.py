@@ -115,5 +115,99 @@ class VideoStoreTests(unittest.TestCase):
         self.assertEqual(card["source"]["id"], "yt-bbc")
 
 
+class VideoPagingTests(unittest.TestCase):
+    """A filtered video page must not be empty while ``total`` counts rows.
+
+    The Formula 1 lane and the formality checks are Python predicates. When
+    they ran after ``LIMIT``, a first page of "motorsport" videos with no F1
+    clip in it came back with zero items and ``total: 25``, so the grid showed
+    "No video here yet" and "Load more" looped on nothing.
+    """
+
+    def setUp(self):
+        db.execute("DELETE FROM articles")
+        db.execute("DELETE FROM stories")
+
+    def _add(self, index: int, title: str, *, topic: str = "motorsport", kind: str = "youtube"):
+        guid = f"yp:{index:03d}"
+        video_id = f"vid{index:08d}"
+        db.execute(
+            """
+            INSERT INTO articles(guid, source_id, url, title, summary, published_at,
+                                 first_seen_at, last_seen_at, primary_topic, topics,
+                                 content_state, video_kind, video_id, video_url)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                guid, "yt-bbc", f"https://www.youtube.com/watch?v={video_id}", title,
+                "A clip from the race weekend.",
+                f"2026-11-{index % 20 + 1:02d}T10:00:00+00:00",
+                f"2026-11-{index % 20 + 1:02d}T10:00:00+00:00",
+                f"2026-11-{index % 20 + 1:02d}T10:00:00+00:00",
+                topic, f'["{topic}"]', "feed", kind, video_id if kind != "file" else None,
+                f"https://www.youtube.com/watch?v={video_id}",
+            ),
+        )
+
+    def test_formula_one_page_is_not_empty_behind_other_motorsport(self):
+        # Newer non-F1 clips fill the first SQL page; the F1 clips are older.
+        for index in range(30):
+            self._add(index, f"IndyCar race highlights number {index}")
+        for index in range(30, 36):
+            self._add(index, f"Verstappen wins the Grand Prix, race {index}")
+
+        profile = profiles.create()
+        page = feed.video_feed(profile, topic="motorsport", limit=5)
+        self.assertEqual(page["total"], 6)
+        self.assertEqual(len(page["items"]), 5)
+        self.assertTrue(page["has_more"])
+        for item in page["items"]:
+            self.assertIn("Grand Prix", item["title"])
+
+    def test_paging_covers_everything_once_and_stops(self):
+        for index in range(12):
+            self._add(index, f"Grand Prix qualifying report {index}")
+
+        profile = profiles.create()
+        seen: list[int] = []
+        offset = 0
+        while True:
+            page = feed.video_feed(profile, topic="motorsport", offset=offset, limit=4)
+            if not page["items"]:
+                break
+            seen.extend(item["id"] for item in page["items"])
+            offset += len(page["items"])
+            if not page["has_more"]:
+                break
+        self.assertEqual(len(seen), 12)
+        self.assertEqual(len(set(seen)), 12)
+
+    def test_same_clip_published_twice_is_one_tile(self):
+        self._add(1, "Grand Prix: the winning move")
+        self._add(2, "Grand Prix: the winning move")  # re-published with a new GUID
+        self._add(3, "Grand Prix: a different session")
+
+        profile = profiles.create()
+        page = feed.video_feed(profile, topic="motorsport")
+        titles = [item["title"] for item in page["items"]]
+        self.assertEqual(len(titles), 2)
+        self.assertEqual(len(set(titles)), 2)
+        self.assertEqual(page["total"], 2)
+
+    def test_unplayable_clip_is_not_counted(self):
+        self._add(1, "Grand Prix: the winning move")
+        self._add(2, "Grand Prix: the winning move, again")
+        # A stream manifest cannot be played by the browser, so the card would
+        # render an empty player. It must not inflate the total either.
+        db.execute("UPDATE articles SET video_kind='file', video_id=NULL, video_url=? WHERE guid='yp:002'",
+                   ("https://cdn.example.com/live.m3u8",))
+
+        profile = profiles.create()
+        page = feed.video_feed(profile, topic="motorsport")
+        self.assertEqual(page["total"], 1)
+        self.assertEqual(len(page["items"]), 1)
+        self.assertFalse(page["has_more"])
+
+
 if __name__ == "__main__":
     unittest.main()

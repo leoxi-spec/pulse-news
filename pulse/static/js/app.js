@@ -364,7 +364,10 @@ function setupImageFallbacks() {
     if (img.dataset.failed) return;
     img.dataset.failed = '1';
     img.classList.add('img-broken');
-    const holder = img.closest('.hero, .story-card__media, .article__hero, .row, .mcard, .top-card');
+    const holder = img.closest(
+      '.hero, .story-card__media, .article__hero, .row, .mcard, .top-card, '
+      + '.video-card__media, .video-lead__media, .hcard, .reel__bg'
+    );
     holder?.classList.add('img-fallback');
   }, true);
 }

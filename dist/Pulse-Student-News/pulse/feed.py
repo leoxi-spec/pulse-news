@@ -392,16 +392,26 @@ def feed_page(
     }
 
 
-def video_feed(
-    profile: dict,
-    *,
-    topic: str | None = None,
-    offset: int = 0,
-    limit: int = 24,
-    days: int = 60,
-) -> dict:
-    """A video-first stream: publisher clips and YouTube newsroom uploads."""
-    since = iso(now() - timedelta(days=days))
+_VIDEO_SELECT = """
+SELECT a.id, a.title, a.summary, a.url, a.canonical_url, a.image_url, a.images, a.author,
+       a.video_url, a.video_id, a.video_kind,
+       a.published_at, a.published_raw, a.date_confidence, a.first_seen_at, a.last_seen_at,
+       a.primary_topic, a.topics, a.reading_minutes, a.word_count, a.content_state,
+       a.paywalled, a.is_breaking, a.story_id, a.source_weight,
+       s.id AS source_id, s.name AS source_name, s.domain, s.lean,
+       s.paywall AS source_paywall, s.country AS source_country, s.region AS source_region,
+       COALESCE(st.source_count, 1) AS story_source_count,
+       COALESCE(st.heat, 0) AS story_heat,
+       COALESCE(st.article_count, 1) AS story_article_count,
+       COALESCE(st.breaking, 0) AS story_breaking,
+       st.title AS story_title
+FROM articles a
+JOIN sources s ON s.id = a.source_id
+LEFT JOIN stories st ON st.id = a.story_id
+"""
+
+
+def _video_where(topic: str | None, since: str) -> tuple[str, list]:
     where = [
         "a.video_kind IS NOT NULL",
         "a.video_url IS NOT NULL",
@@ -416,51 +426,84 @@ def video_feed(
     elif topic:
         where.append("(a.primary_topic = ? OR a.topics LIKE ?)")
         params.extend([topic, f'%"{topic}"%'])
-    clause = " AND ".join(where)
-    total_row = db.query_one(f"SELECT COUNT(*) AS n FROM articles a WHERE {clause}", tuple(params))
-    total = int(total_row["n"] if total_row else 0)
+    return " AND ".join(where), params
+
+
+def _video_rows(ids: list[int], clause: str, params: list) -> list:
+    """Hydrate the page of video ids into full card rows, keeping id order."""
+    if not ids:
+        return []
+    placeholders = ",".join("?" for _ in ids)
     rows = db.query(
+        f"{_VIDEO_SELECT} WHERE {clause} AND a.id IN ({placeholders})",
+        tuple(params) + tuple(ids),
+    )
+    by_id = {int(row["id"]): row for row in rows}
+    return [by_id[article_id] for article_id in ids if article_id in by_id]
+
+
+def video_feed(
+    profile: dict,
+    *,
+    topic: str | None = None,
+    offset: int = 0,
+    limit: int = 24,
+    days: int = 60,
+) -> dict:
+    """A video-first stream: publisher clips and YouTube newsroom uploads.
+
+    Eligibility is decided *before* paging. The playable-clip test, the
+    Formula 1 test and story de-duplication are Python predicates, so running
+    them after ``LIMIT`` produced pages that came back empty while ``total``
+    still counted the rows behind them: the grid said "No video here yet" and
+    "Load more" looped on nothing. Scanning the light candidate rows first
+    keeps ``total``, ``has_more`` and the rendered page in agreement.
+    """
+    since = iso(now() - timedelta(days=days))
+    clause, params = _video_where(topic, since)
+    candidates = db.query(
         f"""
-        SELECT a.id, a.title, a.summary, a.url, a.canonical_url, a.image_url, a.images, a.author,
-               a.video_url, a.video_id, a.video_kind,
-               a.published_at, a.published_raw, a.date_confidence, a.first_seen_at, a.last_seen_at,
-               a.primary_topic, a.topics, a.reading_minutes, a.word_count, a.content_state,
-               a.paywalled, a.is_breaking, a.story_id, a.source_weight,
-               s.id AS source_id, s.name AS source_name, s.domain, s.lean,
-               s.paywall AS source_paywall, s.country AS source_country, s.region AS source_region,
-               COALESCE(st.source_count, 1) AS story_source_count,
-               COALESCE(st.heat, 0) AS story_heat,
-               COALESCE(st.article_count, 1) AS story_article_count,
-               COALESCE(st.breaking, 0) AS story_breaking,
-               st.title AS story_title
+        SELECT a.id, a.title, a.summary, a.primary_topic, a.story_id, a.source_id,
+               a.video_kind, a.video_id, a.video_url
         FROM articles a
-        JOIN sources s ON s.id = a.source_id
-        LEFT JOIN stories st ON st.id = a.story_id
         WHERE {clause}
         ORDER BY COALESCE(a.published_at, a.first_seen_at) DESC
-        LIMIT ? OFFSET ?
         """,
-        tuple(params + [limit, offset]),
+        tuple(params),
     )
-    if topic == "motorsport":
-        rows = [row for row in rows if topics.is_f1(row["title"], row["summary"] or "")]
     age = int((profile.get("survey") or {}).get("age") or 13)
-    if age <= 8:
-        allowed = {"science", "space", "culture", "sports", "motorsport", "tech", "health", "education"}
-        rows = [row for row in rows if row["primary_topic"] in allowed and child_safe(row, age)]
-    elif age <= 9:
-        rows = [row for row in rows if child_safe(row, age)]
-    items = []
-    seen: set = set()
-    for row in rows:
-        key = row["story_id"] or (row["title"] or "").strip().lower()
-        if key in seen:
+    allowed = {"science", "space", "culture", "sports", "motorsport", "tech", "health", "education"}
+    eligible: list[int] = []
+    seen_story: set = set()
+    seen_title: set = set()
+    for row in candidates:
+        if not video_payload(row):
             continue
-        payload = card(row)
-        if not payload.get("video"):
+        if topic == "motorsport" and not topics.is_f1(row["title"], row["summary"] or ""):
             continue
-        seen.add(key)
-        items.append(payload)
+        if age <= 8 and row["primary_topic"] not in allowed:
+            continue
+        if age <= 9 and not child_safe(row, age):
+            continue
+        # One card per story, and one card per identical clip: the same outlet
+        # often publishes the same upload twice with different GUIDs, which
+        # used to show up as two neighbouring tiles with the same headline.
+        title = (row["title"] or "").strip().lower()
+        title_key = (row["source_id"], title)
+        story_key = row["story_id"]
+        if story_key and story_key in seen_story:
+            continue
+        if title and title_key in seen_title:
+            continue
+        if story_key:
+            seen_story.add(story_key)
+        if title:
+            seen_title.add(title_key)
+        eligible.append(int(row["id"]))
+
+    total = len(eligible)
+    page_ids = eligible[offset : offset + limit]
+    items = [card(row) for row in _video_rows(page_ids, clause, params)]
     translate.localize_items(items, sync_limit=6)
     return {
         "items": items,

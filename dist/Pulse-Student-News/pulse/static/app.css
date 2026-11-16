@@ -2803,7 +2803,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   overflow: hidden;
   background: var(--grad-soft);
 }
-.video-card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s var(--ease); }
+.video-card__media img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; transition: transform .35s var(--ease); }
 .video-card:hover .video-card__media img { transform: scale(1.025); }
 .video-card__fallback {
   position: absolute;
@@ -2821,6 +2821,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   margin: auto;
   width: 46px;
   height: 46px;
+  z-index: 3;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -2858,11 +2859,12 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   margin-bottom: 1.2rem;
 }
 .video-lead__media { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--grad-soft); border: 0; padding: 0; text-align: left; }
-.video-lead__media img { width: 100%; height: 100%; object-fit: cover; }
+.video-lead__media img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
 .video-lead__fallback { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2.4rem; font-weight: 800; color: rgba(255, 255, 255, .8); background: var(--grad); }
-.video-lead__shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, .55)); }
+.video-lead__shade { position: absolute; inset: 0; z-index: 2; background: linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, .55)); }
 .video-lead__play {
   position: absolute; inset: 0; margin: auto; width: 64px; height: 64px;
+  z-index: 4;
   display: grid; place-items: center; border-radius: 50%;
   background: rgba(5, 7, 12, .55); border: 1px solid rgba(255, 255, 255, .4);
   color: #fff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -2914,7 +2916,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 
 /* Video badges sit on the artwork, not in the text flow. */
 .video-card__media .video-badge { position: absolute; left: .55rem; bottom: .55rem; z-index: 2; }
-.video-lead__media .video-badge { position: absolute; top: .8rem; left: .8rem; z-index: 2; }
+.video-lead__media .video-badge { position: absolute; top: .8rem; left: .8rem; z-index: 3; }
 
 .video-modal { display: flex; flex-direction: column; gap: .7rem; }
 .video-modal iframe, .video-modal video { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: var(--r-md); background: #000; }

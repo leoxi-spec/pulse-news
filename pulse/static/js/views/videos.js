@@ -77,7 +77,8 @@ function leadMarkup(item) {
   return html`
     <article class="video-lead" data-article-card="${item.id}">
       <button class="video-lead__media" type="button" data-play="${item.id}" aria-label="Play ${item.title}">
-        ${item.image ? html`<img src="${item.image}" alt="" fetchpriority="high" decoding="async">` : html`<span class="video-lead__fallback" aria-hidden="true">${item.topic_label || 'Video'}</span>`}
+        <span class="video-lead__fallback" aria-hidden="true">${item.topic_label || 'Video'}</span>
+        ${item.image ? html`<img src="${item.image}" alt="" fetchpriority="high" decoding="async">` : ''}
         <span class="video-lead__shade" aria-hidden="true"></span>
         <span class="video-lead__play" aria-hidden="true">${raw(icons.play)}</span>
         <span class="video-badge video-badge--solid">${raw(icons.play)}<span>Video</span></span>

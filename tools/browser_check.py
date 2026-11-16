@@ -388,6 +388,10 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.ok(checker.count(".news-row") >= 3, "feed is laid out in rows")
     cols = checker.cdp.js("[...document.querySelectorAll('.news-row')].map((row) => row.className)")
     checker.ok(any("row-4" in c or "row-3" in c for c in (cols or [])), "rows contain 3-4 stories", str(cols)[:120])
+    # The For-you section paints after the rest of the front page, so wait for
+    # its lead row instead of sampling whatever has rendered by now.
+    checker.wait_for("Boolean(document.querySelector('.news-row.row-1'))", 15, "lead row")
+    cols = checker.cdp.js("[...document.querySelectorAll('.news-row')].map((row) => row.className)")
     checker.ok(any("row-1" in c for c in (cols or [])), "a one-per-row lead exists")
     checker.ok(checker.count("#breaking-slot .breaking-strip") <= 1, "breaking strip deduped")
     checker.ok(checker.count(".daily-section") == 1, "daily corner renders")
@@ -825,6 +829,28 @@ def run_checks(checker: Checker, base: str, profile_id: str, skip_profile: str) 
     checker.ok(checker.cdp.js("[...document.querySelectorAll('.reels__tabs button')].some((n) => n.textContent.trim() === 'Video' && n.classList.contains('is-on'))"), "Video tab is active")
     checker.ok(checker.count(".reel__video, .reel__video-play") >= 1, "video Shorts render a player")
     checker.shot("18-video-shorts")
+
+    print("\n[6d] Watch page filters")
+    checker.goto("/videos")
+    checker.wait_for("Boolean(document.querySelector('.video-lead, .empty'))", 20, "videos page")
+    checker.ok(checker.count(".video-lead") == 1, "videos page leads with one player")
+    checker.ok(checker.count(".video-filters .chip") >= 6, "video topic filters render")
+    # Every filter must either list clips or say so plainly. An empty grid under
+    # a non-empty count was the bug: the page said "No video here yet" while the
+    # API reported a total.
+    for slug, label in [("news", "News"), ("sports", "Sports"), ("motorsport", "Formula 1")]:
+        checker.goto(f"/videos?topic={slug}")
+        checker.wait_for("Boolean(document.querySelector('.video-lead, .empty'))", 20, f"{label} videos")
+        has_lead = checker.count(".video-lead") == 1
+        has_empty = checker.count(".empty") == 1
+        checker.ok(has_lead != has_empty, f"{label} filter shows clips or an empty state", f"lead={has_lead} empty={has_empty}")
+        if has_lead:
+            checker.click("[data-play]")
+            checker.ok(checker.wait_for("Boolean(document.querySelector('.video-modal iframe, .video-modal video'))", 12, "player opens"), f"{label} clip opens in the player")
+            checker.cdp.js("document.querySelector('.modal [data-close]')?.click()")
+            time.sleep(0.3)
+    checker.goto("/videos")
+    checker.shot("18b-videos")
 
     print("\n[7] Mobile layout")
     cdp.call("Emulation.setDeviceMetricsOverride", width=390, height=844, deviceScaleFactor=2, mobile=True)

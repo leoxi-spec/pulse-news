@@ -80,9 +80,11 @@ export function videoCard(item, { reels = false } = {}) {
   return html`
     <article class="video-card" data-article-card="${item.id}">
       <a class="video-card__media" href="${href}" data-link aria-label="${item.title}">
-        ${item.image
-          ? html`<img src="${item.image}" alt="" loading="lazy" decoding="async">`
-          : html`<span class="video-card__fallback" aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>`}
+        ${'' /* The fallback always sits behind the still, so a thumbnail the
+               network filter or CDN blocks degrades to the topic mark instead
+               of leaving an empty coloured rectangle. */}
+        <span class="video-card__fallback" aria-hidden="true">${topicEmoji(item.topic) || 'N'}</span>
+        ${item.image ? html`<img src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
         <span class="video-card__play" aria-hidden="true">${raw(icons.play)}</span>
         ${videoBadge(item, 'video-badge--solid')}
       </a>
