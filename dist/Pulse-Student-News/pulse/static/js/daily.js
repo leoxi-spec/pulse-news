@@ -50,14 +50,19 @@ const DEFAULTS_BY_BAND = {
 const OLD_DEFAULT_WIDGETS = ['challenge', 'word', 'poll', 'quiz', 'top3', 'photo', 'journal', 'streak'];
 
 function widgetOrder() {
-  const saved = Array.isArray(prefs().widgets) ? prefs().widgets : [];
+  // An explicitly saved empty board is a real choice, not "unset". That is
+  // what lets the Today page show an Add widgets button instead of forcing a
+  // starter set back onto someone who cleared it.
+  const hasSaved = Array.isArray(prefs().widgets);
+  const saved = hasSaved ? prefs().widgets : [];
   const valid = saved.filter((id) => WIDGETS.some((widget) => widget.id === id));
-  if (valid.length) {
-    if (!prefs().widgets_v2 && valid.join('|') === OLD_DEFAULT_WIDGETS.join('|')) {
+  if (hasSaved) {
+    if (valid.length && !prefs().widgets_v2 && valid.join('|') === OLD_DEFAULT_WIDGETS.join('|')) {
       savePrefs({ widgets: DEFAULT_WIDGETS, widgets_v2: true }).catch(() => {});
       return [...DEFAULT_WIDGETS];
     }
-    if (!prefs().widgets_v2) savePrefs({ widgets_v2: true }).catch(() => {});
+    // Do not fire a second, concurrent prefs write here: it can race the save
+    // that just cleared the board and restore the old widget list.
     return valid;
   }
   const band = ageBand(state.profile?.survey?.age || 13);
@@ -116,25 +121,40 @@ function kidsHero(data) {
     </section>`;
 }
 
+function refreshButton(id) {
+  return html`<button type="button" class="daily-card__refresh" data-widget-refresh="${id}" aria-label="Refresh widget" title="Refresh widget">${raw(icons.refresh)}</button>`;
+}
+
+function decorateCard(widget, markup) {
+  const card = document.createElement('div');
+  card.innerHTML = String(markup || '');
+  const node = card.firstElementChild;
+  if (!node) return '';
+  node.dataset.widgetCard = widget.id;
+  node.insertAdjacentHTML('beforeend', String(refreshButton(widget.id)));
+  return raw(node.outerHTML);
+}
+
 export function dailySection(data) {
   if (!data) return '';
   const order = widgetOrder();
   const cards = order
     .map((id) => WIDGETS.find((widget) => widget.id === id))
     .filter(Boolean)
-    .map((widget) => widget.render(data))
+    .map((widget) => decorateCard(widget, widget.render(data)))
     .filter(Boolean);
+  const showBrief = prefs().daily_brief !== false;
   return html`
     <section class="home-section daily-section" data-id="daily">
       <div data-head>${sectionHead('Today', html`<button class="btn btn--sm btn--ghost" data-customize-widgets>${raw(icons.filter)} Edit widgets</button>`, { sub: `${cards.length} of ${WIDGETS.length} widgets · make it yours` })}</div>
       <div data-body>
-        ${kidsHero(data)}
+        ${showBrief ? kidsHero(data) : ''}
         ${ticker(data.trending)}
         ${cards.length ? html`<div class="daily-grid">${cards}</div>` : html`
-          <div class="card card-pad-lg" style="text-align:center">
-            <p class="daily-card__title">Your Today board is empty</p>
-            <p class="small muted" style="margin:.3rem 0 .8rem">Pick the widgets you want — word games, scores, quizzes, quotes, whatever.</p>
-            <button class="btn btn--primary" data-customize-widgets>Choose widgets</button>
+          <div class="card card-pad-lg daily-empty">
+            <p class="daily-card__title">No widgets yet</p>
+            <p class="small muted" style="margin:.3rem 0 .8rem">Build your Today board with word games, scores, quizzes, quotes and tiny rituals.</p>
+            <button class="btn btn--primary" data-customize-widgets>Add widgets</button>
           </div>`}
       </div>
     </section>`;
@@ -231,15 +251,16 @@ function debateCard(debate) {
 }
 
 function wyrCard(wyr) {
-  if (!wyr) return '';
+  const active = widgetOverrides.wyr || wyr;
+  if (!active) return '';
   const votes = read(KEY.votes, {});
-  const side = votes[wyr.id];
+  const side = votes[active.id];
   return html`
     <article class="daily-card daily-card--wyr">
       <span class="daily-card__eyebrow">${raw(icons.sparkle)} Would you rather…</span>
-      <div class="opt-list" data-wyr="${wyr.id}">
-        <button type="button" class="opt opt--big ${side === 'a' ? 'is-on' : ''}" data-wyr-side="a">${wyr.a}</button>
-        <button type="button" class="opt opt--big ${side === 'b' ? 'is-on' : ''}" data-wyr-side="b">${wyr.b}</button>
+      <div class="opt-list" data-wyr="${active.id}">
+        <button type="button" class="opt opt--big ${side === 'a' ? 'is-on' : ''}" data-wyr-side="a">${active.a}</button>
+        <button type="button" class="opt opt--big ${side === 'b' ? 'is-on' : ''}" data-wyr-side="b">${active.b}</button>
       </div>
       <p class="daily-card__note" data-wyr-note>${side ? 'Locked in. Defend it in the group chat.' : 'No explanation needed. Just vibes.'}</p>
     </article>`;
@@ -712,12 +733,100 @@ const RIDDLES = [
   ['What goes up but never comes down?', 'Your age.'],
 ];
 
+const widgetOverrides = Object.create(null);
+const promptDecks = new Map();
+
+const WYR_BANK = [
+  ['Have a robot that does your homework', 'Have a robot that cleans your room'],
+  ['Know every language', 'Play every instrument'],
+  ['Always be five minutes early', 'Never have to wait in line again'],
+  ['Have a photographic memory', 'Be able to pause time for ten minutes a day'],
+  ['Live in a treehouse', 'Live in a library'],
+  ['Only eat pizza forever', 'Only eat tacos forever'],
+  ['Be able to talk to animals', 'Be able to read minds'],
+  ['Have a personal chef', 'Have a personal driver'],
+  ['Visit any country instantly', 'Never get tired'],
+  ['Have the perfect playlist for every moment', 'Always know the perfect thing to say'],
+  ['Be famous for something you love', 'Be rich but anonymous'],
+  ['Have a dragon as a pet', 'Have a dolphin as a best friend'],
+  ['Never lose your phone', 'Never lose your keys'],
+  ['Have a button that cleans your room', 'Have a button that finishes your homework'],
+  ['Know what everyone really thinks', 'Never be embarrassed again'],
+  ['Spend a day in your favourite game', 'Spend a day in your favourite film'],
+  ['Have a garden that grows snacks', 'Have a fridge that restocks itself'],
+  ['Be the funniest person in school', 'Be the smartest person in school'],
+  ['Have a secret treehouse in the city', 'Have a secret tunnel under your school'],
+  ['Have summer all year', 'Have snow days all year'],
+  ['Be able to fly', 'Be able to breathe underwater'],
+  ['Have a pet dinosaur', 'Have a pet alien'],
+  ['Always have perfect WiFi', 'Always have perfect battery'],
+  ['Have a robot best friend', 'Have a talking backpack'],
+  ['Be able to shrink to ant size', 'Be able to grow as tall as a tree'],
+  ['Have a wardrobe that picks your outfits', 'Have a backpack that organises itself'],
+  ['Never have homework again', 'Never have to take exams again'],
+  ['Be able to draw anything perfectly', 'Be able to sing any song perfectly'],
+  ['Have a cinema in your house', 'Have an arcade in your house'],
+  ['Only wear clothes from the future', 'Only wear clothes from the past'],
+  ['Have a time machine for one day', 'Have a teleporter for one week'],
+  ['Know the ending of every book', 'Know the answer to every test'],
+  ['Have a personal weather cloud', 'Have a personal rainbow'],
+  ['Be able to build anything from LEGO instantly', 'Be able to cook any meal instantly'],
+  ['Have a library that never runs out', 'Have a games console that never runs out'],
+  ['Be able to teleport to school', 'Be able to teleport home'],
+  ['Have an infinite supply of snacks', 'Have an infinite supply of art supplies'],
+  ['Have a dog that understands English', 'Have a cat that understands maths'],
+  ['Always win board games', 'Always win video games'],
+  ['Live in a world with no ads', 'Live in a world with no traffic'],
+  ['Have a room that cleans itself', 'Have a garden that waters itself'],
+  ['Be able to talk to your future self', 'Be able to talk to your past self'],
+  ['Have a machine that makes any sound', 'Have a machine that makes any picture'],
+  ['Have the best treehouse on Earth', 'Have the best treehouse on Mars'],
+  ['Never have to sleep', 'Never have to eat'],
+  ['Be able to run at super speed', 'Be able to jump super high'],
+  ['Have a personal telescope', 'Have a personal microscope'],
+  ['Have a soundtrack follow you around', 'Have a narrator follow you around'],
+  ['Only listen to music from the 2000s', 'Only watch films from the 1990s'],
+  ['Have a pet that can talk', 'Have a phone that can talk'],
+  ['Be able to freeze rain', 'Be able to make it snow on command'],
+].map(([a, b], index) => ({ id: `wyr-local-${index}`, a, b }));
+
+const PROMPT_REFRESH = {
+  storystarter: STORY_STARTERS,
+  fact: KID_FACTS,
+  animal: ANIMAL_FACTS,
+  space: SPACE_FACTS,
+  math: MATH_PUZZLES,
+  joke: KID_JOKES,
+  riddle: RIDDLES,
+  draw: DRAW_PROMPTS,
+  kindness: KINDNESS_CHALLENGES,
+  detective: DETECTIVE_TIPS,
+};
+
+function shuffle(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function nextPrompt(key, pool) {
+  let deck = promptDecks.get(key);
+  if (!deck || !deck.length) {
+    deck = shuffle(pool);
+    promptDecks.set(key, deck);
+  }
+  return deck.pop();
+}
+
 function dayPick(list) {
   return list[new Date().getDate() % list.length];
 }
 
 function jokeCard() {
-  const [setup, punch] = dayPick(KID_JOKES);
+  const [setup, punch] = widgetOverrides.joke || dayPick(KID_JOKES);
   return newCard('daily-card--game', icons.sparkle, 'Joke of the day', html`
     <p class="daily-card__body">${setup}</p>
     <button class="btn btn--sm btn--ghost" data-joke>Show punchline</button>
@@ -725,19 +834,22 @@ function jokeCard() {
 }
 
 function factCard() {
-  return newCard('', icons.sparkle, 'Fun fact', html`<p class="daily-card__body">${dayPick(KID_FACTS)}</p>`);
+  const fact = widgetOverrides.fact || dayPick(KID_FACTS);
+  return newCard('', icons.sparkle, 'Fun fact', html`<p class="daily-card__body">${fact}</p>`);
 }
 
 function animalCard() {
-  return newCard('', icons.sparkle, 'Animal of the day', html`<p class="daily-card__body">${dayPick(ANIMAL_FACTS)}</p>`);
+  const fact = widgetOverrides.animal || dayPick(ANIMAL_FACTS);
+  return newCard('', icons.sparkle, 'Animal of the day', html`<p class="daily-card__body">${fact}</p>`);
 }
 
 function spaceCard() {
-  return newCard('', icons.sparkle, 'Space fact', html`<p class="daily-card__body">${dayPick(SPACE_FACTS)}</p>`);
+  const fact = widgetOverrides.space || dayPick(SPACE_FACTS);
+  return newCard('', icons.sparkle, 'Space fact', html`<p class="daily-card__body">${fact}</p>`);
 }
 
 function mathCard() {
-  const [question, answer] = dayPick(MATH_PUZZLES);
+  const [question, answer] = widgetOverrides.math || dayPick(MATH_PUZZLES);
   return newCard('daily-card--game', icons.bolt, 'Math puzzle', html`
     <p class="daily-card__body">${question}</p>
     <form class="widget-game-form" data-math-form data-answer="${answer}">
@@ -748,18 +860,19 @@ function mathCard() {
 }
 
 function storyStarterCard() {
-  const prompt = dayPick(STORY_STARTERS);
+  const prompt = widgetOverrides.storystarter || dayPick(STORY_STARTERS);
   return newCard('', icons.note, 'Story starter', html`
     <p class="daily-card__body">${prompt}</p>
     <button class="btn btn--sm btn--ghost" data-copy-starter="${prompt}">Copy prompt</button>`);
 }
 
 function drawCard() {
-  return newCard('', icons.eye, 'Draw this', html`<p class="daily-card__body">${dayPick(DRAW_PROMPTS)}</p>`);
+  const prompt = widgetOverrides.draw || dayPick(DRAW_PROMPTS);
+  return newCard('', icons.eye, 'Draw this', html`<p class="daily-card__body">${prompt}</p>`);
 }
 
 function kindnessCard() {
-  const challenge = dayPick(KINDNESS_CHALLENGES);
+  const challenge = widgetOverrides.kindness || dayPick(KINDNESS_CHALLENGES);
   const done = read('pulse.kindness', {})[new Date().toISOString().slice(0, 10)] === challenge;
   return newCard('', icons.sparkle, 'Kindness challenge', html`
     <p class="daily-card__body">${challenge}</p>
@@ -767,7 +880,8 @@ function kindnessCard() {
 }
 
 function detectiveCard() {
-  return newCard('', icons.info, 'News detective', html`<p class="daily-card__body">${dayPick(DETECTIVE_TIPS)}</p>`);
+  const tip = widgetOverrides.detective || dayPick(DETECTIVE_TIPS);
+  return newCard('', icons.info, 'News detective', html`<p class="daily-card__body">${tip}</p>`);
 }
 
 function captionCard(data) {
@@ -850,7 +964,7 @@ function guessYearCard(data) {
 }
 
 function riddleCard() {
-  const [question, answer] = dayPick(RIDDLES);
+  const [question, answer] = widgetOverrides.riddle || dayPick(RIDDLES);
   return newCard('daily-card--game', icons.sparkle, 'Riddle', html`
     <p class="daily-card__body">${question}</p>
     <button class="btn btn--sm btn--ghost" data-riddle>Show answer</button>
@@ -919,6 +1033,7 @@ export const DEFAULT_WIDGET_IDS = DEFAULT_WIDGETS;
 
 export function bindDaily(root, data) {
   if (!data) return;
+  root._pulseDailyData = data;
   bindChallenge(root, data.challenge);
   bindWord(root, data.word);
   bindPoll(root, data.poll);
@@ -1142,21 +1257,77 @@ function rerenderWidgets(root, data) {
   bindDaily(root, data);
 }
 
+async function refreshWidget(root, data, id, button) {
+  button?.classList.add('is-spinning');
+  if (id === 'wyr') {
+    const current = widgetOverrides.wyr || data.wyr;
+    let next = nextPrompt('wyr', WYR_BANK);
+    if (current && next && next.a === current.a && next.b === current.b && WYR_BANK.length > 1) {
+      next = nextPrompt('wyr', WYR_BANK);
+    }
+    widgetOverrides.wyr = next;
+  } else if (PROMPT_REFRESH[id]) {
+    widgetOverrides[id] = nextPrompt(id, PROMPT_REFRESH[id]);
+  } else {
+    // Article-backed widgets refresh from the next daily payload.
+    try { data = await get('/api/daily', 0, true); } catch { /* keep current board */ }
+    root._pulseDailyData = data;
+  }
+  const section = root.querySelector('.daily-section');
+  const widget = WIDGETS.find((item) => item.id === id);
+  if (!section || !widget) { button?.classList.remove('is-spinning'); return; }
+  if (PROMPT_REFRESH[id] || id === 'wyr') {
+    const current = root.querySelector(`[data-widget-card="${id}"]`);
+    const markup = decorateCard(widget, widget.render(data));
+    if (current && markup) {
+      const shell = document.createElement('div');
+      shell.innerHTML = String(markup);
+      current.replaceWith(shell.firstElementChild);
+    }
+  } else {
+    const shell = document.createElement('div');
+    shell.innerHTML = String(dailySection(data));
+    const fresh = shell.firstElementChild;
+    section.replaceWith(fresh);
+  }
+  bindDaily(root, data);
+  toast('Widget refreshed');
+}
+
 function bindWidgetEditor(root, data) {
   root.querySelectorAll('[data-customize-widgets]').forEach((button) => {
     button.addEventListener('click', () => openWidgetEditor(root, data));
   });
+  if (!root.__dailyWidgetRefresh) {
+    root.__dailyWidgetRefresh = true;
+    root.addEventListener('click', async (event) => {
+      const button = event.target.closest?.('[data-widget-refresh]');
+      if (!button || !root.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      await refreshWidget(root, root._pulseDailyData || data, button.dataset.widgetRefresh, button);
+    });
+  }
 }
 
 export function openWidgetEditor(root, data = null) {
   let chosen = [...widgetOrder()];
+  let showBrief = prefs().daily_brief !== false;
   const byId = new Map(WIDGETS.map((widget) => [widget.id, widget]));
   const current = () => chosen.map((id) => byId.get(id)).filter(Boolean);
   const available = () => WIDGETS.filter((widget) => !chosen.includes(widget.id));
 
   const body = html`
     <div class="widget-editor">
-      <p class="small muted">Pick what shows on your Today board. Put the fun stuff first — you can change it any time.</p>
+      <div class="widget-editor__bar">
+        <p class="small muted">Pick what shows on your Today board. Put the fun stuff first — you can change it any time.</p>
+        <button type="button" class="btn btn--sm btn--ghost" data-clear-widgets>Clear board</button>
+      </div>
+      <div class="widget-row widget-row--extra ${showBrief ? 'is-on' : ''}" data-brief-row>
+        <span class="widget-row__icon">${raw(icons.newspaper)}</span>
+        <span class="widget-row__label">Daily brief hero<span class="tiny faint">The “Your day” card above the widgets</span></span>
+        <button type="button" class="switch ${showBrief ? 'is-on' : ''}" data-toggle-brief aria-pressed="${showBrief}" aria-label="Show the daily brief hero"></button>
+      </div>
       <div class="widget-editor__cols">
         <div>
           <h4 class="widget-editor__title">On your board <span class="tiny faint">${chosen.length}</span></h4>
@@ -1179,11 +1350,10 @@ export function openWidgetEditor(root, data = null) {
         label: 'Save board',
         class: 'btn--primary',
         onClick: async () => {
-          if (!chosen.length) { toast('Keep at least one widget on the board.', { type: 'bad' }); return false; }
-          await savePrefs({ widgets: chosen });
+          await savePrefs({ widgets: chosen, daily_brief: showBrief, widgets_v2: true });
           close();
           if (data && root.querySelector('.daily-section')) rerenderWidgets(root, data);
-          toast(`${chosen.length} widgets saved${data ? '' : ' — open Home to see them'}`);
+          toast(chosen.length ? `${chosen.length} widgets saved` : 'Today board cleared');
           return true;
         },
       },
@@ -1192,6 +1362,14 @@ export function openWidgetEditor(root, data = null) {
 
   const chosenEl = document.querySelector('[data-editor-chosen]');
   const availableEl = document.querySelector('[data-editor-available]');
+  document.querySelector('[data-clear-widgets]')?.addEventListener('click', () => { chosen = []; paint(); });
+  document.querySelector('[data-toggle-brief]')?.addEventListener('click', (event) => {
+    showBrief = !showBrief;
+    const row = event.currentTarget.closest('[data-brief-row]');
+    event.currentTarget.classList.toggle('is-on', showBrief);
+    event.currentTarget.setAttribute('aria-pressed', String(showBrief));
+    row?.classList.toggle('is-on', showBrief);
+  });
 
   const paint = () => {
     chosenEl.innerHTML = html`

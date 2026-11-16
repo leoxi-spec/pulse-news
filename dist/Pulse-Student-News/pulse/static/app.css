@@ -4036,3 +4036,60 @@ button.article__back { appearance: none; background: none; border: 0; padding: 0
    First-run and sign-in have no nav, so keep the name visible there. */
 body.onboarding-mode .brand__name,
 body.auth-mode .brand__name { display: inline; }
+
+/* ------------------------------------------------- home strips + widget tools */
+.strip-dismiss {
+  margin-left: auto; flex: none; width: 1.55rem; height: 1.55rem;
+  display: grid; place-items: center; border: 0; border-radius: 6px;
+  background: transparent; color: var(--faint); font-size: 1.05rem;
+  line-height: 1; cursor: pointer;
+}
+.strip-dismiss:hover, .strip-dismiss:focus-visible {
+  background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text);
+}
+.weather-strip { position: relative; }
+.weather-strip > .strip-dismiss { margin-left: .15rem; }
+.daily-card { position: relative; }
+.daily-card__refresh {
+  position: absolute; right: .55rem; bottom: .55rem; z-index: 2;
+  width: 1.8rem; height: 1.8rem; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--muted); cursor: pointer; opacity: .72;
+  transition: opacity .15s ease, color .15s ease, transform .2s ease;
+}
+.daily-card__refresh svg { width: .9rem; height: .9rem; }
+.daily-card__refresh:hover, .daily-card__refresh:focus-visible { opacity: 1; color: var(--text); }
+.daily-card__refresh.is-spinning svg { animation: pulse-spin .7s linear infinite; }
+@keyframes pulse-spin { to { transform: rotate(360deg); } }
+.daily-empty { padding: 2.2rem 1.2rem; }
+.widget-editor__bar {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: .8rem;
+}
+.widget-editor__bar p { margin: 0; }
+.widget-row--extra { margin-bottom: .8rem; background: var(--surface-2); }
+.widget-row--extra .widget-row__label { display: flex; flex-direction: column; gap: .1rem; }
+.widget-editor .section-picker__row:first-of-type { margin-top: .2rem; }
+
+/* Keep the wordmark visible and give the mark real presence in the app bar. */
+.appbar .brand { gap: .62rem; }
+.appbar .brand__name {
+  display: inline !important; font-size: 1.55rem; font-weight: 800;
+  letter-spacing: -.055em; color: var(--text); line-height: 1;
+}
+.appbar .brand__pulse { height: 2.45rem; gap: 3px; }
+.appbar .brand__pulse span { width: 4.5px; border-radius: 3px; }
+.appbar .brand__pulse span:nth-child(1) { height: 15px; }
+.appbar .brand__pulse span:nth-child(2) { height: 29px; }
+.appbar .brand__pulse span:nth-child(3) { height: 21px; }
+.appbar .brand__pulse span:nth-child(4) { height: 34px; }
+.appbar .brand__season { width: 2.45rem; height: 2.45rem; }
+@media (max-width: 1180px) {
+  .appbar .brand__name { font-size: 1.4rem; }
+}
+@media (max-width: 560px) {
+  .appbar .brand__name { font-size: 1.25rem; }
+  .appbar .brand__pulse { height: 2rem; }
+  .appbar .brand__season { width: 2rem; height: 2rem; }
+}

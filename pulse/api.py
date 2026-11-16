@@ -522,18 +522,16 @@ def _bootstrap(profile: dict, request: Request) -> dict:
 
 
 def _health() -> dict:
-    stats = db.stats()
+    # This endpoint is Render's liveness probe. It must never do table scans or
+    # wait behind an ingestion write: a slow health check makes Render declare
+    # a healthy instance dead and show a 502. The full archive/stats payload is
+    # still available from /api/bootstrap and /api/archive.
     return {
         "ok": True,
         "app": {"name": APP_NAME, "version": APP_VERSION, "time": iso()},
-        "articles": stats.get("articles", 0),
-        "videos": stats.get("videos", 0),
-        "sources": stats.get("sources", 0),
-        "feeds_ok": stats.get("feeds_ok", 0),
-        "last_ingest": stats.get("last_ingest"),
+        "sources": len(SOURCES),
         "ai": ai.status()["enabled"],
         "sports": settings.sports_enabled,
-        "archive": feed.archive_summary(),
         "ingest": ingest.ingest.status(),
     }
 

@@ -1,6 +1,6 @@
 // Live Toronto weather theme: Open-Meteo through Pulse's own backend.
 import { get } from './api.js';
-import { prefs, on } from './store.js';
+import { prefs, savePrefs, on } from './store.js';
 import { html, raw, icons } from './ui.js';
 import { setAnimation } from './ambient.js';
 
@@ -25,6 +25,7 @@ export function weatherWidget() {
         <span data-weather-clock>${clock()}</span>
         <span data-weather-meta>Open-Meteo</span>
       </div>
+      <button type="button" class="strip-dismiss" data-hide-weather aria-label="Hide Toronto weather" title="Hide Toronto weather">×</button>
     </div>`;
 }
 
@@ -104,4 +105,10 @@ export async function initWeather() {
 export function mountWeather(root = document) {
   paint(root);
   applyWeatherTheme();
+  root.querySelectorAll('[data-hide-weather]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      await savePrefs({ hide_weather: true }).catch(() => {});
+      button.closest('[data-weather-card]')?.remove();
+    });
+  });
 }

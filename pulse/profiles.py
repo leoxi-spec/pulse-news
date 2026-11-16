@@ -40,6 +40,9 @@ DEFAULT_PREFS: dict = {
     "autoplay_sports": False,
     "show_reading_streak": True,
     "sidebar_slim": True,
+    "daily_brief": True,
+    "hide_band": False,
+    "hide_weather": False,
     "content_filters": {"graphic": False},
     "mood": "balanced",
     "mode": "auto",
@@ -284,7 +287,7 @@ def sanitise_prefs(prefs: dict) -> dict:
     clean["daily_goal"] = max(1, min(30, int(clean.get("daily_goal", 5))))
     for key in ("reduce_motion", "high_contrast", "show_images", "ai_overview", "hide_paywalled",
                 "notify_breaking", "autoplay_sports", "show_reading_streak", "sidebar_slim",
-                "weather_theme", "seasonal_themes"):
+                "weather_theme", "seasonal_themes", "daily_brief", "hide_band", "hide_weather"):
         if key in prefs:
             clean[key] = bool(prefs[key])
     try:
@@ -292,7 +295,10 @@ def sanitise_prefs(prefs: dict) -> dict:
     except (TypeError, ValueError):
         clean["line_spacing"] = 1.55
     widgets = []
-    for widget in prefs.get("widgets") or clean.get("widgets") or []:
+    # An explicit [] means "clear the board"; do not fall back to the starter
+    # set just because the list is empty.
+    widget_source = prefs["widgets"] if "widgets" in prefs else clean.get("widgets") or []
+    for widget in widget_source or []:
         value = str(widget)[:40]
         if value and value not in widgets:
             widgets.append(value)

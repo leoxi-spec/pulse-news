@@ -125,6 +125,7 @@ function bandRibbon() {
       <span class="band-ribbon__label">${band.label} edition</span>
       <b>${band.min}–${band.max}</b>
       <span>${copy[band.id] || band.blurb}</span>
+      <button type="button" class="strip-dismiss" data-hide-band aria-label="Hide edition banner" title="Hide edition banner">×</button>
     </div>`;
 }
 
@@ -205,8 +206,8 @@ export async function homeView(root, ctx) {
       </div>
     </div>
 
-    ${bandRibbon()}
-    ${weatherWidget()}
+    ${prefs().hide_band === true ? '' : bandRibbon()}
+    ${prefs().hide_weather === true ? '' : weatherWidget()}
 
     <button class="home-search" id="home-search" type="button">
       ${raw(icons.search)}
@@ -244,6 +245,10 @@ export async function homeView(root, ctx) {
   mountHomeSearch(root.querySelector('#home-search'));
   root.querySelector('#home-search').addEventListener('click', () => openPalette());
   mountWeather(root);
+  root.querySelector('[data-hide-band]')?.addEventListener('click', async () => {
+    await savePrefs({ hide_band: true }).catch(() => {});
+    root.querySelector('.band-ribbon')?.remove();
+  });
   root.querySelector('#customize-sections').addEventListener('click', () => openCustomizer(root, ctx));
   root.querySelector('#add-section').addEventListener('click', () => openCustomizer(root, ctx));
   bindRefresh(root, sections);
@@ -750,6 +755,8 @@ function bindRefresh(root, sections) {
 function openCustomizer(root, ctx) {
   const selected = activeSections();
   let order = [...selected];
+  let showBand = prefs().hide_band !== true;
+  let showWeather = prefs().hide_weather !== true;
   const all = allSections();
   const body = document.createElement('div');
   body.className = 'section-picker';
@@ -765,7 +772,7 @@ function openCustomizer(root, ctx) {
         class: 'btn--primary',
         onClick: async () => {
           try {
-            await savePrefs({ home_sections: order });
+            await savePrefs({ home_sections: order, hide_band: !showBand, hide_weather: !showWeather });
             toast('Front page updated', { type: 'good' });
             homeView(root, ctx);
           } catch (err) {
@@ -782,6 +789,14 @@ function openCustomizer(root, ctx) {
   function paint() {
     body.innerHTML = html`
       <p class="small muted" style="margin-bottom:.7rem">Turn sections on or off and put them in the order you want. Topic rows use the topics you already follow.</p>
+      <div class="section-picker__row">
+        <button class="switch ${showBand ? 'is-on' : ''}" data-extra="band" aria-pressed="${showBand}" aria-label="Show edition banner"></button>
+        <span class="section-picker__name">Edition banner<span class="choice__sub">The age-band strip under the greeting</span></span>
+      </div>
+      <div class="section-picker__row">
+        <button class="switch ${showWeather ? 'is-on' : ''}" data-extra="weather" aria-pressed="${showWeather}" aria-label="Show Toronto weather"></button>
+        <span class="section-picker__name">Toronto weather<span class="choice__sub">Live temperature and condition strip</span></span>
+      </div>
       ${all.map((section) => {
         const index = order.indexOf(section.id);
         const on = index >= 0;
@@ -800,6 +815,13 @@ function openCustomizer(root, ctx) {
         const id = button.dataset.toggle;
         if (order.includes(id)) order = order.filter((item) => item !== id);
         else order.push(id);
+        paint();
+      });
+    });
+    body.querySelectorAll('[data-extra]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.dataset.extra === 'band') showBand = !showBand;
+        else showWeather = !showWeather;
         paint();
       });
     });
