@@ -351,8 +351,18 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-**launchd** (macOS): run `python3 run.py` from a `LaunchAgent` with
-`PULSE_DATA_DIR` set to a folder you back up.
+**launchd** (macOS): install the included per-user login service so the
+local server is always running before the Chrome app opens:
+
+```bash
+python3 tools/install_launch_agent.py
+```
+
+It starts Pulse at login, restarts it after a crash, writes logs to
+`~/Library/Logs/Pulse/server.log`, and never requests an administrator
+password. Remove it with `python3 tools/install_launch_agent.py --uninstall`.
+If you prefer to manage the process yourself, run `python3 run.py` from your
+own `LaunchAgent` with `PULSE_DATA_DIR` set to a folder you back up.
 
 **Docker**: `docker build -t pulse . && docker run -p 8787:8787 -v pulse-data:/data pulse`
 
