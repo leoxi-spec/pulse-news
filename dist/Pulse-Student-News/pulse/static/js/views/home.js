@@ -1,4 +1,5 @@
 import { get, post } from '../api.js';
+import { onViewCleanup } from '../router.js';
 import {
   state, prefs, savePrefs, dailyProgress, streak, levels, followedTopics, topicLabel, topicIcon, ageBand,
 } from '../store.js';
@@ -261,6 +262,7 @@ export async function homeView(root, ctx) {
   container.innerHTML = sections.map((id) => sectionMarkup(id, data.get(id))).filter(Boolean).join('');
   bindSectionActions(root, sections, data);
   bindDaily(root, data.get('daily'));
+  if (isColdStart()) watchColdStart(root);
 
   // Sports is the slow one: a placeholder reserves its space and fills later,
   // which only moves content below it, never above.
@@ -348,7 +350,10 @@ function topSection(data) {
   const items = (withImages.length >= 2 ? withImages : candidates).slice(0, 3);
   const head = sectionHead('Top Stories', html`<a href="/?stream=top" data-link>More ${raw(icons.chevron)}</a>`, { sub: 'what the most outlets are covering' });
   if (!data) return sectionWrap('top', head, skeletonFeed(1));
-  if (!items.length) return sectionWrap('top', head, emptyState({ title: 'No top stories yet', text: 'The next refresh will fill this in.' }));
+  if (!items.length) {
+    if (isColdStart()) return sectionWrap('top', head, warmupCard('top'));
+    return sectionWrap('top', head, emptyState({ icon: 'newspaper', title: 'No top stories yet', text: 'The next refresh will fill this in.' }));
+  }
   return sectionWrap('top', head, html`<div class="top-grid top-grid--${items.length}">${items.map((item) => topCard(item))}</div>`);
 }
 
@@ -397,7 +402,9 @@ function forYouSection(data, mode, items, hasMore, offset) {
     return sectionWrap('for-you', head, skeletonFeed(3));
   }
   if (!list.length) {
+    if (isColdStart()) return sectionWrap('for-you', head, warmupCard('for-you'));
     return sectionWrap('for-you', head, emptyState({
+      icon: 'inbox',
       title: 'Nothing in this stream yet',
       text: 'Try another tab, or search the whole archive.',
       action: '<button class="btn btn--primary" data-open-search>Search news</button>',
@@ -513,6 +520,71 @@ function mySportsSection(data) {
   return sectionWrap('my-sports', head, html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`);
 }
 
+// A newly deployed Render instance starts with an empty SQLite file and
+// begins fetching hundreds of feeds in the background. Showing "No top
+// stories" during those first minutes looks like a broken section; show a
+// purposeful warming state instead and re-check as the first edition arrives.
+function isColdStart() {
+  const articles = Number(state.boot?.stats?.articles || 0);
+  const ingest = state.boot?.ingest || {};
+  return articles < 40 && ingest.enabled !== false;
+}
+
+function warmupCard(id) {
+  const ingest = state.boot?.ingest || {};
+  const feeds = Number(ingest.feeds_total || state.boot?.catalog?.feeds || 0);
+  const percent = Math.max(0, Math.min(100, Math.round(Number(ingest.progress || 0) * 100)));
+  const label = id === 'top' ? 'Building the first edition' : 'Writing your first feed';
+  return html`
+    <div class="card warmup" data-warming>
+      <div class="warmup__graphic" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <defs>
+            <linearGradient id="warmup-grad-${id}" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="var(--accent)"/>
+              <stop offset="1" stop-color="var(--accent-2)"/>
+            </linearGradient>
+          </defs>
+          <circle cx="32" cy="32" r="25" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+          <circle cx="32" cy="32" r="17" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 4"/>
+          <path d="M18 35h6l4-11 5 20 4-13 3 4h6" fill="none" stroke="url(#warmup-grad)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="warmup__copy">
+        <p class="eyebrow">First edition</p>
+        <h3>${label}</h3>
+        <p>Pulse is pulling ${feeds ? `${feeds} ` : ''}feeds into the archive. This takes a few minutes on a cold server; the page will fill itself in.</p>
+        <div class="warmup__progress" role="progressbar" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div>
+        <div class="warmup__meta"><span>${percent ? `${percent}% fetched` : 'Starting the first sweep'}</span><button class="link" type="button" data-warming-retry>Check again</button></div>
+      </div>
+    </div>`;
+}
+
+function watchColdStart(root) {
+  if (!isColdStart()) return;
+  let tries = 0;
+  let timer = null;
+  let cancelled = false;
+  const tick = async () => {
+    timer = null;
+    if (cancelled || !root.querySelector('#home-sections')) return;
+    const status = await get('/api/ingest/status', 0, true).catch(() => null);
+    if (status) {
+      state.boot = state.boot || {};
+      state.boot.ingest = status;
+      state.boot.stats = { ...(state.boot.stats || {}), articles: Number(status.db?.articles || 0) };
+    }
+    for (const id of ['top', 'for-you']) {
+      const shell = root.querySelector(`.home-section[data-id="${id}"]`);
+      if (shell?.querySelector('[data-warming]')) await fillSection(root, id);
+    }
+    tries += 1;
+    if (!cancelled && root.querySelector('#home-sections') && isColdStart() && tries < 60) timer = setTimeout(tick, 5000);
+  };
+  timer = setTimeout(tick, 2500);
+  onViewCleanup(() => { cancelled = true; if (timer) clearTimeout(timer); });
+}
+
 function sectionError(id) {
   const meta = sectionMeta(id);
   return sectionWrap(id,
@@ -578,6 +650,16 @@ function bindSectionActions(root, sections, data) {
     if (button.dataset.bound) return;
     button.dataset.bound = '1';
     button.addEventListener('click', () => loadStream(root, button.dataset.mode, 0));
+  });
+  root.querySelectorAll('[data-warming-retry]').forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      button.textContent = 'Checking…';
+      await fillSection(root, 'top');
+      await fillSection(root, 'for-you');
+    });
   });
   root.querySelectorAll('[data-retry-section]').forEach((button) => {
     if (button.dataset.bound) return;

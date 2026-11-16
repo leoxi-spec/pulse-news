@@ -326,6 +326,10 @@ export const icons = {
   note: '<svg viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5"/></svg>',
   external: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>',
   eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  network: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="6" r="1.8"/><circle cx="5" cy="18" r="1.8"/><circle cx="19" cy="18" r="1.8"/><path d="m6.5 7.2 4 3.4M17.5 7.2l-4 3.4M6.5 16.8l4-3.4M17.5 16.8l-4-3.4"/></svg>',
+  layers: '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></svg>',
+  newspaper: '<svg viewBox="0 0 24 24"><path d="M4 5h16v15H4z"/><path d="M7 8h6M7 11h6M7 14h4M15 8h2M15 11h2"/><path d="M2 8v10a2 2 0 0 0 2 2"/></svg>',
+  signal: '<svg viewBox="0 0 24 24"><path d="M4 18v-3M8 18v-7M12 18V7M16 18v-4M20 18V4"/><path d="M3 21h18"/></svg>',
 };
 
 export function emptyState({ icon = '', title, text, action = '' }) {

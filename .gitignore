@@ -11,3 +11,6 @@ __pycache__/
 venv/
 node_modules/
 *.log
+
+# Render runtime data (ephemeral unless a disk is mounted)
+.pulse-data/

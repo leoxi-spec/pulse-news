@@ -567,6 +567,8 @@ async function boot() {
   await initSeasons();
   applyAmbient();
   initWeather().catch(() => {});
+  document.body.classList.toggle('onboarding-mode', location.pathname === '/onboarding');
+  document.body.classList.toggle('auth-mode', location.pathname === '/account' && !data.account);
   document.getElementById('shell').hidden = false;
   if (bootEl) bootEl.remove();
   document.body.dataset.ready = '1';

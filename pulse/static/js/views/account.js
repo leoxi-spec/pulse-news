@@ -2,7 +2,7 @@
 import { get, post } from '../api.js';
 import { html, raw, icons, toast, timeAgo, modal } from '../ui.js';
 import { state, prefs, profileInitials, setProfile, setAccount } from '../store.js';
-import { navigate } from '../router.js';
+import { navigate, onViewCleanup } from '../router.js';
 import { sectionHead } from '../components.js';
 
 function dateLabel(value) {
@@ -15,6 +15,8 @@ function dateLabel(value) {
 export async function accountView(root, ctx) {
   const account = state.account;
   const age = Number(state.profile?.survey?.age || 13);
+  document.body.classList.toggle('auth-mode', !account);
+  onViewCleanup(() => document.body.classList.remove('auth-mode'));
   root.innerHTML = account ? dashboard(account) : authPage(age);
   if (account) {
     bindDashboard(root, account);
@@ -27,50 +29,70 @@ export async function accountView(root, ctx) {
 function authPage(age = 13) {
   const canCreate = age >= 13;
   return html`
-    <div class="account">
-      <div class="account__hero">
-        <p class="eyebrow">Pulse account</p>
-        <h1>Keep your progress.</h1>
-        <p class="page-sub">Save your reading history, streak, saves and preferences behind an email and password. Accounts live on this Pulse server in <code>pulse.sqlite3</code>.</p>
-      </div>
+    <div class="auth-page">
+      <aside class="auth-page__aside">
+        <a class="brand auth-page__brand" href="/" data-link aria-label="Pulse home">
+          <span class="brand__pulse" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <img class="brand__season" data-season-icon alt="" hidden>
+          <span class="brand__name">Pulse</span>
+        </a>
+        <div class="auth-page__copy">
+          <p class="eyebrow">Pulse account</p>
+          <h1>Your reading,<br><em>in sync.</em></h1>
+          <p class="page-sub">Keep your history, saves, streak and preferences across every browser that can reach this Pulse server.</p>
+        </div>
+        <div class="auth-art" aria-hidden="true">
+          <div class="auth-art__bar"><span>Reading profile</span><span class="live-dot"></span></div>
+          <div class="auth-art__signal">${raw(icons.signal)}</div>
+          <div class="auth-art__rows">
+            <div><span>Archive</span><b>searchable</b></div>
+            <div><span>Progress</span><b>synced</b></div>
+            <div><span>Data</span><b>on your server</b></div>
+          </div>
+        </div>
+        <p class="auth-page__fine">No ads. No tracking. No third-party analytics.</p>
+      </aside>
 
-      <div class="account__grid">
-        ${canCreate ? html`<form class="card card-pad-lg account__form" data-signup-form>
-          <div class="account__form-head">
-            <span class="account__icon">NEW</span>
-            <div><h2>Create an account</h2><p class="tiny muted">The first account automatically becomes the admin.</p></div>
-          </div>
-          <label class="account__label" for="signup-name">Name</label>
-          <input id="signup-name" name="name" type="text" autocomplete="name" maxlength="40" placeholder="First name or nickname" value="${state.profile?.name || ''}">
-          <label class="account__label" for="signup-email">Email</label>
-          <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
-          <label class="account__label" for="signup-password">Password</label>
-          <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
-          <button class="btn btn--primary btn--block" type="submit">Create account ${raw(icons.chevron)}</button>
-          <p class="account__fine">Stored on this server only. No ads, no tracking, no verification email. This build has no mail server, so pick a password you’ll remember.</p>
-        </form>` : html`
-        <div class="card card-pad-lg account__form">
-          <div class="account__form-head">
-            <span class="account__icon">13+</span>
-            <div><h2>Accounts are for 13+</h2><p class="tiny muted">Younger readers keep using Pulse as a guest on this device.</p></div>
-          </div>
-          <p class="small muted">Guest mode still keeps your streak, saves and reading history on this device. Email accounts are limited to ages 13 and up for privacy reasons.</p>
-          <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Read the privacy note</a>
-        </div>`}
+      <main class="auth-page__main">
+        <div class="account__grid">
+          ${canCreate ? html`<form class="card card-pad-lg account__form" data-signup-form>
+            <div class="account__form-head">
+              <span class="account__icon">${raw(icons.user)}</span>
+              <div><h2>Create an account</h2><p class="tiny muted">The first account becomes the admin.</p></div>
+            </div>
+            <label class="account__label" for="signup-name">Name</label>
+            <input id="signup-name" name="name" type="text" autocomplete="name" maxlength="40" placeholder="First name or nickname" value="${state.profile?.name || ''}">
+            <label class="account__label" for="signup-email">Email</label>
+            <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+            <label class="account__label" for="signup-password">Password</label>
+            <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+            <button class="btn btn--primary btn--block" type="submit">Create account ${raw(icons.chevron)}</button>
+            <p class="account__fine">Stored on this server only. This build has no mail server, so pick a password you’ll remember.</p>
+          </form>` : html`
+          <div class="card card-pad-lg account__form">
+            <div class="account__form-head">
+              <span class="account__icon">13+</span>
+              <div><h2>Accounts are for 13+</h2><p class="tiny muted">Younger readers keep using Pulse as a guest on this device.</p></div>
+            </div>
+            <p class="small muted">Guest mode still keeps your streak, saves and reading history on this device. Email accounts are limited to ages 13 and up for privacy reasons.</p>
+            <a class="btn btn--sm btn--ghost" href="/privacy" data-link>Read the privacy note</a>
+          </div>`}
 
-        <form class="card card-pad-lg account__form" data-login-form>
-          <div class="account__form-head">
-            <span class="account__icon">IN</span>
-            <div><h2>Sign in</h2><p class="tiny muted">Welcome back — your streak is waiting.</p></div>
-          </div>
-          <label class="account__label" for="login-email">Email</label>
-          <input id="login-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
-          <label class="account__label" for="login-password">Password</label>
-          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
-          <button class="btn btn--primary btn--block" type="submit">Sign in</button>
-          <p class="account__fine">One account works on any browser that can reach this server.</p>
-        </form>
-      </div>
+          <form class="card card-pad-lg account__form" data-login-form>
+            <div class="account__form-head">
+              <span class="account__icon">${raw(icons.user)}</span>
+              <div><h2>Sign in</h2><p class="tiny muted">Welcome back — your streak is waiting.</p></div>
+            </div>
+            <label class="account__label" for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+            <label class="account__label" for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+            <button class="btn btn--primary btn--block" type="submit">Sign in</button>
+            <p class="account__fine">One account works on any browser that can reach this server.</p>
+          </form>
+        </div>
+        <p class="auth-page__legal"><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a></p>
+      </main>
     </div>`;
 }
 

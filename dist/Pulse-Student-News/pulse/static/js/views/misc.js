@@ -1339,24 +1339,81 @@ export async function onboardingView(root, ctx) {
 
 function stepMarkup(key, draft, boot, selectedTopics, editing = false) {
   if (key === 'welcome') {
+    const sources = boot.catalog?.sources || 500;
+    const topics = (boot.topics || []).length || 20;
     return html`
       <div class="welcome">
-        <div class="welcome__aura" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p class="welcome__kicker">Pulse</p>
-        <h1 class="welcome__title">The news,<br><em>without the noise.</em></h1>
-        <p class="welcome__sub">A personal front page for school, curiosity and the things you actually care about. Built to be read, not doomscrolled.</p>
-        <div class="welcome__metrics">
-          <div><b>${boot.catalog?.sources || 336}</b><span>sources</span></div>
-          <div><b>${(boot.topics || []).length || 20}</b><span>topics</span></div>
-          <div><b>${compactNumber(boot.stats?.videos || 0)}</b><span>videos</span></div>
-          <div><b>0</b><span>ads</span></div>
+        <div class="welcome__copy">
+          <p class="welcome__kicker"><span class="welcome__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span> The student edition</p>
+          <h1 class="welcome__title">News that<br><em>keeps up with you.</em></h1>
+          <p class="welcome__sub">A personal front page for school, curiosity and the world beyond the group chat. Built to be read, not doomscrolled.</p>
+
+          <div class="welcome__card">
+            <label class="tiny muted" for="name">What should we call you?</label>
+            <div class="welcome__input">
+              <input id="name" type="text" maxlength="40" placeholder="First name or nickname" value="${draft.name}" autocomplete="given-name">
+              <span class="welcome__input-mark" aria-hidden="true">${raw(icons.user)}</span>
+            </div>
+            <p class="tiny faint">No account required. You can change everything later.</p>
+          </div>
+
+          <div class="welcome__proof">
+            <span><b>${sources}+</b> newsrooms</span>
+            <span><b>${topics}</b> topics</span>
+            <span><b>0</b> ads</span>
+          </div>
+
+          ${!editing ? html`<p class="welcome__skip">In a hurry? <button class="link" id="skip-welcome">Skip the survey</button> and start with a general feed. <a class="link" href="/about" data-link>Why Pulse?</a></p>` : ''}
         </div>
-        <div class="welcome__card">
-          <label class="tiny muted" for="name">What should we call you?</label>
-          <input id="name" type="text" maxlength="40" placeholder="First name or nickname" value="${draft.name}" autocomplete="given-name">
-          <p class="tiny faint">No account. No tracking. You can change everything later.</p>
+
+        <div class="welcome__visual" aria-hidden="true">
+          <div class="welcome__glow"></div>
+          <div class="edition-card">
+            <div class="edition-card__bar">
+              <span class="edition-card__brand"><i></i> Pulse / First edition</span>
+              <span class="edition-card__time">06:45</span>
+            </div>
+            <div class="edition-card__lead">
+              <span class="edition-card__eyebrow">Top story</span>
+              <h2>The stories shaping<br>your week.</h2>
+              <p>A calmer front page, built around what you actually read.</p>
+            </div>
+            <div class="edition-card__signal" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="edition-card__rows">
+              <div><span class="edition-card__dot"></span><span>World</span><em>4 min</em></div>
+              <div><span class="edition-card__dot edition-card__dot--alt"></span><span>Science</span><em>6 min</em></div>
+              <div><span class="edition-card__dot edition-card__dot--live"></span><span>Formula 1</span><em>Live</em></div>
+            </div>
+          </div>
+          <div class="floating-card floating-card--sources">
+            <span class="floating-card__icon">${raw(icons.network)}</span>
+            <span><b>${sources}+</b><small>newsrooms</small></span>
+          </div>
+          <div class="floating-card floating-card--live">
+            <span class="live-dot"></span>
+            <span><b>Live scores</b><small>and the context behind them</small></span>
+          </div>
         </div>
-        ${!editing ? html`<p class="welcome__skip">In a hurry? <button class="link" id="skip-welcome">Skip the survey</button> and start with a general feed. <a class="link" href="/about" data-link>Why Pulse?</a></p>` : ''}
+      </div>
+
+      <div class="welcome-features">
+        <div class="welcome-feature">
+          <span class="welcome-feature__icon">${raw(icons.network)}</span>
+          <h3>A wider view</h3>
+          <p>Hundreds of newsrooms, one calm front page. Compare how the world is covering the same story.</p>
+        </div>
+        <div class="welcome-feature">
+          <span class="welcome-feature__icon">${raw(icons.layers)}</span>
+          <h3>Context first</h3>
+          <p>Overviews, timelines and sources before you commit. Know the story, not just the headline.</p>
+        </div>
+        <div class="welcome-feature">
+          <span class="welcome-feature__icon">${raw(icons.signal)}</span>
+          <h3>Your pace</h3>
+          <p>Short reads, live scores and study tools that fit the day. Personalise it in two minutes.</p>
+        </div>
       </div>`;
   }
   if (key === 'grade') {
