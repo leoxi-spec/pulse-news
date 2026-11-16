@@ -1015,26 +1015,19 @@ def icon_svg(season: dict, *, maskable: bool = False) -> str:
             p.bar, 4, opacity=.07,
         )
     )
-    border = "" if maskable else (
-        f'<rect x="3" y="3" width="506" height="506" rx="113" fill="none" '
-        f'stroke="{p.bar}" stroke-opacity=".08" stroke-width="2"/>'
-    )
-    if maskable:
-        background = f'<rect width="512" height="512" fill="url(#{uid}-bg)"/>'
-        wrapper_open = "<g>"
-    else:
-        background = f'<rect width="512" height="512" rx="{RADIUS}" fill="url(#{uid}-bg)"/>'
-        wrapper_open = f'<g clip-path="url(#{uid}-clip)">'
+    # Every icon is full-bleed and borderless. A transparent rounded corner
+    # becomes a white square when Chrome bakes the PWA icon or when a favicon
+    # is drawn on a light tab strip; a light hairline reads as the same white
+    # halo at 28 px. The square edge is deliberate.
+    background = f'<rect width="512" height="512" fill="url(#{uid}-bg)"/>'
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img">'
         f"<defs>{_gradient(uid, p, ANGLES.get(season['id'], 135))}{glow}"
-        f'<clipPath id="{uid}-clip"><rect width="512" height="512" rx="{RADIUS}"/></clipPath>'
         f'<filter id="{uid}-shadow" x="-25%" y="-25%" width="150%" height="150%">'
         f'<feDropShadow dx="0" dy="13" stdDeviation="13" flood-color="{p.deep}" flood-opacity=".48"/>'
-        f"</filter></defs>"
-        f"{wrapper_open}{background}"
+        f"</filter></defs><g>{background}"
         f'<circle cx="256" cy="246" r="228" fill="url(#{uid}-glow)"/>'
         f"{pattern}{pulse}"
         f'<g filter="url(#{uid}-shadow)">{art}</g>'
-        f"{border}</g></svg>"
+        f"</g></svg>"
     )

@@ -1,37 +1,46 @@
 # Pulse on a Workers URL without moving the Python server
 
-This is the stop-gap for a Worker that already exists at
-`pulse-news.leo-xi.workers.dev` but only serves static assets.
+This is the stop-gap for a Worker that only serves static assets (for example
+`pulse-news.leo-xi.workers.dev`). It is **not** the permanent-link setup; a
+Quick Tunnel URL changes whenever the tunnel restarts.
 
-1. Start Pulse locally (the login service does this):
+## Create the Worker (current Cloudflare dashboard)
 
-   ```bash
-   python3 tools/install_launch_agent.py
-   ```
+Cloudflare's current **Create an app** screen does not have a separate
+"Create Worker" button. Use:
 
-2. Expose the local server with a Quick Tunnel:
+1. Open **Workers & Pages → Create application**.
+2. Choose **Start with Hello World!**. This creates a blank Worker.
+3. Name it `pulse-news` if you want the existing workers.dev address, or use a
+   new name such as `pulse-news-live`.
+4. Deploy the Hello World worker once.
+5. Choose **Edit code**, delete the sample code, and paste [`proxy.js`](proxy.js).
+6. Open **Settings → Variables and Secrets**, add a text variable:
+   - `PULSE_ORIGIN` = the public tunnel origin, for example
+     `https://fog-innovation-epa-tail.trycloudflare.com`
+7. Deploy again.
 
-   ```bash
-   ~/bin/cloudflared tunnel --url http://127.0.0.1:8787
-   ```
+The Worker does not need a static-assets binding. It forwards the whole app,
+including `/api/*`, to the tunnel origin.
 
-   Copy the `https://….trycloudflare.com` URL it prints. The URL changes when
-   the tunnel restarts.
+Do **not** choose **Upload your static files** or **Continue to Pages**. Those
+create a static-only app, which is why the current deployment returns 404 for
+`/api/health`.
 
-3. Create or edit a Worker in the Cloudflare dashboard and paste
-   [`proxy.js`](proxy.js). Add a plain-text variable:
+## Quick demo origin
 
-   - Name: `PULSE_ORIGIN`
-   - Value: the `https://….trycloudflare.com` URL
+Start Pulse locally, then run a Quick Tunnel:
 
-4. Deploy. Open the Worker URL. Every request, including `/api/*`, now reaches
-   the Python server.
+```bash
+python3 tools/install_launch_agent.py
+~/bin/cloudflared tunnel --url http://127.0.0.1:8787
+```
 
-If the existing `pulse-news` Worker is static-only, delete it and create a new
-Worker with the same name (or use a new name) and paste the proxy. The Worker
-does not need a static-assets binding because the tunnel serves the front end
-too.
+Copy the `https://….trycloudflare.com` URL into `PULSE_ORIGIN`. The URL changes
+when the tunnel restarts, so this is only for a demo.
 
-For a permanent setup, replace the Quick Tunnel with a named Tunnel on a domain
-you control; see [`../CLOUDFLARE.md`](../CLOUDFLARE.md). A Quick Tunnel has no
-uptime guarantee.
+## Permanent link
+
+For a stable, professional URL, use a named Tunnel on a domain managed by
+Cloudflare. See [`../CLOUDFLARE.md`](../CLOUDFLARE.md), Option A. A
+`*.workers.dev` address cannot be the origin of a Tunnel.

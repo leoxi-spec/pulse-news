@@ -349,9 +349,9 @@ def draw(size: int, style: dict | None = None, *, padding: float = 0.0, transpar
     for y in range(size):
         row = bytearray()
         for x in range(size):
-            if not transparent and not rounded_rect(*tile, radius, x, y):
-                row += b"\x00\x00\x00\x00"
-                continue
+            # Full-bleed background. Transparent rounded corners become a
+            # white square in Chrome's PWA matte and in tab favicons, so there
+            # is deliberately no alpha around the normal mark either.
             t = ((x - tile[0]) + (y - tile[1])) / max(1, (tile[2] - tile[0]) + (tile[3] - tile[1]))
             color = lerp(start, end, min(1.0, max(0.0, t)))
             if transparent:
@@ -433,7 +433,7 @@ def normal_svg() -> str:
       <stop offset="1" stop-color="#ff4d8d"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="15" fill="url(#pulse)"/>
+  <rect width="64" height="64" fill="url(#pulse)"/>
   <g fill="#ffffff">
 %s
   </g>
@@ -446,16 +446,16 @@ def main() -> None:
     for size in (192, 512):
         pixels = draw(size, NORMAL)
         write_png(OUT / f"icon-{size}.png", size, pixels, size, size)
-        write_png(OUT / f"icon-{size}-v25.png", size, pixels, size, size)
+        write_png(OUT / f"icon-{size}-v28.png", size, pixels, size, size)
     write_png(OUT / "icon-maskable.png", 512, draw(512, NORMAL), 512, 512)
-    write_png(OUT / "icon-maskable-v25.png", 512, draw(512, NORMAL), 512, 512)
+    write_png(OUT / "icon-maskable-v28.png", 512, draw(512, NORMAL), 512, 512)
     write_png(OUT / "apple-touch-icon.png", 180, draw(180, NORMAL), 180, 180)
-    write_png(OUT / "apple-touch-icon-v25.png", 180, draw(180, NORMAL), 180, 180)
+    write_png(OUT / "apple-touch-icon-v28.png", 180, draw(180, NORMAL), 180, 180)
     svg = normal_svg()
     (OUT / "icon.svg").write_text(svg, encoding="utf-8")
-    (OUT / "icon-v25.svg").write_text(svg, encoding="utf-8")
+    (OUT / "icon-v28.svg").write_text(svg, encoding="utf-8")
 
-    render_seasons(SEASONS, SEASON_OUT / "v26", log=print)
+    render_seasons(SEASONS, SEASON_OUT / "v28", log=print)
     print(f"icons written to {OUT} (normal + {len(SEASONS)} large seasonal illustrations)")
 
 

@@ -56,7 +56,7 @@ export async function seasonsView(root) {
         </div>
         <div class="season-now__art">${activeId
           ? html`<img src="${now.active.icon.small}" alt="${now.active.label} icon">`
-          : html`<img src="/icons/icon-192-v25.png" alt="Pulse icon">`}</div>
+          : html`<img src="/icons/icon-192-v28.png" alt="Pulse icon">`}</div>
       </section>
 
       ${sectionHead('The archive', '', { sub: `${seasons.length} holiday families` })}

@@ -101,4 +101,4 @@ window.setSvg = (svg, size) => new Promise((resolve) => {
 if __name__ == "__main__":
     from pulse.holidays import SEASONS
 
-    render_seasons(SEASONS, ROOT / "pulse" / "static" / "icons" / "seasons" / "v26")
+    render_seasons(SEASONS, ROOT / "pulse" / "static" / "icons" / "seasons" / "v28")

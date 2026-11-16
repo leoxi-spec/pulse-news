@@ -39,7 +39,7 @@ class HolidayScheduleTests(unittest.TestCase):
     def test_manifest_switches_icon_with_the_season(self):
         self.assertIn("/icon-192.png", holidays.manifest(date(2026, 12, 24))["icons"][0]["src"])
         self.assertIn("christmas", holidays.manifest(date(2026, 12, 24))["icons"][0]["src"])
-        self.assertIn("v25", holidays.manifest(date(2026, 11, 14))["icons"][0]["src"])
+        self.assertIn("v28", holidays.manifest(date(2026, 11, 14))["icons"][0]["src"])
 
     def test_archive_lists_all_24_and_their_icons(self):
         rows = holidays.archive(date(2026, 11, 14))

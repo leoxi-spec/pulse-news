@@ -20,13 +20,13 @@ subdomain cannot be pointed at a tunnel.
 cd "/Users/leozihanxi/.deepai-code/scratch/2026-11-10-make-a-completely-production-ready-fadd607d"
 python3 tools/install_launch_agent.py
 
-# 2. Install cloudflared and authorise it.
-brew install cloudflared
-cloudflared tunnel login
+# 2. cloudflared is already installed at ~/bin/cloudflared in this checkout.
+#    If it is missing, download the macOS build and then authorise it.
+~/bin/cloudflared tunnel login
 
 # 3. Create the tunnel and route a hostname.
-cloudflared tunnel create pulse
-cloudflared tunnel route dns pulse pulse.example.com
+~/bin/cloudflared tunnel create pulse
+~/bin/cloudflared tunnel route dns pulse pulse.example.com
 
 # 4. ~/.cloudflared/config.yml
 cat > ~/.cloudflared/config.yml <<'YAML'
@@ -39,10 +39,10 @@ ingress:
 YAML
 
 # 5. Test it.
-cloudflared tunnel run pulse
+~/bin/cloudflared tunnel run pulse
 
 # 6. Keep it running at login (may ask for your password once).
-sudo cloudflared service install
+sudo ~/bin/cloudflared service install
 ```
 
 Open `https://pulse.example.com`. Do not expose the origin directly; keep
@@ -91,6 +91,11 @@ The first ingestion pass takes a few minutes. The volume keeps the archive,
 profiles and translations across deploys.
 
 ## Option C — keep the Workers URL with a proxy
+
+In the current dashboard, **Create application → Start with Hello World!** is the
+blank Worker flow. There is no separate "Create Worker" button. Paste
+`cloudflare/proxy.js`, add `PULSE_ORIGIN`, and deploy. Do not choose **Upload
+your static files**.
 
 If you specifically want `*.workers.dev` to stay as the address, run the real
 server behind a Tunnel and put a tiny Worker in front of it. The Worker forwards
