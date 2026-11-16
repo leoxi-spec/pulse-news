@@ -389,6 +389,15 @@ function setupImageFallbacks() {
   document.addEventListener('error', (event) => {
     const img = event.target;
     if (!(img instanceof HTMLImageElement)) return;
+    // A cold Render instance can briefly time out while the image proxy is
+    // fetching a publisher's CDN. Retry once before showing the monogram.
+    const src = img.getAttribute('src') || '';
+    if (!img.dataset.retried && src.includes('/api/img')) {
+      img.dataset.retried = '1';
+      const separator = src.includes('?') ? '&' : '?';
+      img.src = `${src}${separator}retry=1`;
+      return;
+    }
     if (img.dataset.failed) return;
     img.dataset.failed = '1';
     img.classList.add('img-broken');

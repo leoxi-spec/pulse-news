@@ -270,7 +270,7 @@ export function topCard(item) {
             <b>${item.source?.initials || topicEmoji(item.topic) || 'N'}</b>
             <i>${item.source?.name || ''}</i>
           </span>
-          <img class="top-card__img" src="${item.image}" alt="" loading="lazy" decoding="async">
+          <img class="top-card__img" src="${item.image}" alt="" loading="eager" decoding="async">
           ${item.image_count > 1 ? html`<span class="photo-count photo-count--card">${raw(icons.camera)} ${item.image_count}</span>` : ''}
           ${videoBadge(item, 'video-badge--card')}
         </a>` : html`
