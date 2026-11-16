@@ -568,8 +568,9 @@ async function boot() {
     ]);
   } catch (err) {
     if (bootEl) {
-      bootEl.innerHTML = `<div class="empty" style="max-width:420px"><div class="empty__mark"></div><h2>Can't reach the Pulse server</h2><p>${err.message}</p><button class="btn btn--primary" style="margin-top:1rem" onclick="location.reload()">Retry</button></div>`;
+      bootEl.innerHTML = `<div class="empty" style="max-width:420px"><div class="empty__mark"></div><h2>Pulse is reconnecting</h2><p>${err.message}</p><p class="small muted" style="margin-top:.6rem">This page will refresh automatically when the server is back.</p><button class="btn btn--primary" style="margin-top:1rem" onclick="location.reload()">Retry now</button></div>`;
     }
+    watchServerRecovery();
     return;
   }
   setBoot(data);

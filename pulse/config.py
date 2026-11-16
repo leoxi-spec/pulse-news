@@ -12,7 +12,7 @@ from pathlib import Path
 
 APP_NAME = "Pulse"
 APP_TAGLINE = "News that keeps up with you"
-APP_VERSION = "3.4.3"
+APP_VERSION = "3.4.4"
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -63,14 +63,14 @@ class Settings:
     # Ingestion
     ingest_enabled: bool = _env_bool("PULSE_INGEST", True)
     ingest_interval_seconds: int = _env_int("PULSE_INGEST_INTERVAL", 300, 60)
-    ingest_workers: int = _env_int("PULSE_INGEST_WORKERS", 12, 1, 48)
+    ingest_workers: int = _env_int("PULSE_INGEST_WORKERS", 4, 1, 48)
     feed_timeout_seconds: int = _env_int("PULSE_FEED_TIMEOUT", 20, 5, 90)
     article_timeout_seconds: int = _env_int("PULSE_ARTICLE_TIMEOUT", 20, 5, 90)
-    max_articles_per_feed: int = _env_int("PULSE_MAX_PER_FEED", 40, 5, 200)
+    max_articles_per_feed: int = _env_int("PULSE_MAX_PER_FEED", 25, 5, 200)
     extract_bodies: bool = _env_bool("PULSE_EXTRACT_BODIES", True)
-    extract_workers: int = _env_int("PULSE_EXTRACT_WORKERS", 8, 1, 16)
-    extract_per_cycle: int = _env_int("PULSE_EXTRACT_PER_CYCLE", 150, 0, 500)
-    archive_full_text: bool = _env_bool("PULSE_ARCHIVE_FULLTEXT", True)
+    extract_workers: int = _env_int("PULSE_EXTRACT_WORKERS", 2, 1, 16)
+    extract_per_cycle: int = _env_int("PULSE_EXTRACT_PER_CYCLE", 24, 0, 500)
+    archive_full_text: bool = _env_bool("PULSE_ARCHIVE_FULLTEXT", False)
     # Some publishers (and ESPN's scoreboard API) reject obvious bot user
     # agents, so the default is a normal desktop browser string. Set
     # PULSE_USER_AGENT to identify yourself if you prefer, and PULSE_HONEST_UA=1

@@ -50,12 +50,15 @@ export async function api(path, opts = {}) {
     try {
       response = await fetch(path, { method, headers, body, signal: controller.signal, credentials: 'same-origin' });
     } catch (err) {
-      if (err.name === 'AbortError') throw new ApiError(0, 'Request timed out. Check your connection and try again.', 'timeout');
-      // A local Pulse server can be stopped while the browser still has a
-      // network connection. Tell the shell so it can watch for recovery and
-      // refresh automatically instead of leaving the Today board on a skeleton.
-      window.dispatchEvent(new CustomEvent('pulse:network-error', { detail: { path } }));
-      throw new ApiError(0, 'Pulse cannot reach its local server. Reconnecting…', 'offline');
+      if (err.name === 'AbortError') {
+        window.dispatchEvent(new CustomEvent('pulse:network-error', { detail: { path, reason: 'timeout' } }));
+        throw new ApiError(0, 'Request timed out. Check your connection and try again.', 'timeout');
+      }
+      // A local Pulse server can be stopped — or restarting on Render — while
+      // the browser still has a network connection. Tell the shell so it can
+      // watch for recovery and refresh automatically.
+      window.dispatchEvent(new CustomEvent('pulse:network-error', { detail: { path, reason: 'offline' } }));
+      throw new ApiError(0, 'Pulse cannot reach its server. Reconnecting…', 'offline');
     } finally {
       clearTimeout(timer);
     }
@@ -64,6 +67,13 @@ export async function api(path, opts = {}) {
       try { detail = await response.json(); } catch { /* ignore */ }
       window.dispatchEvent(new CustomEvent('pulse:auth-required', { detail }));
       throw new ApiError(401, 'Access token required.', 'token_required');
+    }
+    if (response.status >= 500) {
+      // Render serves its own 502/503 HTML page while an instance restarts.
+      // Treat that as a temporary outage so the app can keep its shell and
+      // reconnect instead of surfacing "Request failed (502)".
+      window.dispatchEvent(new CustomEvent('pulse:network-error', { detail: { path, reason: `http_${response.status}` } }));
+      throw new ApiError(response.status, 'Pulse is restarting. Reconnecting…', 'server_error');
     }
     if (!response.ok) {
       let detail = {};

@@ -133,7 +133,17 @@ export function start() {
     const link = event.target.closest('a');
     if (!link) return;
     const href = link.getAttribute('href');
-    if (!href || link.target || link.hasAttribute('download') || href.startsWith('http') || href.startsWith('#')) return;
+    if (!href || link.hasAttribute('download') || href.startsWith('#')) return;
+    // Publisher links (and any other off-site link) open in a new tab. A plain
+    // external href used to replace the whole Pulse app in the current tab,
+    // which looked like the article had sent the reader somewhere else.
+    if (/^(?:https?:)?\/\//i.test(href)) {
+      if (link.target) return;
+      event.preventDefault();
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (link.target) return;
     if (link.dataset.external !== undefined) return;
     event.preventDefault();
     navigate(href);

@@ -1,5 +1,5 @@
 /* Pulse service worker: app shell + offline reading of what you've opened. */
-const VERSION = 'pulse-v68';
+const VERSION = 'pulse-v69';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = `${VERSION}-api`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -80,6 +80,9 @@ async function networkFirst(request, cacheName) {
   try {
     const response = await fetch(request);
     if (response.ok) cache.put(request, response.clone());
+    // A 502/503 from Render is not usable app data. Fall through to the cached
+    // response (if any) rather than handing the error page to the UI.
+    if (response.status >= 500) throw new Error(`server ${response.status}`);
     return response;
   } catch (err) {
     const cached = await cache.match(request);
@@ -104,12 +107,19 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(async () => {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request);
+        if (response.status < 500) return response;
+        throw new Error(`navigation ${response.status}`);
+      } catch (err) {
+        // Render's free instance can briefly return 502 while it restarts.
+        // Never replace the installed app with that page: load the cached
+        // shell and let the app's own reconnect logic recover.
         const cache = await caches.open(SHELL_CACHE);
         return (await cache.match('/')) || Response.error();
-      }),
-    );
+      }
+    })());
     return;
   }
 
