@@ -46,7 +46,7 @@ free tier. Feed previews, images, search, scores and the archive still work.
 
 ## Deploy the current code
 
-The GitHub repository at `leo-xi-spec/pulse-news` currently has an old
+The GitHub repository at `leoxi-spec/pulse-news` currently has an old
 `Pulse News` upload at commit `a44eef7`. That is why the front page still shows
 the old version. Render is deploying that commit, not this checkout.
 
@@ -74,7 +74,7 @@ On your Mac:
 
 ```bash
 # 1. Clone the repository.
-git clone https://github.com/leo-xi-spec/pulse-news.git
+git clone https://github.com/leoxi-spec/pulse-news.git
 cd pulse-news
 
 # 2. Remove the old uploaded app from the repository.
@@ -101,7 +101,9 @@ In Render:
 - **Start Command**: `python3 run.py --host 0.0.0.0 --port $PORT`
 
 If the service was originally configured with **Root Directory = Pulse News**,
-clear it. Otherwise Render will keep starting the old app.
+clear it. Otherwise Render will keep starting the old app. The uploaded build
+also includes a small `Pulse News/run.py` compatibility launcher, so an old
+Root Directory will still start the current app; clearing it is still tidier.
 
 Alternatively, use Render's manual upload deploy and upload
 `dist/Pulse-Student-News.zip`; the zip currently contains the current build.
