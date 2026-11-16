@@ -334,6 +334,9 @@ server's security headers, CSRF check, ETag and traversal defences.
 See [CLOUDFLARE.md](CLOUDFLARE.md) for the Tunnel, container and Workers
 trade-offs before deploying.
 
+**Render:** [RENDER.md](RENDER.md) has the low-memory environment, the correct
+start command, cold-start behaviour and persistent-disk guidance.
+
 **Behind a reverse proxy** (nginx/caddy), set `PULSE_ACCESS_TOKEN` and
 `PULSE_HOST=127.0.0.1`, then proxy to `:8787`.
 
