@@ -1,0 +1,47 @@
+# Pulse on Render.
+#
+# The free 512 MB instance is the constraint: keep the feed pool small and
+# leave full-article extraction off. A paid instance can raise these limits and
+# add a persistent disk (see RENDER.md).
+services:
+  - type: web
+    name: pulse-news
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python3 run.py --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      # Free instances have an ephemeral disk. This path is writable and keeps
+      # SQLite out of the source tree; it is recreated after a restart.
+      - key: PULSE_DATA_DIR
+        value: /opt/render/project/src/.pulse-data
+      - key: PULSE_INGEST
+        value: "1"
+      - key: PULSE_INGEST_WORKERS
+        value: "3"
+      - key: PULSE_INGEST_INTERVAL
+        value: "600"
+      - key: PULSE_FEED_TIMEOUT
+        value: "15"
+      - key: PULSE_ARTICLE_TIMEOUT
+        value: "15"
+      - key: PULSE_MAX_PER_FEED
+        value: "20"
+      # Full-body extraction is the biggest memory user. Feed previews, images,
+      # search and the archive still work; long reads fill only when enabled.
+      - key: PULSE_EXTRACT_BODIES
+        value: "0"
+      - key: PULSE_EXTRACT_WORKERS
+        value: "1"
+      - key: PULSE_EXTRACT_PER_CYCLE
+        value: "0"
+      - key: PULSE_ARCHIVE_FULLTEXT
+        value: "0"
+      - key: PULSE_SPORTS_CACHE
+        value: "30"

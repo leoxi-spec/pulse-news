@@ -1,0 +1,1234 @@
+import { get, post, del } from '../api.js';
+import { state, record, emit, savePrefs, prefs, toggleSave } from '../store.js';
+import {
+  html, raw, icons, esc, toast, modal, timeAgo, absDate, copyText, confirmDialog, confetti,
+  errorState, toastProgress, setLoading,
+} from '../ui.js';
+import { sourceDot, leanBar, emptyState, accessInfo, translatedBadge } from '../components.js';
+import { applyVoice, currentVoiceId, openVoicePicker, voiceProfile } from '../voice.js';
+import { onViewCleanup } from '../router.js';
+
+let articleAbort = null;
+let articleEpoch = 0;
+
+const FONTS = [
+  { id: 'serif', label: 'Serif' },
+  { id: 'sans', label: 'Sans' },
+  { id: 'dyslexic', label: 'Easy-read' },
+];
+
+export async function articleView(root, ctx) {
+  const epoch = ++articleEpoch;
+  articleAbort?.abort();
+  articleAbort = new AbortController();
+  const signal = articleAbort.signal;
+  onViewCleanup(() => articleAbort?.abort());
+  const id = Number(ctx.params.id);
+  if (!Number.isFinite(id)) {
+    root.innerHTML = emptyState({ icon: '🔍', title: 'Bad article link', text: 'That article id is not valid.' });
+    return;
+  }
+  root.innerHTML = html`
+    <div class="article">
+      <div class="skeleton skeleton--line" style="width:30%;margin-bottom:1rem"></div>
+      <div class="skeleton" style="height:2.6rem;width:92%;margin-bottom:.7rem"></div>
+      <div class="skeleton" style="height:2.6rem;width:70%;margin-bottom:1.4rem"></div>
+      <div class="skeleton" style="height:280px;border-radius:16px;margin-bottom:1.4rem"></div>
+      ${Array.from({ length: 6 }).map(() => html`<div class="skeleton skeleton--line" style="margin-bottom:.7rem"></div>`)}
+    </div>`;
+
+  let article;
+  try {
+    const data = await get(`/api/articles/${id}`, 30);
+    if (epoch !== articleEpoch) return;
+    article = data.article;
+  } catch (err) {
+    if (epoch !== articleEpoch) return;
+    if (err.status === 404) {
+      root.innerHTML = emptyState({
+        icon: '🗞️',
+        title: 'Article not found',
+        text: 'It may have been removed from the archive, or the link is wrong.',
+        action: '<a class="btn btn--primary" href="/" data-link>Back to feed</a>',
+      });
+    } else {
+      errorState(root, err.message, () => articleView(root, ctx));
+    }
+    return;
+  }
+
+  const p = prefs();
+  root.innerHTML = articleMarkup(article, p);
+  bindArticle(root, article, signal);
+  renderStoryExtras(root, article);
+  trackReading(article, signal);
+  if (article.overview) {
+    const overviewSlot = root.querySelector('#overview-slot');
+    if (overviewSlot) {
+      overviewSlot.innerHTML = overviewMarkup(article.overview, article);
+      bindOverview(root, article, article.overview);
+    }
+  } else {
+    loadOverview(root, article);
+  }
+  if (article.notes?.length) renderNotes(root, article);
+}
+
+function articleMarkup(a, p) {
+  const source = a.source || {};
+  const blocks = a.blocks || [];
+  const hasBody = blocks.length > 0;
+  const gallery = (Array.isArray(a.images) && a.images.length ? a.images : (a.image ? [a.image] : [])).filter(Boolean);
+  const dateLabel = a.date_label === 'First seen' ? 'First seen' : 'Published';
+  const dateRel = a.published_relative || timeAgo(a.published_at || a.first_seen_at);
+
+  return html`
+    <div id="read-progress" style="position:fixed;top:0;left:0;height:3px;width:0;background:var(--grad);z-index:70;transition:width .1s linear"></div>
+    <article class="article" data-article-id="${a.id}">
+      <button class="article__back" type="button" data-act="back">${raw(icons.chevron)} Back</button>
+      <div class="article__kicker">
+        <span class="badge badge--topic">${a.topic_label}</span>
+        ${translatedBadge(a, { long: true })}
+        ${a.breaking ? html`<span class="badge badge--breaking">Breaking</span>` : ''}
+        ${a.story?.source_count > 1 ? html`<span class="badge badge--topic">${a.story.source_count} outlets covering</span>` : ''}
+      </div>
+
+      <h1 class="article__title">${a.title}</h1>
+      ${a.summary && a.summary !== a.title ? html`<p class="article__dek">${a.summary}</p>` : ''}
+
+      <div class="article__byline">
+        ${sourceDot(source)}
+        <span><strong>${source.name}</strong></span>
+        <span class="faint">·</span>
+        <span title="${absDate(a.published_at || a.first_seen_at)}">${dateLabel} ${dateRel}</span>
+        ${a.author ? html`<span class="faint">·</span><span>By ${a.author}</span>` : ''}
+        <span class="faint">·</span>
+        <span>${a.reading_minutes} min read</span>
+        ${a.date_confidence === 'day' || a.date_confidence === 'inferred' ? html`<span class="faint" title="The publisher only provided a date, so the time of day is unknown">· date-only</span>` : ''}
+      </div>
+
+      ${renderAccessBanner(a)}
+      <div class="story-facts" id="story-facts"></div>
+
+      <div class="article__actions" role="toolbar" aria-label="Story actions">
+        ${renderSaveButton(a)}
+        <button class="btn" data-act="share">${raw(icons.share)} Share</button>
+        <button class="btn" data-act="cite">${raw(icons.quote)} Cite</button>
+        ${a.language && a.language !== 'en' && hasBody ? html`
+          <button class="btn btn--translate" data-act="translate" aria-pressed="false" title="Translate the full article into English">
+            ${raw(icons.language)} Translate article
+          </button>` : ''}
+        <button class="btn" data-act="quiz">${raw(icons.bolt)} Quiz</button>
+        <button class="btn" data-act="listen" aria-pressed="false" title="Read this story aloud">${raw(icons.sound)} Listen</button>
+        <span class="spacer"></span>
+        <button class="btn" data-act="focus" title="Distraction-free reading">${raw(icons.eye)} Focus</button>
+        <details class="action-more">
+          <summary class="btn" aria-label="More reading actions">${raw(icons.filter)} More</summary>
+          <div class="action-menu">
+            <button class="btn" data-act="notes">${raw(icons.note)} Notes</button>
+            <button class="btn" data-act="print">${raw(icons.printer)} Print / PDF</button>
+            <button class="btn" data-act="font">${raw(icons.text)} Reading font</button>
+            <button class="btn" data-act="text-smaller">A− Smaller text</button>
+            <button class="btn" data-act="text-larger">A+ Larger text</button>
+            <button class="btn" data-act="voice">${raw(icons.sound)} Listen voice <span class="tiny faint" data-voice-label>${voiceProfile(currentVoiceId()).label}</span></button>
+            <a class="btn" href="${a.read_url}" target="_blank" rel="noopener noreferrer">${raw(icons.external)} Open at ${source.name}</a>
+          </div>
+        </details>
+      </div>
+      <div class="reaction-bar" id="reaction-bar" aria-label="React to this story"></div>
+
+      ${renderVideo(a)}
+
+      ${gallery.length ? html`
+        <figure class="article__hero article__hero--photos">
+          <button class="hero-photo" data-gallery-open="0" aria-label="Open photo 1 of ${gallery.length}">
+            <img src="${gallery[0]}" alt="" fetchpriority="high" decoding="async">
+            <span class="photo-count">${gallery.length} photo${gallery.length === 1 ? '' : 's'}</span>
+          </button>
+          ${gallery.length > 1 ? html`
+            <div class="hero-thumbs">
+              ${gallery.slice(1, 4).map((src, index) => html`
+                <button class="hero-thumb" data-gallery-open="${index + 1}" aria-label="Open photo ${index + 2} of ${gallery.length}">
+                  <img src="${src}" alt="" loading="lazy" decoding="async">
+                </button>`)}
+              ${gallery.length > 4 ? html`
+                <button class="hero-more" data-gallery-open="0" aria-label="View all ${gallery.length} photos">+${gallery.length - 4}</button>` : ''}
+            </div>` : ''}
+        </figure>` : ''}
+
+      <div id="overview-slot">
+        <div class="overview">
+          <div class="overview__head">
+            <h2>${raw(icons.sparkle)} Overview</h2>
+            <span class="badge badge--ai">Building…</span>
+          </div>
+          <div class="overview__body"><div class="skeleton skeleton--line" style="width:80%;margin-bottom:.5rem"></div><div class="skeleton skeleton--line" style="width:60%"></div></div>
+        </div>
+      </div>
+
+      <div id="full-translation-note"></div>
+      <div class="prose" id="prose" data-font="${document.body.classList.contains('font-serif') ? 'serif' : ''}">${renderBlocks(a, blocks)}</div>
+
+      <div id="extras-slot"></div>
+
+      ${!hasBody ? renderNoBody(a) : ''}
+
+      <div class="article__foot">
+        <div class="hstack" style="justify-content:space-between">
+          <div class="hstack" style="gap:.5rem">
+            <span class="tiny muted">From ${source.name}</span>
+            <span class="tiny faint">·</span>
+            <span class="tiny muted">${a.archive ? 'In your permanent archive' : ''}</span>
+          </div>
+          <a class="btn btn--sm btn--ghost" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read the original ${raw(icons.external)}</a>
+        </div>
+        <p class="tiny faint" style="margin-top:.8rem">
+          Pulse stores a preview and summary for reading and search. Full rights stay with ${source.name}.
+          ${a.source_about ? esc(a.source_about) : ''}
+        </p>
+      </div>
+
+      <div id="notes-slot"></div>
+      <div id="coverage-slot">${renderCoverage(a)}</div>
+      <div id="quiz-slot"></div>
+      <div id="related-slot">${renderRelated(a)}</div>
+    </article>`;
+}
+
+function renderVideo(a) {
+  const video = a.video;
+  if (!video) return '';
+  if (video.kind === 'file' && video.url) {
+    return html`
+      <figure class="article__video">
+        <video controls preload="metadata" poster="${a.image || ''}" src="${video.url}"></video>
+        <figcaption>Video from ${a.source?.name || 'the publisher'}</figcaption>
+      </figure>`;
+  }
+  if (!video.embed) return '';
+  const poster = a.image || video.thumbnail || '';
+  return html`
+    <figure class="article__video" data-video-embed="${video.embed}">
+      <button class="video-poster" type="button" data-video-play aria-label="Play video from ${video.provider || 'the publisher'}">
+        ${poster ? html`<img src="${poster}" alt="">` : ''}
+        <span class="video-poster__shade" aria-hidden="true"></span>
+        <span class="video-poster__play" aria-hidden="true">${raw(icons.play)}</span>
+        <span class="video-poster__label">Watch on ${video.provider || 'video'}</span>
+      </button>
+      <figcaption>
+        Video from ${a.source?.name || 'the publisher'}${video.provider === 'YouTube' ? ' · YouTube' : ''}
+        ${video.url ? html` · <a href="${video.url}" target="_blank" rel="noopener noreferrer">Watch on ${video.provider || 'the source'}</a>` : ''}
+      </figcaption>
+    </figure>`;
+}
+
+function bindVideo(root, article) {
+  root.querySelectorAll('.article__video video').forEach((video) => {
+    const showUnavailable = () => {
+      const figure = video.closest('.article__video');
+      if (!figure) return;
+      const link = article.read_url || article.url;
+      figure.innerHTML = `<div class="video-unavailable"><b>This clip is unavailable</b><span>The publisher's video file did not load.</span><a class="btn btn--sm" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Open the story</a></div>`;
+    };
+    if (video.error) showUnavailable();
+    else video.addEventListener('error', showUnavailable, { once: true });
+  });
+  root.querySelectorAll('[data-video-play]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const figure = button.closest('[data-video-embed]');
+      if (!figure) return;
+      const base = figure.dataset.videoEmbed;
+      const origin = encodeURIComponent(window.location.origin);
+      const referrer = encodeURIComponent(window.location.href);
+      const iframe = document.createElement('iframe');
+      iframe.src = `${base}${base.includes('?') ? '&' : '?'}autoplay=1&rel=0&playsinline=1&origin=${origin}&widget_referrer=${referrer}`;
+      iframe.title = 'Video player';
+      iframe.loading = 'lazy';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen';
+      iframe.allowFullscreen = true;
+      figure.innerHTML = '';
+      figure.appendChild(iframe);
+    });
+  });
+}
+
+function renderAccessBanner(a) {
+  if (a.video && !(a.blocks || []).length) {
+    return html`
+      <div class="reader-banner reader-banner--full">
+        <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
+        <div><b>Video story</b><span>Watch the clip above. The publisher's text description is below; the full article may live on their site.</span></div>
+        <a class="btn btn--sm btn--ghost" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Open original ${raw(icons.external)}</a>
+      </div>`;
+  }
+  const access = accessInfo(a);
+  if (access.kind === 'full') {
+    return html`
+      <div class="reader-banner reader-banner--full">
+        <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
+        <div><b>Full story available here</b><span>You can read the complete article inside Pulse — no need to leave the app.</span></div>
+        ${a.read_url ? html`<a class="btn btn--sm btn--ghost" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Original ${raw(icons.external)}</a>` : ''}
+      </div>`;
+  }
+  if (access.kind === 'locked') {
+    return html`
+      <div class="reader-banner reader-banner--locked">
+        <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
+        <div><b>Subscription required at ${a.source.name}</b><span>This is the publisher's preview. Pulse shows you the overview, coverage and full metadata, then links to the source.</span></div>
+        <a class="btn btn--sm btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at source ${raw(icons.external)}</a>
+      </div>`;
+  }
+  return html`
+    <div class="reader-banner reader-banner--preview">
+      <span class="reader-banner__icon" aria-hidden="true"><span class="access-dot"></span></span>
+      <div><b>Preview only</b><span>Pulse has the summary and overview. The full article is at ${a.source.name}.</span></div>
+      <a class="btn btn--sm btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at source ${raw(icons.external)}</a>
+    </div>`;
+}
+
+function renderSaveButton(a) {
+  return html`<button class="btn ${a.saved_collection ? 'is-on' : ''}" data-act="save" aria-pressed="${a.saved_collection ? 'true' : 'false'}">
+    ${raw(icons.bookmark)} <span data-save-label>${a.saved_collection ? 'Saved' : 'Save'}</span>
+  </button>`;
+}
+
+function renderBlocks(a, blocks) {
+  if (!blocks.length) return '';
+  return raw(blocks.map((block, index) => {
+    const text = esc(block.text);
+    if (block.type === 'h2' || block.type === 'h3' || block.type === 'h4') {
+      const tag = block.type === 'h4' ? 'h3' : block.type;
+      return `<${tag} id="block-${index}">${text}</${tag}>`;
+    }
+    if (block.type === 'li') return `<li id="block-${index}">${text}</li>`;
+    if (block.type === 'blockquote') return `<blockquote id="block-${index}">${text}</blockquote>`;
+    if (block.type === 'p') return `<p id="block-${index}">${text}</p>`;
+    return '';
+  }).join(''));
+}
+
+function renderNoBody(a) {
+  if (a.video) {
+    return html`
+      <div class="paywall">
+        <h3>Watch the video above</h3>
+        <p>This is a video story. Pulse has the clip and the publisher's description; the full article, if there is one, is at ${a.source.name}.</p>
+        <a class="btn btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Open at ${a.source.name} ${raw(icons.external)}</a>
+      </div>`;
+  }
+  if (a.paywalled) {
+    return html`
+      <div class="paywall">
+        <h3>The full story is at ${a.source.name}</h3>
+        <p>This outlet requires a subscription for the full text. Pulse can still show you the preview, the overview, related coverage and the archive metadata — and you can open the original any time.</p>
+        <a class="btn btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Continue at ${a.source.name} ${raw(icons.external)}</a>
+      </div>`;
+  }
+  return html`
+    <div class="paywall">
+      <h3>Preview available</h3>
+      <p>Pulse could not extract the full text from ${a.source.name}'s page, so this is the publisher's own summary. The original is one tap away.</p>
+      <a class="btn btn--primary" href="${a.read_url}" target="_blank" rel="noopener noreferrer">Read at ${a.source.name} ${raw(icons.external)}</a>
+    </div>`;
+}
+
+function renderCoverage(a) {
+  const coverage = a.coverage || {};
+  const others = (coverage.articles || []).filter(Boolean);
+  if (!others.length) return '';
+  const leans = coverage.leans || {};
+  return html`
+    <section class="coverage">
+      <div class="section-head" style="margin-top:0">
+        <h2>How other outlets covered it</h2>
+        <span class="tiny muted">${coverage.sources} source${coverage.sources === 1 ? '' : 's'}</span>
+      </div>
+      ${leanBar(leans)}
+      <p class="tiny faint" style="margin-top:-.4rem;margin-bottom:.8rem">${coverage.note || ''}</p>
+      <div class="row-list">
+        ${others.slice(0, 8).map((item) => html`
+          <div class="row">
+            <div class="row__body">
+              <a class="row__title" href="/article/${item.id}" data-link>${item.title}</a>
+              <div class="row__meta">
+                <span>${item.source}</span>
+                <span aria-hidden="true">·</span>
+                <span>${item.published_relative}</span>
+                <span aria-hidden="true">·</span>
+                <span>${item.lean}</span>
+                ${item.paywall ? html`<span class="tiny faint">Paywalled</span>` : ''}
+              </div>
+            </div>
+          </div>`)}
+      </div>
+    </section>`;
+}
+
+function renderRelated(a) {
+  const related = a.related || [];
+  if (!related.length) return '';
+  return html`
+    <section class="related section">
+      <div class="section-head" style="margin-top:0"><h2>Keep reading</h2></div>
+      <div class="row-list">
+        ${related.map((item) => html`
+          <div class="row">
+            ${item.image ? html`<img class="row__img" src="${item.image}" alt="" loading="lazy" decoding="async">` : ''}
+            <div class="row__body">
+              <a class="row__title" href="/article/${item.id}" data-link>${item.title}</a>
+              <div class="row__meta"><span>${item.source}</span><span aria-hidden="true">·</span><span>${item.published_relative}</span><span aria-hidden="true">·</span><span>${item.reading_minutes} min</span></div>
+            </div>
+          </div>`)}
+      </div>
+    </section>`;
+}
+
+function renderNotes(root, article, notes = null) {
+  const list = notes || article.notes || [];
+  const slot = root.querySelector('#notes-slot');
+  if (!slot) return;
+  if (!list.length) { slot.innerHTML = ''; return; }
+  slot.innerHTML = html`
+    <section class="section">
+      <div class="section-head" style="margin-top:0"><h2>Your notes</h2><span class="tiny muted">${list.length}</span></div>
+      ${list.map((note) => html`
+        <div class="note" data-note="${note.id}">
+          ${note.quote ? html`<div class="note__quote">“${note.quote}”</div>` : ''}
+          <div class="note__body">${note.body}</div>
+          <div class="note__meta">
+            <span>${timeAgo(note.created_at)}</span>
+            <button class="link" data-del-note="${note.id}" style="background:none;border:0;font-size:.72rem">Delete</button>
+          </div>
+        </div>`)}
+    </section>`;
+  slot.querySelectorAll('[data-del-note]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const noteId = button.dataset.delNote;
+      try {
+        await del(`/api/notes/${noteId}`);
+        button.closest('.note')?.remove();
+        toast('Note deleted');
+      } catch (err) { toast(err.message, { type: 'bad' }); }
+    });
+  });
+}
+
+const REACTIONS = ['Hype', 'Whoa', 'Funny', 'Sad', 'Learned'];
+
+function readabilityOf(text) {
+  const words = text.match(/[A-Za-z’'-]+/g) || [];
+  if (words.length < 60) return { label: 'Quick read', help: 'Short piece' };
+  const sentences = Math.max(1, (text.match(/[.!?]+/g) || []).length);
+  const syllables = words.reduce((total, word) => {
+    const lower = word.toLowerCase();
+    return total + Math.max(1, (lower.match(/[aeiouy]+/g) || []).length - (lower.endsWith('e') ? 1 : 0));
+  }, 0);
+  let score = 206.835 - 1.015 * (words.length / sentences) - 84.6 * (syllables / words.length);
+  score = Math.max(0, Math.min(100, score));
+  const label = score >= 65 ? 'Easy read' : score >= 45 ? 'Moderate read' : 'Dense read';
+  return { label, help: `Flesch reading ease ${Math.round(score)}/100` };
+}
+
+const POSITIVE = new Set(('win wins won boost boosts growth success successful agree agreement hope improve improved record breakthrough recovery support celebrate rise gain safe peace progress best top').split(' '));
+const NEGATIVE = new Set(('war killed kill death dead crisis fall fell drop loss lose lost attack threat risk fear crash decline cut cuts strike protest inflation layoff layoffs damage hate abuse fail failed warning concern danger').split(' '));
+
+function toneOf(text) {
+  const tokens = text.toLowerCase().match(/[a-z']+/g) || [];
+  let positive = 0;
+  let negative = 0;
+  for (const token of tokens) {
+    if (POSITIVE.has(token)) positive += 1;
+    if (NEGATIVE.has(token)) negative += 1;
+  }
+  if (positive > negative * 1.4) return { label: 'Upbeat tone' };
+  if (negative > positive * 1.4) return { label: 'Critical tone' };
+  return { label: 'Neutral tone' };
+}
+
+function numbersOf(text) {
+  const out = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    if (sentence.length < 35 || sentence.length > 260) continue;
+    const match = sentence.match(/(?:[$£€]\s?)?\d[\d,.]*\s?(?:%|percent|million|billion|trillion|bn|km|kg|°c|years?|months?|days?|hours?|people|students?|seats?|votes?|goals?|points?|miles?)/i);
+    if (!match) continue;
+    out.push({ value: match[0].trim(), context: sentence.trim().slice(0, 150) });
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+function classQuestions(article) {
+  const stop = new Set(['The', 'This', 'That', 'After', 'Before', 'Why', 'How', 'What', 'When', 'Where', 'Who', 'New', 'One', 'Two', 'Three', 'First', 'Last', 'From', 'With', 'And']);
+  const names = [...new Set((article.title.match(/\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?\b/g) || [])
+    .filter((name) => !stop.has(name.split(' ')[0])))].slice(0, 2);
+  const who = names[0] || 'the main person';
+  return [
+    `What does ${who} want — and who stands to lose?`,
+    'Which number in this story would you check first, and where would you look?',
+    `If you had 30 seconds with ${article.source?.name || 'the reporter'}, what would you ask?`,
+  ];
+}
+
+function reactionMap() {
+  try { return JSON.parse(localStorage.getItem('pulse.reactions') || '{}'); } catch { return {}; }
+}
+
+function renderStoryExtras(root, article) {
+  const text = (article.blocks || []).map((block) => block.text).join(' ');
+  const facts = root.querySelector('#story-facts');
+  const bar = root.querySelector('#reaction-bar');
+  const slot = root.querySelector('#extras-slot');
+  if (!text) return;
+
+  if (facts) {
+    const read = readabilityOf(text);
+    const tone = toneOf(text);
+    const reasons = (article.reasons || []).slice(0, 2);
+    facts.innerHTML = html`
+      <span class="fact-pill" title="${read.help}">${raw(icons.text)} ${read.label}</span>
+      <span class="fact-pill" title="Rough tone estimate from the story's own words">${tone.label}</span>
+      ${reasons.map((reason) => html`<span class="fact-pill fact-pill--why" title="Why Pulse included this">${reason}</span>`)}`;
+  }
+
+  if (bar) {
+    const stored = reactionMap()[article.id];
+    bar.innerHTML = html`
+      <span class="reaction-bar__label">React</span>
+      ${REACTIONS.map((label) => html`
+        <button type="button" class="reaction ${stored === label ? 'is-on' : ''}" data-reaction="${label}" title="${label}" aria-label="${label}">${label}</button>`)}
+      <span class="reaction-bar__note" data-reaction-note>${stored ? `You reacted ${stored}` : ''}</span>`;
+    bar.querySelectorAll('[data-reaction]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const reaction = button.dataset.reaction;
+        const map = reactionMap();
+        map[article.id] = map[article.id] === reaction ? null : reaction;
+        try { localStorage.setItem('pulse.reactions', JSON.stringify(map)); } catch { /* ignore */ }
+        bar.querySelectorAll('[data-reaction]').forEach((node) => node.classList.toggle('is-on', node === button && Boolean(map[article.id])));
+        const note = bar.querySelector('[data-reaction-note]');
+        if (note) note.textContent = map[article.id] ? `You reacted: ${reaction}` : '';
+        if (map[article.id]) confetti(8);
+      });
+    });
+  }
+
+  if (slot) {
+    const numbers = numbersOf(text);
+    const questions = classQuestions(article);
+    slot.innerHTML = html`
+      <section class="section extras">
+        <div class="section-head" style="margin-top:1.5rem"><h2>Go deeper</h2><span class="tiny muted">made from this story</span></div>
+        <div class="extras-grid">
+          ${numbers.length ? html`
+            <div class="card card-pad">
+              <h3 class="extras-card__title">By the numbers</h3>
+              <ul class="numbers-list">
+                ${numbers.map((number) => html`<li><b>${number.value}</b><span>${number.context}</span></li>`)}
+              </ul>
+            </div>` : ''}
+          <div class="card card-pad class-card">
+            <h3 class="extras-card__title">Three questions for class</h3>
+            <ol class="class-list">
+              ${questions.map((question) => html`<li>${question}</li>`)}
+            </ol>
+          </div>
+          <div class="card card-pad ask-card">
+            <h3 class="extras-card__title">Ask this article</h3>
+            <p class="tiny muted">Type a question. The answer is always a sentence from this story — no invented facts.</p>
+            <form class="ask-form" data-ask-form>
+              <input data-ask-input type="search" placeholder="What did the coach say about…?" aria-label="Ask this article">
+              <button class="btn btn--sm btn--primary" type="submit">Ask</button>
+            </form>
+            <div class="hstack ask-chips">
+              <button type="button" class="chip" data-ask-suggest="Who is involved?">Who is involved?</button>
+              <button type="button" class="chip" data-ask-suggest="What happens next?">What happens next?</button>
+              <button type="button" class="chip" data-ask-suggest="What are the key numbers?">Key numbers</button>
+            </div>
+            <div class="ask-results" data-ask-results></div>
+          </div>
+        </div>
+      </section>`;
+
+    const askForm = slot.querySelector('[data-ask-form]');
+    const askInput = slot.querySelector('[data-ask-input]');
+    const askResults = slot.querySelector('[data-ask-results]');
+    const runAsk = (question) => {
+      const tokens = askTokens(question);
+      const found = askArticle(text, question);
+      if (found.length) {
+        askResults.innerHTML = html`<div class="ask-answer">
+          ${found.map((row) => html`<p>${raw(markTerms(row.sentence, tokens))}</p>`)}
+          <p class="tiny faint">Found in this story · not an AI answer</p>
+        </div>`;
+        return;
+      }
+      // Broad questions ("who is involved?") may not share a word with the
+      // text. Show the opening lines instead of pretending there is no story.
+      const opening = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length >= 45).slice(0, 2);
+      askResults.innerHTML = opening.length
+        ? html`<div class="ask-answer">
+            ${opening.map((sentence) => html`<p>${sentence}</p>`)}
+            <p class="tiny faint">No exact match — here is the opening of the story.</p>
+          </div>`
+        : html`<p class="tiny faint">No sentence matched. Try fewer, more specific words.</p>`;
+    };
+    askForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const question = askInput.value.trim();
+      if (question) runAsk(question);
+    });
+    slot.querySelectorAll('[data-ask-suggest]').forEach((button) => {
+      button.addEventListener('click', () => {
+        askInput.value = button.dataset.askSuggest;
+        runAsk(button.dataset.askSuggest);
+      });
+    });
+  }
+}
+
+function adjustText(delta) {
+  const current = Number(prefs().text_size ?? 1);
+  const next = Math.max(0, Math.min(4, current + delta));
+  if (next === current) return;
+  savePrefs({ text_size: next }).catch(() => {});
+}
+
+function askTokens(question) {
+  const stop = new Set(('the and for with from that this will have has are was were but not you your its his her their they them who what when where why how after before over under into than then more most can could would should may might says said new now one two three first last next about amid as at by in of on to up out off is it be or an a').split(' '));
+  return [...new Set((question.toLowerCase().match(/[a-z0-9']{3,}/g) || []).filter((token) => !stop.has(token)))];
+}
+
+function askArticle(text, question) {
+  const tokens = askTokens(question);
+  if (!tokens.length) return [];
+  const phrase = question.toLowerCase().trim();
+  return text.split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 45 && sentence.length <= 320)
+    .map((sentence) => {
+      const low = sentence.toLowerCase();
+      let score = tokens.reduce((total, token) => total + (low.includes(token) ? 1 : 0), 0);
+      if (phrase.length > 6 && low.includes(phrase)) score += 4;
+      return { sentence, score };
+    })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}
+
+function markTerms(sentence, tokens) {
+  let markup = esc(sentence);
+  for (const token of tokens) {
+    try {
+      markup = markup.replace(new RegExp(`\\b(${token}[a-z']*)`, 'gi'), '<mark>$1</mark>');
+    } catch { /* ignore bad token */ }
+  }
+  return markup;
+}
+
+function speechChunks(article) {
+  const parts = [article.title, article.summary || ''];
+  const blocks = article.showingFullTranslation && article.translated_blocks
+    ? article.translated_blocks
+    : (article.blocks || []);
+  for (const block of blocks) {
+    if (['p', 'li', 'blockquote', 'h2', 'h3', 'h4'].includes(block.type) && block.text) parts.push(block.text);
+  }
+  const text = parts.filter(Boolean).join('. ')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return [];
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const chunks = [];
+  let current = '';
+  for (const sentence of sentences) {
+    if (current && (current + sentence).length > 230) { chunks.push(current.trim()); current = sentence; }
+    else current += sentence;
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+function onListen(button, article) {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    toast('This browser cannot read stories aloud.', { type: 'bad' });
+    return;
+  }
+  const mode = button.dataset.mode || 'idle';
+  const setMode = (next, label) => {
+    button.dataset.mode = next;
+    button.setAttribute('aria-pressed', next === 'playing' ? 'true' : 'false');
+    button.innerHTML = html`${raw(next === 'playing' ? icons.pause : icons.sound)} ${label}`;
+  };
+  if (mode === 'playing') {
+    synth.pause();
+    setMode('paused', 'Resume');
+    return;
+  }
+  if (mode === 'paused') {
+    synth.resume();
+    setMode('playing', 'Pause');
+    return;
+  }
+  const chunks = speechChunks(article);
+  if (!chunks.length) { toast('There is not enough text to read aloud yet.'); return; }
+  synth.cancel();
+  let index = 0;
+  let stopped = false;
+  const finish = () => {
+    if (stopped) return;
+    stopped = true;
+    setMode('idle', 'Listen');
+  };
+  const speakNext = () => {
+    if (stopped) return;
+    if (index >= chunks.length) { finish(); toast('Finished reading'); return; }
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    applyVoice(utterance);
+    utterance.onend = () => { index += 1; speakNext(); };
+    utterance.onerror = (event) => {
+      if (event.error === 'interrupted' || event.error === 'canceled') { finish(); return; }
+      finish();
+      toast('Read aloud stopped.', { type: 'bad' });
+    };
+    synth.speak(utterance);
+  };
+  setMode('playing', 'Pause');
+  speakNext();
+}
+
+function bindGallery(root, article) {
+  const images = (Array.isArray(article.images) && article.images.length ? article.images : (article.image ? [article.image] : [])).filter(Boolean);
+  if (!images.length) return;
+  let layer = null;
+  let index = 0;
+  let previousFocus = null;
+
+  const close = () => {
+    if (!layer) return;
+    layer.remove();
+    layer = null;
+    document.body.classList.remove('no-scroll');
+    document.removeEventListener('keydown', onKey);
+    if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+  };
+
+  const paint = () => {
+    if (!layer) return;
+    layer.querySelector('img').src = images[index];
+    layer.querySelector('[data-count]').textContent = `${index + 1} / ${images.length}`;
+    layer.querySelector('[data-prev]').disabled = index === 0;
+    layer.querySelector('[data-next]').disabled = index === images.length - 1;
+  };
+
+  const onKey = (event) => {
+    if (event.key === 'Escape') close();
+    else if (event.key === 'ArrowLeft' && index > 0) { index -= 1; paint(); }
+    else if (event.key === 'ArrowRight' && index < images.length - 1) { index += 1; paint(); }
+  };
+
+  const open = (start) => {
+    previousFocus = document.activeElement;
+    index = Math.max(0, Math.min(images.length - 1, start));
+    layer = document.createElement('div');
+    layer.className = 'lightbox';
+    layer.setAttribute('role', 'dialog');
+    layer.setAttribute('aria-modal', 'true');
+    layer.setAttribute('aria-label', 'Article photos');
+    layer.innerHTML = html`
+      <div class="lightbox__bar">
+        <span class="lightbox__brand">${raw(icons.camera)} Photos</span>
+        <span class="lightbox__count" data-count>${index + 1} / ${images.length}</span>
+        <button class="lightbox__close" data-close aria-label="Close photos">${raw(icons.close)}</button>
+      </div>
+      <button class="lightbox__nav lightbox__nav--prev" data-prev aria-label="Previous photo">${raw(icons.chevron)}</button>
+      <img src="${images[index]}" alt="Photo ${index + 1} of ${images.length} from the article">
+      <button class="lightbox__nav lightbox__nav--next" data-next aria-label="Next photo">${raw(icons.chevron)}</button>
+      <p class="lightbox__hint">Swipe or use ← → · Esc to close</p>`;
+    document.body.append(layer);
+    document.body.classList.add('no-scroll');
+    paint();
+    layer.tabIndex = -1;
+    layer.querySelector('[data-close]')?.focus();
+    layer.querySelector('[data-close]').addEventListener('click', close);
+    layer.querySelector('[data-prev]').addEventListener('click', () => { if (index > 0) { index -= 1; paint(); } });
+    layer.querySelector('[data-next]').addEventListener('click', () => { if (index < images.length - 1) { index += 1; paint(); } });
+    layer.addEventListener('click', (event) => { if (event.target === layer) close(); });
+    let touchX = null;
+    layer.addEventListener('touchstart', (event) => { touchX = event.touches[0]?.clientX ?? null; }, { passive: true });
+    layer.addEventListener('touchend', (event) => {
+      if (touchX === null) return;
+      const delta = (event.changedTouches[0]?.clientX ?? touchX) - touchX;
+      touchX = null;
+      if (Math.abs(delta) < 45) return;
+      if (delta < 0 && index < images.length - 1) { index += 1; paint(); }
+      if (delta > 0 && index > 0) { index -= 1; paint(); }
+    }, { passive: true });
+    document.addEventListener('keydown', onKey);
+  };
+
+  root.querySelectorAll('[data-gallery-open]').forEach((button) => {
+    button.addEventListener('click', () => open(Number(button.dataset.galleryOpen || 0)));
+  });
+}
+
+function bindArticle(root, article, signal) {
+  bindGallery(root, article);
+  bindVideo(root, article);
+  const prose = root.querySelector('#prose');
+
+  root.querySelectorAll('[data-act]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const act = button.dataset.act;
+      if (act === 'back') {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = '/';
+        return;
+      }
+      if (act === 'save') return onSave(button, article);
+      if (act === 'share') return onShare(article);
+      if (act === 'cite') return onCite(article);
+      if (act === 'translate') return onTranslateArticle(button, article, root);
+      if (act === 'quiz') return onQuiz(article, root);
+      if (act === 'notes') return onAddNote(article, root);
+      if (act === 'listen') return onListen(button, article);
+      if (act === 'voice') return openVoicePicker({
+        onSelect: () => {
+          const label = root.querySelector('[data-voice-label]');
+          if (label) label.textContent = voiceProfile(currentVoiceId()).label;
+        },
+      });
+      if (act === 'focus') return toggleFocus();
+      if (act === 'font') return cycleFont();
+      if (act === 'text-smaller') return adjustText(-1);
+      if (act === 'text-larger') return adjustText(1);
+      if (act === 'print') return window.print();
+    });
+  });
+
+  // Text selection → highlight / note popover.
+  const menu = document.getElementById('selection-menu');
+  let selectionText = '';
+  const hideMenu = () => { menu.hidden = true; menu.innerHTML = ''; };
+
+  const showMenu = (event) => {
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    if (!text || text.length < 3 || !prose || !selection.anchorNode || !prose.contains(selection.anchorNode)) {
+      hideMenu();
+      return;
+    }
+    selectionText = text.slice(0, 600);
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    menu.innerHTML = html`
+      <button type="button" data-sel="mark">Highlight</button>
+      <button type="button" data-sel="note">Note</button>
+      <button type="button" data-sel="copy">Copy</button>`;
+    menu.hidden = false;
+    const top = rect.top + window.scrollY - 46;
+    menu.style.top = `${Math.max(8, top)}px`;
+    menu.style.left = `${Math.min(window.innerWidth - 240, Math.max(8, rect.left))}px`;
+    menu.querySelectorAll('[data-sel]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const action = button.dataset.sel;
+        if (action === 'mark') {
+          try {
+            const mark = document.createElement('mark');
+            mark.textContent = selectionText;
+            mark.title = 'Highlighted in Pulse';
+            range.deleteContents();
+            range.insertNode(mark);
+            toast('Highlighted', { type: 'good' });
+          } catch { toast('Could not highlight that selection', { type: 'bad' }); }
+        } else if (action === 'copy') {
+          await copyText(selectionText);
+          toast('Copied');
+        } else {
+          openNoteModal(article, root, selectionText);
+        }
+        hideMenu();
+        selection.removeAllRanges();
+      });
+    });
+  };
+
+  if (prose) {
+    prose.addEventListener('mouseup', (event) => setTimeout(() => showMenu(event), 10));
+    prose.addEventListener('touchend', (event) => setTimeout(() => showMenu(event), 20));
+  }
+  document.addEventListener('click', (event) => {
+    if (!menu.hidden && !menu.contains(event.target) && !prose?.contains(event.target)) hideMenu();
+  }, { signal });
+  window.addEventListener('scroll', hideMenu, { passive: true, signal });
+
+  // Track reading progress and award a "read" once.
+  const bar = root.querySelector('#read-progress');
+  window.addEventListener('scroll', () => {
+    if (!bar) return;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const percent = max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0;
+    bar.style.width = `${percent}%`;
+  }, { passive: true, signal });
+}
+
+async function onTranslateArticle(button, article, root) {
+  const prose = root.querySelector('#prose');
+  const note = root.querySelector('#full-translation-note');
+  if (!prose) return;
+
+  const paint = (translated) => {
+    const blocks = translated ? (article.translated_blocks || []) : (article.blocks || []);
+    article.showingFullTranslation = translated;
+    prose.innerHTML = renderBlocks(article, blocks);
+    prose.classList.toggle('is-translated', translated);
+    button.classList.toggle('is-on', translated);
+    button.setAttribute('aria-pressed', translated ? 'true' : 'false');
+    button.innerHTML = html`${raw(icons.language)} ${translated ? 'Show original' : 'Translate article'}`;
+    if (!note) return;
+    if (!translated) {
+      note.innerHTML = '';
+      return;
+    }
+    const meta = article.translation_meta || {};
+    const provider = meta.provider === 'mymemory' ? 'MyMemory' : 'Google Translate';
+    const partial = meta.partial ? ' Some paragraphs could not be translated and stay in the original language.' : '';
+    note.innerHTML = html`
+      <div class="translation-note">
+        <span class="translation-note__mark">${raw(icons.language)}</span>
+        <div>
+          <b>Translated from ${meta.language_name || article.language_name || 'the original language'}</b>
+          <span>Full article translated by ${provider}. The publisher's original is always one tap away.${partial}</span>
+        </div>
+        <button class="link" type="button" data-act="translate">Show original</button>
+      </div>`;
+    note.querySelector('[data-act="translate"]')?.addEventListener('click', () => paint(false));
+  };
+
+  if (article.translated_blocks) {
+    paint(!article.showingFullTranslation);
+    return;
+  }
+
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  const previous = button.innerHTML;
+  button.innerHTML = html`${raw(icons.language)} Translating…`;
+  try {
+    const data = await get(`/api/articles/${article.id}/translation`, 180);
+    if (!data.translated || !Array.isArray(data.blocks) || !data.blocks.length) {
+      toast(data.error || 'The translation service is busy. Try again in a moment.', { type: 'bad' });
+      return;
+    }
+    article.translated_blocks = data.blocks;
+    article.translation_meta = data;
+    paint(true);
+    toast(data.partial ? 'Article translated — some paragraphs are still original' : 'Full article translated', { type: 'good' });
+  } catch (err) {
+    toast(err.message || 'Could not translate this article.', { type: 'bad' });
+  } finally {
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    if (!article.translated_blocks) button.innerHTML = previous;
+  }
+}
+
+async function onSave(button, article) {
+  try {
+    const { saved } = await toggleSave({ id: article.id, saved: Boolean(article.saved_collection) });
+    article.saved_collection = saved ? 'Saved' : null;
+    button.classList.toggle('is-on', saved);
+    button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+    const label = button.querySelector('[data-save-label]');
+    if (label) label.textContent = saved ? 'Saved' : 'Save';
+    toast(saved ? 'Saved to your library' : 'Removed from saved');
+    if (saved) confetti(10);
+  } catch (err) {
+    toast(err.message, { type: 'bad' });
+  }
+}
+
+async function onShare(article) {
+  const shareUrl = `${window.location.origin}/article/${article.id}`;
+  const shareData = { title: article.title, text: article.preview || article.title, url: shareUrl };
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      record('share', { articleId: article.id });
+      return;
+    }
+  } catch { /* user cancelled or unsupported */ }
+  const ok = await copyText(shareUrl);
+  toast(ok ? 'Link copied' : 'Could not copy the link', { type: ok ? 'good' : 'bad' });
+  if (ok) record('share', { articleId: article.id });
+}
+
+async function onCite(article) {
+  const { modal: box } = modal({
+    title: 'Cite this story',
+    wide: true,
+    body: html`<div class="stack-sm" id="cite-list"><div class="skeleton skeleton--line"></div><div class="skeleton skeleton--line" style="width:70%"></div></div>`,
+    actions: [{ label: 'Done', class: 'btn--ghost' }],
+  });
+  const list = box.querySelector('#cite-list');
+  try {
+    const data = await get(`/api/articles/${article.id}/citations`, 60);
+    list.innerHTML = data.styles.map((style) => html`
+      <div>
+        <div class="citation-label">${style.label} <span class="faint" style="text-transform:none;letter-spacing:0">· ${style.hint}</span></div>
+        <div class="citation-box" id="cite-${style.id}">${data.citations[style.id]}</div>
+        <button class="btn btn--sm btn--ghost" style="margin-top:.35rem" data-copy="${style.id}">Copy ${style.label}</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-copy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const text = data.citations[button.dataset.copy];
+        const ok = await copyText(text);
+        toast(ok ? 'Citation copied' : 'Copy failed', { type: ok ? 'good' : 'bad' });
+      });
+    });
+  } catch (err) {
+    list.innerHTML = html`<p class="muted small">${err.message}</p>`;
+  }
+}
+
+async function onQuiz(article, root) {
+  const slot = root.querySelector('#quiz-slot');
+  if (slot.dataset.loaded) { slot.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  slot.innerHTML = html`<section class="section"><div class="section-head"><h2>Test yourself</h2></div><div class="skeleton" style="height:120px"></div></section>`;
+  try {
+    const quiz = await get(`/api/articles/${article.id}/quiz`, 120);
+    if (!quiz.questions?.length) {
+      slot.innerHTML = html`<section class="section"><div class="section-head"><h2>Test yourself</h2></div><div class="card card-pad"><p class="small muted">Not enough extractable text for a quiz on this one — try a longer article.</p></div></section>`;
+      return;
+    }
+    slot.dataset.loaded = '1';
+    slot.innerHTML = html`
+      <section class="section">
+        <div class="section-head">
+          <h2>Test yourself</h2>
+          <span class="badge ${quiz.engine === 'ai' ? 'badge--ai' : 'badge--topic'}">${quiz.engine === 'ai' ? 'AI quiz' : 'Auto quiz'}</span>
+        </div>
+        <div class="card card-pad-lg">
+          ${quiz.questions.map((question, qIndex) => html`
+            <div class="quiz__q" data-q="${qIndex}">
+              <p>${qIndex + 1}. ${question.question}</p>
+              <div class="quiz__options">
+                ${question.options.map((option, oIndex) => html`
+                  <button class="quiz__opt" data-option="${oIndex}" data-answer="${question.answer_index}" data-qindex="${qIndex}">
+                    <b>${String.fromCharCode(65 + oIndex)}</b><span>${option}</span>
+                  </button>`)}
+              </div>
+              <div class="quiz__explain" hidden></div>
+            </div>`)}
+          <p class="tiny faint" style="margin-top:.6rem">${quiz.note || (quiz.engine === 'ai' ? 'Questions generated from this article only — check them against the text.' : 'Questions are built from the article’s own sentences.')}</p>
+        </div>
+      </section>`;
+
+    slot.querySelectorAll('.quiz__opt').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const group = button.closest('.quiz__q');
+        if (group.dataset.answered) return;
+        group.dataset.answered = '1';
+        const correctIndex = Number(button.dataset.answer);
+        const chosen = Number(button.dataset.option);
+        const correct = chosen === correctIndex;
+        group.querySelectorAll('.quiz__opt').forEach((option, index) => {
+          option.classList.toggle('is-right', index === correctIndex);
+          option.classList.toggle('is-wrong', index === chosen && !correct);
+        });
+        const explain = group.querySelector('.quiz__explain');
+        if (explain) {
+          const text = quiz.questions[Number(button.dataset.qindex)].explain;
+          explain.textContent = text || '';
+          explain.hidden = !text;
+        }
+        try {
+          const result = await post(`/api/articles/${article.id}/quiz-result`, {
+            correct,
+            question: quiz.questions[Number(button.dataset.qindex)].question,
+            selected: chosen,
+          });
+          toastProgress(result.progress);
+        } catch { /* offline-friendly */ }
+      });
+    });
+  } catch (err) {
+    slot.innerHTML = html`<section class="section"><div class="card card-pad"><p class="small muted">${err.message}</p></div></section>`;
+  }
+}
+
+function openNoteModal(article, root, quote = '') {
+  const body = document.createElement('div');
+  body.innerHTML = html`
+    ${quote ? html`<div class="note__quote" style="margin-bottom:.7rem">“${quote}”</div>` : ''}
+    <label class="tiny muted" for="note-body" style="display:block;margin-bottom:.35rem">Your note</label>
+    <textarea id="note-body" placeholder="What stood out? Why does it matter? A question to ask in class…"></textarea>`;
+  const { close } = modal({
+    title: 'Add a note',
+    body,
+    actions: [
+      { label: 'Cancel', class: 'btn--ghost' },
+      {
+        label: 'Save note',
+        class: 'btn--primary',
+        onClick: async () => {
+          const text = body.querySelector('#note-body').value.trim();
+          if (text.length < 2) { toast('Write something first', { type: 'bad' }); return false; }
+          try {
+            await post(`/api/articles/${article.id}/notes`, { body: text, quote });
+            const data = await get(`/api/articles/${article.id}`, 0, true);
+            article.notes = data.article.notes;
+            renderNotes(root, article);
+            const progress = await record('note', { articleId: article.id });
+            toastProgress(progress);
+            toast('Note saved', { type: 'good' });
+          } catch (err) {
+            toast(err.message, { type: 'bad' });
+            return false;
+          }
+          return true;
+        },
+      },
+    ],
+  });
+  void close;
+}
+
+function onAddNote(article, root) {
+  openNoteModal(article, root, '');
+  record('open', { articleId: article.id, silent: true });
+}
+
+async function toggleFocus() {
+  document.body.classList.toggle('focus-mode');
+  const on = document.body.classList.contains('focus-mode');
+  toast(on ? 'Focus mode on — press Esc to exit' : 'Focus mode off');
+}
+
+async function cycleFont() {
+  const current = prefs().font || 'sans';
+  const index = FONTS.findIndex((font) => font.id === current);
+  const next = FONTS[(index + 1) % FONTS.length];
+  try {
+    await savePrefs({ font: next.id });
+    const prose = document.getElementById('prose');
+    if (prose) prose.dataset.font = next.id === 'serif' ? 'serif' : '';
+    toast(`Reading font: ${next.label}`);
+  } catch (err) { toast(err.message, { type: 'bad' }); }
+}
+
+async function loadOverview(root, article) {
+  const slot = root.querySelector('#overview-slot');
+  if (!slot) return;
+  try {
+    const overview = await get(`/api/articles/${article.id}/overview`, 300);
+    slot.innerHTML = overviewMarkup(overview, article);
+    bindOverview(root, article, overview);
+  } catch (err) {
+    slot.innerHTML = html`<div class="overview"><div class="overview__body"><p class="small muted">Overview unavailable: ${err.message}</p></div></div>`;
+  }
+}
+
+function overviewMarkup(overview, article) {
+  const isAI = overview.engine === 'ai';
+  const badge = isAI
+    ? html`<span class="badge badge--ai">${raw(icons.sparkle)} AI overview</span>`
+    : html`<span class="badge badge--topic">Auto summary</span>`;
+  const meta = isAI
+    ? html`<span class="tiny faint">${overview.model || 'model'} · grounded in this article</span>`
+    : html`<span class="tiny faint">extractive · built from the article's own sentences</span>`;
+  const translated = overview.translated
+    ? html`<span class="badge badge--translated">Translated overview</span>`
+    : '';
+  return html`
+    <section class="overview" id="overview-card">
+      <div class="overview__head">
+        <h2>${badge}</h2>
+        ${meta}
+        ${translated}
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn btn--sm btn--ghost" data-act="simplify">${raw(icons.text)} Explain simply</button>
+      </div>
+      <div class="overview__body">
+        ${overview.summary && overview.summary.trim() !== (article.summary || '').trim()
+          ? html`<p class="overview__summary">${overview.summary}</p>`
+          : ''}
+        ${overview.key_points?.length ? html`
+          <ul class="overview__points">
+            ${overview.key_points.map((point) => html`<li><span>${point}</span></li>`)}
+          </ul>` : ''}
+        ${overview.why_it_matters ? html`
+          <div class="term" style="margin-top:.9rem">
+            <dt>Why it matters</dt>
+            <dd>${overview.why_it_matters}</dd>
+          </div>` : ''}
+        ${overview.terms?.length ? html`
+          <div class="overview__terms">
+            ${overview.terms.map((term) => html`<dl class="term"><dt>${term.term}</dt><dd>${term.definition}</dd></dl>`)}
+          </div>` : ''}
+        <div id="simplify-slot"></div>
+        <p class="overview__note">
+          ${raw(icons.info)}
+          <span>${overview.warning || (isAI
+            ? 'AI overviews are generated from this article only and can still be wrong. Always check the original before citing.'
+            : 'This summary is assembled from sentences in the article — no AI model, no added facts.')}</span>
+        </p>
+      </div>
+    </section>`;
+}
+
+function bindOverview(root, article, overview) {
+  const button = root.querySelector('[data-act="simplify"]');
+  if (!button) return;
+  button.addEventListener('click', async () => {
+    const slot = root.querySelector('#simplify-slot');
+    if (!slot) return;
+    if (slot.dataset.loaded) { slot.innerHTML = ''; slot.dataset.loaded = ''; return; }
+    slot.innerHTML = html`<div class="skeleton skeleton--line" style="margin-top:1rem"></div>`;
+    try {
+      const explained = await get(`/api/articles/${article.id}/explain`, 300);
+      slot.dataset.loaded = '1';
+      slot.innerHTML = html`
+        <div class="term" style="margin-top:1rem;background:var(--surface-2)">
+          <dt>In plain English <span class="tiny faint">· ${explained.engine === 'ai' ? 'AI rewrite' : 'simplified'}</span></dt>
+          <dd style="font-size:.86rem;line-height:1.6">${explained.text}</dd>
+          ${explained.jargon?.length ? html`
+            <div class="overview__terms">
+              ${explained.jargon.map((term) => html`<dl class="term" style="background:var(--surface)"><dt>${term.term}</dt><dd>${term.definition}</dd></dl>`)}
+            </div>` : ''}
+          ${explained.warning ? html`<p class="tiny faint" style="margin-top:.5rem">${explained.warning}</p>` : ''}
+        </div>`;
+    } catch (err) {
+      slot.innerHTML = html`<p class="small muted">${err.message}</p>`;
+    }
+  });
+  void overview;
+}
+
+let readTimer = null;
+function trackReading(article, signal) {
+  if (readTimer) clearTimeout(readTimer);
+  record('open', { articleId: article.id, silent: true });
+  const started = Date.now();
+  let awarded = false;
+  const award = () => {
+    if (awarded) return;
+    awarded = true;
+    const seconds = Math.max(12, Math.round((Date.now() - started) / 1000));
+    record('read', { articleId: article.id, value: seconds }).then((progress) => {
+      if (progress) toastProgress(progress);
+    });
+  };
+  readTimer = setTimeout(award, 22000);
+  const onScroll = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    if (max > 0 && window.scrollY / max > 0.45) {
+      award();
+      window.removeEventListener('scroll', onScroll);
+    }
+  };
+  window.addEventListener('scroll', onScroll, { passive: true, signal });
+  signal.addEventListener('abort', () => clearTimeout(readTimer), { once: true });
+}

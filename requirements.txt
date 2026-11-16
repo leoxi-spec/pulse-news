@@ -1,0 +1,8 @@
+# Pulse has no third-party runtime dependencies.
+# It runs on the Python standard library (3.10+, 3.13 recommended).
+#
+# Optional, if installed:
+#   certifi   — used as a fallback CA bundle when the OS store is unavailable
+#
+# Start the app with:
+#   python3 run.py
