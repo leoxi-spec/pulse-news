@@ -90,7 +90,18 @@ mode **Full (strict)** after Fly issues its certificate).
 The first ingestion pass takes a few minutes. The volume keeps the archive,
 profiles and translations across deploys.
 
-## Option C — Cloudflare Containers
+## Option C — keep the Workers URL with a proxy
+
+If you specifically want `*.workers.dev` to stay as the address, run the real
+server behind a Tunnel and put a tiny Worker in front of it. The Worker forwards
+every request, including `/api/*`, to the Tunnel. This is the setup in
+[`cloudflare/README.md`](cloudflare/README.md); it works with a Quick Tunnel
+today, but the Quick Tunnel URL changes when it restarts.
+
+Do not try to proxy to `http://localhost:8787` from the Worker: Cloudflare
+cannot reach your Mac's loopback. The origin must be the public Tunnel URL.
+
+## Option D — Cloudflare Containers
 
 Cloudflare Containers can run the Docker image, but Pulse stores its archive in
 a local SQLite file. Cloudflare Containers do not provide a normal persistent
