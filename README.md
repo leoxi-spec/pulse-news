@@ -51,7 +51,7 @@ classes who still wants to understand what's happening. That means:
 | **Search everywhere** | A search bar, a command palette (`⌘K` or `/`) and a dedicated **keyword archive** (`/keyword?q=`) that turns any term into a paginated feed across the whole archive, current and historical. |
 | **Front-page sections** | Apple News-style **Top Stories** grid plus configurable rows: brief, For you, scores, any topic, long reads, saved, research. Reorder or hide them in *Customize*. |
 | **25 themes** | Auto, Dark, Light, Sepia, Midnight, Forest, Sunset, Mono, Rose, Ocean, plus five calmer palettes: **Dusk, Sage, Sand, Mist, Clay**, and ten more including Lavender, Mint and Matcha. |
-| **24 holiday themes** | Seasonal palettes plus matching app-icon families for New Year, Lunar New Year, Valentine’s Day, St. Patrick’s Day, Holi, Eid, Easter, Passover, Earth Day, Mother’s Day, Victoria Day, Pride, Father’s Day, Juneteenth, Canada Day, Independence Day, Labor Day, Rosh Hashanah, Diwali, Halloween, Thanksgiving, Hanukkah, Christmas and Kwanzaa. The archive lives at `/seasons`; the next holiday switches automatically inside 1.5 weeks, with the more significant holiday winning overlaps. |
+| **24 holiday themes** | Seasonal palettes plus a full-bleed, hand-built illustration for every holiday: New Year, Lunar New Year, Valentine’s Day, St. Patrick’s Day, Holi, Eid, Easter, Passover, Earth Day, Mother’s Day, Victoria Day, Pride, Father’s Day, Juneteenth, Canada Day, Independence Day, Labor Day, Rosh Hashanah, Diwali, Halloween, Thanksgiving, Hanukkah, Christmas and Kwanzaa. The archive lives at `/seasons`; the next holiday switches automatically inside 1.5 weeks, with the more significant holiday winning overlaps. |
 | **Room to read** | No sidebars at all: a compact top bar, a personalised **Today** masthead, full-width sections and a mixed-size mosaic (1–3 stories per row, tall leads and compact briefs). |
 | **Sports pins** | Apple News-style **Pinned** bar: pin leagues and teams (★ on any team), filter with **My sports**, and see pinned games on the front page. Scores stream in progressively so the page never waits on 15 leagues. |
 | **Research desk** | Turn every saved story into a bibliography in MLA, APA, Chicago, Harvard or BibTeX; add books/websites by hand; export `.txt`/`.bib`; quote collector from your notes. |
@@ -329,6 +329,10 @@ server's security headers, CSRF check, ETag and traversal defences.
 ---
 
 ## Deployment
+
+**Cloudflare:** a Workers/Pages static deployment cannot run Pulse's Python API.
+See [CLOUDFLARE.md](CLOUDFLARE.md) for the Tunnel, container and Workers
+trade-offs before deploying.
 
 **Behind a reverse proxy** (nginx/caddy), set `PULSE_ACCESS_TOKEN` and
 `PULSE_HOST=127.0.0.1`, then proxy to `:8787`.

@@ -451,7 +451,7 @@ def icon_paths(ident: str) -> tuple[str, str, str, str]:
             "/icons/icon-maskable-v25.png",
             "/icons/apple-touch-icon-v25.png",
         )
-    base = f"/icons/seasons/{ident}"
+    base = f"/icons/seasons/v26/{ident}"
     return (f"{base}/icon-192.png", f"{base}/icon-512.png", f"{base}/icon-maskable.png", f"{base}/apple-touch-icon.png")
 
 

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Generate Pulse app icons as PNGs using only the standard library.
+"""Generate the normal Pulse icon and the 24 large seasonal illustrations.
 
-The regular icon and the 24 holiday icons all use the same waveform geometry,
-so the brand stays recognisable while the palette and small motif change.
+The normal mark stays the familiar five-bar waveform. Seasonal icons are
+hand-built SVG scenes (clock, lantern, rainbow, menorah, and so on), rasterised
+with the local Chrome build and written to ``pulse/static/icons/seasons``.
+
+Run from the project root: ``python3 tools/make_icons.py``.
 """
 from __future__ import annotations
 
@@ -15,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from pulse.holidays import SEASONS  # noqa: E402
+from tools.season_render import render_seasons  # noqa: E402
 
 OUT = ROOT / "pulse" / "static" / "icons"
 SEASON_OUT = OUT / "seasons"
@@ -451,9 +455,8 @@ def main() -> None:
     (OUT / "icon.svg").write_text(svg, encoding="utf-8")
     (OUT / "icon-v25.svg").write_text(svg, encoding="utf-8")
 
-    for season in SEASONS:
-        write_style(SEASON_OUT / season["id"], season)
-    print(f"icons written to {OUT} (normal + {len(SEASONS)} seasons)")
+    render_seasons(SEASONS, SEASON_OUT / "v26", log=print)
+    print(f"icons written to {OUT} (normal + {len(SEASONS)} large seasonal illustrations)")
 
 
 if __name__ == "__main__":

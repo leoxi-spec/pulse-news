@@ -41,7 +41,7 @@ export async function seasonsView(root) {
         <div>
           <p class="eyebrow">The Pulse calendar</p>
           <h1>Every season has a Pulse.</h1>
-          <p class="page-lede">Twenty-four holiday themes and matching app icons live here. Pulse switches automatically when the next holiday is within 1.5 weeks; when two windows overlap, the more significant holiday keeps the shared days.</p>
+          <p class="page-lede">Twenty-four hand-built holiday scenes, one for every seasonal theme. Pulse switches automatically when the next holiday is within 1.5 weeks; when two windows overlap, the more significant holiday keeps the shared days.</p>
         </div>
       </header>
 
@@ -56,7 +56,7 @@ export async function seasonsView(root) {
         </div>
         <div class="season-now__art">${activeId
           ? html`<img src="${now.active.icon.small}" alt="${now.active.label} icon">`
-          : html`<img src="/icons/icon-192-v24.png" alt="Pulse icon">`}</div>
+          : html`<img src="/icons/icon-192-v25.png" alt="Pulse icon">`}</div>
       </section>
 
       ${sectionHead('The archive', '', { sub: `${seasons.length} holiday families` })}
