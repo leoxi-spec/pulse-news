@@ -513,11 +513,28 @@ function mySportsSection(data) {
   return sectionWrap('my-sports', head, html`<div class="score-strip">${games.map((game) => scoreMini(game))}</div>`);
 }
 
+function sectionError(id) {
+  const meta = sectionMeta(id);
+  return sectionWrap(id,
+    sectionHead(meta.label, '', { sub: 'Could not load' }),
+    html`<div class="card card-pad">
+      <p class="small muted">This section could not reach the Pulse server. Your reading data is safe.</p>
+      <button class="btn btn--sm" type="button" data-retry-section="${id}">Retry</button>
+    </div>`);
+}
+
 async function fillSection(root, id) {
   const shell = root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
   if (!shell) return;
   const data = await loadSection(id, 12000).catch(() => null);
-  if (!data) return;
+  if (!data) {
+    const current = root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = sectionError(id);
+    if (current && wrapper.firstElementChild) current.replaceWith(wrapper.firstElementChild);
+    bindSectionActions(root, [id], new Map());
+    return;
+  }
   const wrapper = document.createElement('div');
   wrapper.innerHTML = sectionMarkup(id, data);
   const replacement = wrapper.firstElementChild;
@@ -532,14 +549,22 @@ async function fillSportsSection(root, id) {
   if (!shell) return;
   const body = shell.querySelector('[data-body]');
   if (body) body.innerHTML = html`<div class="sports-placeholder"><div class="skeleton skeleton--line" style="width:45%"></div><div class="skeleton" style="height:112px;margin-top:.5rem"></div></div>`;
-  const data = await loadSection(id, 0).catch(() => null);
-  if (!data) return;
+  const data = await loadSection(id, 10000).catch(() => null);
+  if (!data) {
+    const current = root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = sectionError(id);
+    if (current && wrapper.firstElementChild) current.replaceWith(wrapper.firstElementChild);
+    bindSectionActions(root, [id], new Map());
+    return;
+  }
   const markup = id === 'sports' ? sportsSection(data) : mySportsSection(data);
   const wrapper = document.createElement('div');
   wrapper.innerHTML = markup;
   const replacement = wrapper.firstElementChild;
-  const current = root.querySelector(`.home-section[data-id="${id}"]`);
+  const current = root.querySelector(`.home-section[data-id="${CSS.escape(id)}"]`);
   if (replacement && current) current.replaceWith(replacement);
+  bindSectionActions(root, [id], new Map([[id, data]]));
 }
 
 // -------------------------------------------------------------------- actions
@@ -553,6 +578,17 @@ function bindSectionActions(root, sections, data) {
     if (button.dataset.bound) return;
     button.dataset.bound = '1';
     button.addEventListener('click', () => loadStream(root, button.dataset.mode, 0));
+  });
+  root.querySelectorAll('[data-retry-section]').forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', () => {
+      const id = button.dataset.retrySection;
+      button.disabled = true;
+      button.textContent = 'Retrying…';
+      if (id === 'sports' || id === 'my-sports') fillSportsSection(root, id);
+      else fillSection(root, id);
+    });
   });
   root.querySelectorAll('[data-load-more]').forEach((button) => {
     if (button.dataset.bound) return;

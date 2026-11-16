@@ -182,6 +182,33 @@ function renderNav() {
   }
 }
 
+let recoveryTimer = null;
+
+// The app shell and its service-worker cache can survive a stopped local
+// server. Watch /api/health briefly and reload once it comes back, so Today,
+// weather and the feed recover without asking the reader to hunt for Retry.
+function watchServerRecovery() {
+  if (recoveryTimer) return;
+  let attempts = 0;
+  recoveryTimer = setInterval(async () => {
+    attempts += 1;
+    try {
+      const response = await fetch('/api/health', { cache: 'no-store' });
+      if (response.ok) {
+        clearInterval(recoveryTimer);
+        recoveryTimer = null;
+        toast('Pulse is back online — refreshing', { type: 'good', duration: 1200 });
+        setTimeout(() => window.location.reload(), 650);
+        return;
+      }
+    } catch { /* server is still starting */ }
+    if (attempts >= 40) {
+      clearInterval(recoveryTimer);
+      recoveryTimer = null;
+    }
+  }, 3000);
+}
+
 function bindShell() {
   document.getElementById('nav-back')?.addEventListener('click', () => {
     if (window.history.length > 1) window.history.back();
@@ -242,6 +269,7 @@ function bindShell() {
   window.addEventListener('online', () => { state.online = true; toast('Back online', { type: 'good' }); });
   window.addEventListener('offline', () => { state.online = false; toast('You are offline — showing what is cached', { type: 'bad' }); });
   window.addEventListener('pulse:auth-required', showTokenModal);
+  window.addEventListener('pulse:network-error', watchServerRecovery);
 
   // Sidebar search + key buttons survive every nav re-render.
   document.addEventListener('click', (event) => {

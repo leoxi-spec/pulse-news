@@ -51,7 +51,11 @@ export async function api(path, opts = {}) {
       response = await fetch(path, { method, headers, body, signal: controller.signal, credentials: 'same-origin' });
     } catch (err) {
       if (err.name === 'AbortError') throw new ApiError(0, 'Request timed out. Check your connection and try again.', 'timeout');
-      throw new ApiError(0, 'You appear to be offline.', 'offline');
+      // A local Pulse server can be stopped while the browser still has a
+      // network connection. Tell the shell so it can watch for recovery and
+      // refresh automatically instead of leaving the Today board on a skeleton.
+      window.dispatchEvent(new CustomEvent('pulse:network-error', { detail: { path } }));
+      throw new ApiError(0, 'Pulse cannot reach its local server. Reconnecting…', 'offline');
     } finally {
       clearTimeout(timer);
     }
