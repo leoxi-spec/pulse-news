@@ -1,8 +1,9 @@
 # Pulse on Render
 
 The live Render deployment is still reporting **Pulse 2.2.1**. The current
-checkout is **3.4.2**. That alone explains a lot of the old empty-state and
-memory behaviour: Render is running an older uploaded snapshot, not this code.
+checkout is **3.4.3**. The service is a **Docker** web service, so it needs a
+`Dockerfile` at the repository root. The previous upload omitted it and the
+deploys failed before the container started.
 
 ## Recommended settings
 
@@ -10,9 +11,11 @@ Use these values in **Render Dashboard → pulse-news → Settings**.
 
 | Setting | Value |
 | --- | --- |
-| Runtime | Python |
-| Build command | `pip install -r requirements.txt` |
-| Start command | `python3 run.py --host 0.0.0.0 --port $PORT` |
+| Runtime | Docker |
+| Dockerfile Path | `Dockerfile` |
+| Build command | Leave blank |
+| Start command | Leave blank (the Dockerfile runs the app) |
+| Docker command | Leave blank |
 | Health check path | `/api/health` |
 | Instance type | Free (512 MB) for testing; Starter/Standard for a public site |
 | Auto deploy | On, if the service is connected to GitHub |
@@ -23,7 +26,7 @@ Environment:
 PYTHONUNBUFFERED=1
 MALLOC_ARENA_MAX=2
 
-PULSE_DATA_DIR=/opt/render/project/src/.pulse-data
+PULSE_DATA_DIR=/data
 PULSE_INGEST=1
 PULSE_INGEST_WORKERS=3
 PULSE_INGEST_INTERVAL=600
@@ -46,9 +49,10 @@ free tier. Feed previews, images, search, scores and the archive still work.
 
 ## Deploy the current code
 
-The GitHub repository at `leoxi-spec/pulse-news` currently has an old
-`Pulse News` upload at commit `a44eef7`. That is why the front page still shows
-the old version. Render is deploying that commit, not this checkout.
+The GitHub repository at `leoxi-spec/pulse-news` is now on the current code.
+Render is a **Docker** service: it needs a `Dockerfile` at the repository root.
+The 3.4.3 uploads omitted that file, so every Docker build failed before the
+process could start.
 
 Make the repository root look like this checkout:
 
@@ -114,7 +118,7 @@ After the deploy, verify:
 curl -fsS https://pulse-news-6b68.onrender.com/api/health
 ```
 
-The response must say `"version": "3.4.2"`. If it still says `2.2.1`, Render is
+The response must say `"version": "3.4.3"`. If it still says `2.2.1`, Render is
 still running the old upload.
 
 ## The two empty sections
@@ -137,9 +141,9 @@ For a persistent archive, use a paid instance and add a disk:
 
 1. Render Dashboard → **Disks** → **Add Disk**.
 2. Name: `pulse-data`.
-3. Mount path: `/var/data`.
+3. Mount path: `/data`.
 4. Size: 1 GB or more.
-5. Change `PULSE_DATA_DIR` to `/var/data`.
+5. Keep `PULSE_DATA_DIR=/data` (the disk mount path is `/data`).
 6. Redeploy.
 
 `render.yaml` deliberately does not declare a disk because disks are not
