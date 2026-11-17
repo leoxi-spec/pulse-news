@@ -1,7 +1,7 @@
-import { get, post } from './api.js';
+import { get, patch, post } from './api.js';
 import {
   state, setBoot, on, emit, prefs, savePrefs, toggleSave, profileInitials,
-  dailyProgress, streak, levels, followedTopics, topicLabel, setProfile,
+  dailyProgress, streak, levels, followedTopics, topicLabel, setProfile, loadProfileBackup,
 } from './store.js';
 import {
   html, raw, icons, toast, modal, errorState, esc, timeAgo, compactNumber, registerAction,
@@ -574,6 +574,27 @@ async function boot() {
     return;
   }
   setBoot(data);
+  // Render's free disk is ephemeral: a redeploy can leave the cookie pointing
+  // at a profile that no longer exists. Restore the last completed survey from
+  // this browser instead of forcing the reader through onboarding again.
+  const explicitProfile = new URLSearchParams(location.search).has('profile') || new URLSearchParams(location.search).has('profile_switch');
+  if (!data.profile?.onboarded && !explicitProfile) {
+    const backup = loadProfileBackup();
+    if (backup) {
+      try {
+        const restored = await patch('/api/profile', {
+          name: backup.name || undefined,
+          survey: backup.survey,
+          prefs: backup.prefs,
+          onboarded: true,
+        });
+        if (restored.profile) {
+          data.profile = restored.profile;
+          setProfile(restored.profile);
+        }
+      } catch { /* normal onboarding remains the fallback */ }
+    }
+  }
   await initSeasons();
   applyAmbient();
   initWeather().catch(() => {});

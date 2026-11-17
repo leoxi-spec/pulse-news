@@ -111,6 +111,9 @@ class Handler(BaseHTTPRequestHandler):
             switch = query.get("profile") or ""
             if not path.startswith("/api/") and re.fullmatch(r"[a-f0-9]{24}", switch or ""):
                 remaining = {key: value for key, value in query.items() if key != "profile"}
+                # Mark deliberate profile switching. The client uses this to
+                # avoid restoring the previous profile's onboarding backup.
+                remaining["profile_switch"] = "1"
                 location = (path or "/") + ("?" + urllib.parse.urlencode(remaining) if remaining else "")
                 self.send_response(302)
                 self._base_headers(extra={

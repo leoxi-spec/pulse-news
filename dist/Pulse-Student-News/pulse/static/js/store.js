@@ -34,10 +34,37 @@ export function setBoot(boot) {
   emit('boot', boot);
 }
 
+const PROFILE_BACKUP_KEY = 'pulse.profile.backup';
+
+function backupProfile(profile) {
+  if (!profile?.onboarded) return;
+  try {
+    localStorage.setItem(PROFILE_BACKUP_KEY, JSON.stringify({
+      name: profile.name || '',
+      survey: profile.survey || {},
+      prefs: profile.prefs || {},
+      onboarded: true,
+      saved_at: new Date().toISOString(),
+    }));
+  } catch { /* browser storage may be unavailable */ }
+}
+
+export function loadProfileBackup() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PROFILE_BACKUP_KEY) || 'null');
+    return value && value.onboarded && value.survey && typeof value.survey === 'object' ? value : null;
+  } catch { return null; }
+}
+
+export function clearProfileBackup() {
+  try { localStorage.removeItem(PROFILE_BACKUP_KEY); } catch { /* ignore */ }
+}
+
 export function setProfile(profile, { silent = false } = {}) {
   if (!profile) return;
   state.profile = profile;
   applyPrefs(profile.prefs || {});
+  backupProfile(profile);
   if (!silent) emit('profile', profile);
 }
 

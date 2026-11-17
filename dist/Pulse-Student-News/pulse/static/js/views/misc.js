@@ -1,8 +1,7 @@
 import { get, post, patch, del } from '../api.js';
 import {
   state, prefs, savePrefs, saveSurvey, record, setProfile, profileInitials,
-  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES, ageBand, AGE_BANDS,
-} from '../store.js';
+  levels, streak, dailyProgress, topicLabel, followedTopics, THEMES, ageBand, AGE_BANDS, clearProfileBackup} from '../store.js';
 import {
   html, raw, icons, esc, toast, modal, confirmDialog, copyText, timeAgo, absDate,
   errorState, emptyState, compactNumber, number, toastProgress, confetti,
@@ -1186,6 +1185,7 @@ function bindProfile(root, p, today, profile) {
     if (!ok) return;
     try {
       const result = await post('/api/profile/reset', {});
+      clearProfileBackup();
       setProfile(result.profile);
       toast('Profile reset');
       navigate('/onboarding', { replace: true });
