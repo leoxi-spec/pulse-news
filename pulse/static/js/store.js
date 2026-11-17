@@ -190,18 +190,31 @@ export async function savePrefs(patchObj, { quiet = false } = {}) {
     applyPrefs(state.profile.prefs);
     emit('prefs', state.profile.prefs);
   }
-  try {
-    const result = await patch('/api/profile', { prefs: patchObj });
-    if (result.profile) setProfile(result.profile, { silent: quiet });
-    return result.profile;
-  } catch (err) {
+  let result;
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      result = await patch('/api/profile', { prefs: patchObj });
+      lastError = null;
+      break;
+    } catch (err) {
+      lastError = err;
+      const transient = err?.status === 0 || err?.status >= 500;
+      if (!transient || attempt === 1) break;
+      // Free Render instances briefly reject requests while restarting.
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    }
+  }
+  if (lastError) {
     if (state.profile && previous) {
       state.profile = { ...state.profile, prefs: previous };
       applyPrefs(previous);
       emit('prefs', previous);
     }
-    throw err;
+    throw lastError;
   }
+  if (result.profile) setProfile(result.profile, { silent: quiet });
+  return result.profile;
 }
 
 export async function saveSurvey(survey, { onboarded = null, name = null } = {}) {

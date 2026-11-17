@@ -1349,11 +1349,18 @@ export function openWidgetEditor(root, data = null) {
       {
         label: 'Save board',
         class: 'btn--primary',
-        onClick: async () => {
-          await savePrefs({ widgets: chosen, daily_brief: showBrief, widgets_v2: true });
+        onClick: () => {
+          // savePrefs applies the change optimistically before its network
+          // request. Repaint immediately so a slow free Render instance never
+          // makes the remove/add buttons look broken; reconcile in background.
+          const saving = savePrefs({ widgets: chosen, daily_brief: showBrief, widgets_v2: true });
           close();
           if (data && root.querySelector('.daily-section')) rerenderWidgets(root, data);
           toast(chosen.length ? `${chosen.length} widgets saved` : 'Today board cleared');
+          saving.catch(() => {
+            toast('Could not save the board — restoring your previous widgets.', { type: 'bad' });
+            if (data && root.querySelector('.daily-section')) rerenderWidgets(root, data);
+          });
           return true;
         },
       },
