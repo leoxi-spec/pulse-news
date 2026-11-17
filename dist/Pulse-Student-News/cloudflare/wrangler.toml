@@ -1,6 +1,0 @@
-name = "pulse-news"
-main = "cloudflare/proxy.js"
-compatibility_date = "2026-11-16"
-
-[vars]
-PULSE_ORIGIN = "https://REPLACE-WITH-YOUR-TUNNEL.trycloudflare.com"

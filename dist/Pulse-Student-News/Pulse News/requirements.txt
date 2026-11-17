@@ -1,1 +1,0 @@
-# Pulse has no third-party runtime dependencies. See the repository root.
